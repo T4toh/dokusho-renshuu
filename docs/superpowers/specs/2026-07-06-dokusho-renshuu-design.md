@@ -87,7 +87,7 @@ oracion_palabra (termino, id_oracion)    -- ejemplos por palabra
 
 - `oracion_kanji` se precalcula al parsear → consulta instantánea en la app.
 - Tatoeba filtrado a pares con traducción EN directa (~200-300k). Si el db
-  supera ~80 MB, capar a N oraciones por kanji priorizando las cortas.
+  supera ~80 MB, capar a 50 oraciones por kanji priorizando las cortas.
 - `verify_db.py` actualizado: counts por fuente, integridad FK, kanjis
   huérfanos, spot-checks de kanjis conocidos.
 - Output versionado: `diccionario-vX.db`. La app declara versión mínima.
