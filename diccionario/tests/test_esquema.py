@@ -25,6 +25,14 @@ class TestEsquema(unittest.TestCase):
         self.assertIsInstance(esquema.DB_VERSION, int)
         self.assertGreater(esquema.DB_VERSION, 0)
 
+    def test_indices_existen(self):
+        indices = {
+            fila[0] for fila in self.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='index'")
+        }
+        self.assertIn('idx_palabras_termino', indices)
+        self.assertIn('idx_palabras_lectura', indices)
+
 
 if __name__ == '__main__':
     unittest.main()
