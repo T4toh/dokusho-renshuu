@@ -13,6 +13,7 @@ FIXTURES = os.path.join(os.path.dirname(__file__), 'fixtures')
 class TestVerify(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp)
         self.ruta_db = os.path.join(self.tmp, 'test.db')
         # constructor espera nombres de producción: se copian los fixtures
         # a un dir "fuentes" temporal con esos nombres

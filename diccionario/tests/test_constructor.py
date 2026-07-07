@@ -14,6 +14,7 @@ class TestConstructor(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
+        cls.addClassCleanup(shutil.rmtree, cls.tmp)
         cls.ruta_db = os.path.join(cls.tmp, 'test.db')
         # constructor espera nombres de producción: se copian los fixtures
         # a un dir "fuentes" temporal con esos nombres
@@ -71,6 +72,7 @@ class TestCaps(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
+        cls.addClassCleanup(shutil.rmtree, cls.tmp)
         cls.ruta_db = os.path.join(cls.tmp, 'caps.db')
         cls.fuentes = os.path.join(cls.tmp, 'fuentes')
         os.makedirs(cls.fuentes)

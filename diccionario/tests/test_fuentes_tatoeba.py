@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 import unittest
 
@@ -11,6 +12,7 @@ class TestFuentesTatoeba(unittest.TestCase):
 
     def setUp(self):
         self.dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.dir)
         self._escribir('jpn_sentences.tsv', [
             '1297\tjpn\tこれは物語です。',
             '4702\tjpn\t走れ。',
