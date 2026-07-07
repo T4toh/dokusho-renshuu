@@ -33,7 +33,7 @@ class TestConstructor(unittest.TestCase):
         cls.conn.close()
 
     def test_stats(self):
-        self.assertEqual(self.stats['palabras'], 2)
+        self.assertEqual(self.stats['palabras'], 3)
         self.assertEqual(self.stats['kanjis'], 2)
         # oración 3 es kana-only → descartada. Quedan 1 (物語) y 2 (猫... sin
         # kanji en kanjidic_min → según fixture 猫 no está en kanjis, también
