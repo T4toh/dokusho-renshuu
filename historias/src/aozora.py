@@ -4,6 +4,7 @@ import re
 from . import japones
 
 _ANOTACION = re.compile(r'［＃.*?］')
+_DELIMITADOR = re.compile(r'^-{10,}\s*$')
 
 
 def limpiar_linea(linea: str) -> tuple:
@@ -44,3 +45,39 @@ def limpiar_linea(linea: str) -> tuple:
             texto.append(c)
             i += 1
     return ''.join(texto), furigana
+
+
+def extraer_cuerpo(texto_completo: str) -> tuple:
+    """Un .txt de Aozora → (titulo, autor, lineas_cuerpo).
+
+    Título en línea 1, autor en línea 2; el cuerpo arranca tras el segundo
+    delimitador de guiones (si existe) y termina antes del colofón (底本：).
+    """
+    lineas = texto_completo.splitlines()
+    if len(lineas) < 3:
+        raise ValueError('archivo demasiado corto para ser una obra de Aozora')
+    titulo = lineas[0].strip()
+    autor = lineas[1].strip()
+
+    delimitadores = [i for i, l in enumerate(lineas) if _DELIMITADOR.match(l)]
+    inicio = delimitadores[1] + 1 if len(delimitadores) >= 2 else 2
+
+    fin = len(lineas)
+    for i in range(inicio, len(lineas)):
+        if lineas[i].startswith('底本：') or lineas[i].startswith('底本:'):
+            fin = i
+            break
+    return titulo, autor, lineas[inicio:fin]
+
+
+def parsear(texto_completo: str) -> dict:
+    """Obra completa → {titulo, autor, parrafos: [(texto, furigana)]}."""
+    titulo, autor, lineas = extraer_cuerpo(texto_completo)
+    parrafos = []
+    for linea in lineas:
+        texto, furigana = limpiar_linea(linea)
+        if texto:
+            parrafos.append((texto, furigana))
+    if not parrafos:
+        raise ValueError(f'"{titulo}": cuerpo vacío tras la limpieza')
+    return {'titulo': titulo, 'autor': autor, 'parrafos': parrafos}

@@ -1,6 +1,11 @@
+import os
 import unittest
 
 from src import aozora
+
+
+FIXTURE = os.path.join(os.path.dirname(__file__), 'fixtures',
+                       'fragmento_aozora.txt')
 
 
 class TestLimpiarLinea(unittest.TestCase):
@@ -49,6 +54,36 @@ class TestLimpiarLinea(unittest.TestCase):
         texto, furigana = aozora.limpiar_linea('《よみ》')
         self.assertEqual(texto, '')
         self.assertEqual(furigana, [])
+
+
+class TestParsear(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        with open(FIXTURE, encoding='utf-8') as f:
+            cls.obra = aozora.parsear(f.read())
+
+    def test_titulo_y_autor(self):
+        self.assertEqual(self.obra['titulo'], '桃太郎')
+        self.assertEqual(self.obra['autor'], '楠山正雄')
+
+    def test_solo_el_cuerpo(self):
+        # el bloque de notación y el colofón quedan afuera
+        self.assertEqual(len(self.obra['parrafos']), 2)
+        for texto, _ in self.obra['parrafos']:
+            self.assertNotIn('底本', texto)
+            self.assertNotIn('《', texto)
+            self.assertNotIn('｜', texto)
+
+    def test_furigana_alineada(self):
+        texto, furigana = self.obra['parrafos'][0]
+        inicio = texto.index('刈')
+        self.assertIn([inicio, inicio + 1, 'か'], furigana)
+        inicio = texto.index('洗濯')
+        self.assertIn([inicio, inicio + 2, 'せんたく'], furigana)
+
+    def test_archivo_invalido_falla_ruidoso(self):
+        with self.assertRaises(ValueError):
+            aozora.parsear('una línea\n')
 
 
 if __name__ == '__main__':
