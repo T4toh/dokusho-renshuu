@@ -47,6 +47,10 @@ def _verificar_historia(ruta: str, id_: str) -> list:
                     errores.append(f'{donde}: furigana inválida {furi}')
                     continue
                 inicio, fin, lectura = furi
+                if (not isinstance(inicio, int) or not isinstance(fin, int)
+                        or not isinstance(lectura, str)):
+                    errores.append(f'{donde}: furigana inválida {furi}')
+                    continue
                 if not (0 <= inicio < fin <= len(texto)) or not lectura:
                     errores.append(f'{donde}: furigana inválida {furi}')
     return errores
