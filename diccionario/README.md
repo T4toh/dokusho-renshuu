@@ -65,6 +65,12 @@ python verify_db.py diccionario-v1.db # verificación (exit 1 si falla)
 python -m unittest discover tests -v  # tests
 ```
 
+**Contrato de `oracion_palabra`**: solo indexa términos de 2 a 6 caracteres
+(`LARGO_MIN_TERMINO`/`LARGO_MAX_TERMINO` en `src/constructor.py`). Para
+palabras de un solo kanji (猫, 山, ...) no hay filas en `oracion_palabra`:
+la app debe hacer fallback a `oracion_kanji` del kanji correspondiente para
+mostrar oraciones de ejemplo.
+
 ## Release
 
 1. `python parser.py && python verify_db.py diccionario-v1.db`
