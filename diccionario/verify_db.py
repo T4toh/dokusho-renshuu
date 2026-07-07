@@ -11,14 +11,15 @@ from src import esquema
 TABLAS = ['palabras', 'kanjis', 'oraciones', 'oracion_kanji', 'oracion_palabra']
 
 
-def verificar(ruta_db: str) -> list:
+def verificar(ruta_db: str, imprimir: bool = False) -> list:
     errores = []
     conn = sqlite3.connect(ruta_db)
 
     # 1. counts: ninguna tabla vacía
     for tabla in TABLAS:
         n = conn.execute(f'SELECT COUNT(*) FROM {tabla}').fetchone()[0]
-        print(f'  {tabla}: {n:,}')
+        if imprimir:
+            print(f'  {tabla}: {n:,}')
         if n == 0:
             errores.append(f'tabla {tabla} vacía')
 
@@ -61,7 +62,7 @@ def _spot_checks(ruta_db: str) -> list:
 if __name__ == '__main__':
     ruta = sys.argv[1] if len(sys.argv) > 1 else f'diccionario-v{esquema.DB_VERSION}.db'
     print(f'Verificando {ruta} ...')
-    errores = verificar(ruta) + _spot_checks(ruta)
+    errores = verificar(ruta, imprimir=True) + _spot_checks(ruta)
     if errores:
         print('ERRORES:')
         for e in errores:
