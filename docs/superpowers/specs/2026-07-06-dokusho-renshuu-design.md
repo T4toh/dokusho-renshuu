@@ -14,20 +14,20 @@ Público: principiantes/intermedios que quieren practicar lectura y kanjis.
 
 ## Decisiones tomadas
 
-| Tema | Decisión |
-|------|----------|
-| Stack | Kotlin + Jetpack Compose, Android puro. Compose deja puerta abierta a Compose Multiplatform (iOS) si algún día hay Mac. |
-| Contenido | Híbrido: 3-5 historias empaquetadas en APK + catálogo descargable + importación de texto propio. |
-| Hosting catálogo | GitHub como CDN (raw.githubusercontent). Migrable a Cloudflare después sin tocar la app. |
-| Tap en palabra | Palabra completa primero (lectura + significado), con drill-down a cada kanji individual. |
-| Furigana | Toggle global en top bar. Full kanji por defecto. Nunca romaji. |
-| Fragmentos | Avance por oración, con oraciones anteriores visibles atenuadas (contexto). |
-| Export Anki | Archivo `.apkg` + share intent. API de AnkiDroid solo si hace falta después. |
-| Cartas Anki | Kanji-céntricas: kanji al frente; dorso con significados, lecturas, oración de la historia + 2-3 oraciones Tatoeba. Varias oraciones por kanji para evitar memorizar estructura en vez del kanji. |
-| Oraciones ejemplo | Tatoeba offline dentro del db (las de jisho.org salen de ahí). Sin APIs. |
-| Tokenización | On-device con Kuromoji (JVM). El pipeline NO pre-tokeniza. |
-| Organización | Monorepo `dokusho-renshuu` con app + parser + pipeline + catálogo. |
-| Futuro (fuera de scope v1) | Toggle por oración a inglés. El formato JSON ya reserva el campo `traduccion`. |
+| Tema                       | Decisión                                                                                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stack                      | Kotlin + Jetpack Compose, Android puro. Compose deja puerta abierta a Compose Multiplatform (iOS) si algún día hay Mac.                                                                           |
+| Contenido                  | Híbrido: 3-5 historias empaquetadas en APK + catálogo descargable + importación de texto propio.                                                                                                  |
+| Hosting catálogo           | GitHub como CDN (raw.githubusercontent). Migrable a Cloudflare después sin tocar la app.                                                                                                          |
+| Tap en palabra             | Palabra completa primero (lectura + significado), con drill-down a cada kanji individual.                                                                                                         |
+| Furigana                   | Toggle global en top bar. Full kanji por defecto. Nunca romaji.                                                                                                                                   |
+| Fragmentos                 | Avance por oración, con oraciones anteriores visibles atenuadas (contexto).                                                                                                                       |
+| Export Anki                | Archivo `.apkg` + share intent. API de AnkiDroid solo si hace falta después.                                                                                                                      |
+| Cartas Anki                | Kanji-céntricas: kanji al frente; dorso con significados, lecturas, oración de la historia + 2-3 oraciones Tatoeba. Varias oraciones por kanji para evitar memorizar estructura en vez del kanji. |
+| Oraciones ejemplo          | Tatoeba offline dentro del db (las de jisho.org salen de ahí). Sin APIs.                                                                                                                          |
+| Tokenización               | On-device con Kuromoji (JVM). El pipeline NO pre-tokeniza.                                                                                                                                        |
+| Organización               | Monorepo `dokusho-renshuu` con app + parser + pipeline + catálogo.                                                                                                                                |
+| Futuro (fuera de scope v1) | Toggle por oración a inglés. El formato JSON ya reserva el campo `traduccion`.                                                                                                                    |
 
 ## Arquitectura general
 
@@ -97,6 +97,7 @@ oracion_palabra (termino, id_oracion)    -- ejemplos por palabra
 **Input**: obras de Aozora Bunko (HTML o texto con marcado propio).
 
 **Proceso:**
+
 1. Descargar/leer obra por ID de Aozora
 2. Limpiar marcado Aozora, notas de editor, headers legales
 3. Extraer furigana del ruby de Aozora (`《ふりがな》`) y guardarla alineada
@@ -111,15 +112,21 @@ oracion_palabra (termino, id_oracion)    -- ejemplos por palabra
 ```json
 {
   "id": "momotaro",
-  "titulo": "桃太郎", "autor": "楠山正雄",
-  "fuente": "aozora:001091", "licencia": "dominio público",
+  "titulo": "桃太郎",
+  "autor": "楠山正雄",
+  "fuente": "aozora:001091",
+  "licencia": "dominio público",
   "dificultad": "facil",
   "parrafos": [
-    { "oraciones": [
-      { "texto": "むかし、むかし...",
-        "furigana": [[2, 4, "..."]],
-        "traduccion": null }
-    ]}
+    {
+      "oraciones": [
+        {
+          "texto": "むかし、むかし...",
+          "furigana": [[2, 4, "..."]],
+          "traduccion": null
+        }
+      ]
+    }
   ]
 }
 ```
