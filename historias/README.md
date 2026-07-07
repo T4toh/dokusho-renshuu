@@ -44,7 +44,8 @@ python -m unittest discover tests -v   # tests
   dificultad, tamaño, version}]}` — `tamaño` en bytes del JSON de la historia.
 - `dificultad` ∈ `{facil, media, dificil}` (umbral en `src/dificultad.py`).
 - El diálogo `「...。...。」` es UNA oración (el segmentador no corta dentro
-  de comillas) — mismo algoritmo a portar en Kotlin (Plan 3).
+  de comillas) — mismo algoritmo a portar en Kotlin (Plan 3). Ninguna oración
+  es solo puntuación de cierre (spans residuales se fusionan).
 
 ## Agregar una obra
 

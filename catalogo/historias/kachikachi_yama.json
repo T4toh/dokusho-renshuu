@@ -901,7 +901,7 @@
   {
    "oraciones": [
     {
-     "texto": "流しの下の骨を見ろ。",
+     "texto": "流しの下の骨を見ろ。」",
      "furigana": [
       [
        0,
@@ -919,11 +919,6 @@
        "み"
       ]
      ],
-     "traduccion": null
-    },
-    {
-     "texto": "」",
-     "furigana": [],
      "traduccion": null
     }
    ]

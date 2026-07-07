@@ -32,6 +32,16 @@
 - `jitendex.py`: sin test multi-archivo `term_bank_*`; li-anidado-en-li se aplana en una glosa.
 - Recomendación pendiente: guardar procedencia de fuentes (fechas) en tabla `metadata` del db.
 
+## Backlog diferido (review final Plan 2 — no bloqueante)
+
+- `segmentador`: margen navaja de urashima_taro (pct 0.449 vs umbral facil 0.45) — retoque del texto o del set JLPT lo flipea; considerar test de borde de umbral.
+- `verify_catalogo`: no valida `catalogo['version']`, ids duplicados ni archivos huérfanos en `catalogo/historias/`.
+- `japones`: `_EXTRAS_BASE` sin tests de 〆ヵヶ; helpers sin guarda multi-char (igual que diccionario/).
+- `aozora`: sin tests de colofón ASCII `底本:` ni delimitadores-sin-colofón; `lstrip('　')` redundante tras `strip()`.
+- `pipeline`: cp932 puede decodificar UTF-8 como mojibake sin lanzar (mitigado por sanity check manual); rama fallback utf-8 sin test.
+- `emisor`: sin tests de multi-historia/ids duplicados en `emitir`.
+- `genera_jlpt`: fixture sin entrada `jlpt=3` (rama N4 sin test directo).
+
 ## Proceso de trabajo usado
 
 Brainstorming → spec → plan por subsistema (`docs/superpowers/plans/`) → ejecución subagent-driven (implementer + reviewer por tarea, review final de branch) → PR. Repetir por plan.
