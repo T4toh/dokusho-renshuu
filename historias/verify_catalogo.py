@@ -43,13 +43,16 @@ def _verificar_historia(ruta: str, id_: str) -> list:
             if oracion.get('traduccion') is not None:
                 errores.append(f'{donde}: traduccion debe ser null en v1')
             for furi in oracion.get('furigana', []):
+                if not isinstance(furi, list) or len(furi) != 3:
+                    errores.append(f'{donde}: furigana inválida {furi}')
+                    continue
                 inicio, fin, lectura = furi
                 if not (0 <= inicio < fin <= len(texto)) or not lectura:
                     errores.append(f'{donde}: furigana inválida {furi}')
     return errores
 
 
-def verificar(dir_catalogo: str) -> list:
+def verificar(dir_catalogo: str, imprimir: bool = False) -> list:
     errores = []
     ruta_catalogo = os.path.join(dir_catalogo, 'catalogo.json')
     if not os.path.exists(ruta_catalogo):
@@ -71,7 +74,8 @@ def verificar(dir_catalogo: str) -> list:
             errores.append(f"catálogo: {entrada['id']} sin archivo {ruta}")
             continue
         real = os.path.getsize(ruta)
-        print(f"  {entrada['id']}: {real:,} bytes, {entrada['dificultad']}")
+        if imprimir:
+            print(f"  {entrada['id']}: {real:,} bytes, {entrada['dificultad']}")
         if entrada['tamaño'] != real:
             errores.append(
                 f"{entrada['id']}: tamaño {entrada['tamaño']} != real {real}")
@@ -82,7 +86,7 @@ def verificar(dir_catalogo: str) -> list:
 if __name__ == '__main__':
     dir_catalogo = sys.argv[1] if len(sys.argv) > 1 else '../catalogo'
     print(f'Verificando {dir_catalogo} ...')
-    errores = verificar(dir_catalogo)
+    errores = verificar(dir_catalogo, imprimir=True)
     if errores:
         print('ERRORES:')
         for e in errores:

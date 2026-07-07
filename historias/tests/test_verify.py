@@ -52,6 +52,13 @@ class TestVerify(unittest.TestCase):
         errores = verify_catalogo.verificar(self.tmp)
         self.assertTrue(any('tamaño' in e for e in errores))
 
+    def test_furigana_malformada_se_reporta_sin_excepcion(self):
+        def mutar(h):
+            h['parrafos'][0]['oraciones'][1]['furigana'] = [[2, 99]]
+        self._corromper(mutar)
+        errores = verify_catalogo.verificar(self.tmp)
+        self.assertTrue(any('furigana' in e for e in errores))
+
     def test_detecta_historia_faltante(self):
         os.unlink(os.path.join(self.tmp, 'historias', 'momotaro.json'))
         errores = verify_catalogo.verificar(self.tmp)
