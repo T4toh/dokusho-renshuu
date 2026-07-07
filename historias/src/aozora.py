@@ -62,11 +62,17 @@ def extraer_cuerpo(texto_completo: str) -> tuple:
     delimitadores = [i for i, l in enumerate(lineas) if _DELIMITADOR.match(l)]
     inicio = delimitadores[1] + 1 if len(delimitadores) >= 2 else 2
 
-    fin = len(lineas)
+    # colofón: desde la línea que empieza con 底本
+    fin = None
     for i in range(inicio, len(lineas)):
         if lineas[i].startswith('底本：') or lineas[i].startswith('底本:'):
             fin = i
             break
+    if len(delimitadores) < 2 and fin is None:
+        raise ValueError(
+            'sin bloque de notación ni colofón: no parece una obra de Aozora')
+    if fin is None:
+        fin = len(lineas)
     return titulo, autor, lineas[inicio:fin]
 
 

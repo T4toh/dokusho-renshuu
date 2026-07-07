@@ -85,6 +85,10 @@ class TestParsear(unittest.TestCase):
         with self.assertRaises(ValueError):
             aozora.parsear('una línea\n')
 
+    def test_texto_plano_sin_estructura_aozora_falla(self):
+        with self.assertRaises(ValueError):
+            aozora.parsear('línea uno\nlínea dos\nlínea tres\nlínea cuatro\n')
+
 
 if __name__ == '__main__':
     unittest.main()
