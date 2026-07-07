@@ -11,26 +11,17 @@ MAX_ORACIONES_POR_PALABRA = 10
 LARGO_MIN_TERMINO = 2
 LARGO_MAX_TERMINO = 6
 
-ARCHIVO_KANJIDIC = 'kanjidic2_min.xml'  # en fuentes reales: kanjidic2.xml
-ARCHIVO_TATOEBA = 'pares_min.tsv'       # en fuentes reales: pares_jpn_eng.tsv
-
 
 def _json(lista) -> str:
     return json.dumps(lista, ensure_ascii=False)
 
 
-def _resolver(dir_fuentes: str, preferido: str, alternativo: str) -> str:
-    """Usa el nombre real si existe, si no el de fixture (para tests)."""
-    ruta = os.path.join(dir_fuentes, preferido)
-    return ruta if os.path.exists(ruta) else os.path.join(dir_fuentes, alternativo)
-
-
 def construir(ruta_db: str, dir_fuentes: str) -> dict:
     palabras = jitendex.parsear_directorio(dir_fuentes)
     kanjis = kanjidic.parsear_kanjidic(
-        _resolver(dir_fuentes, 'kanjidic2.xml', ARCHIVO_KANJIDIC))
+        os.path.join(dir_fuentes, 'kanjidic2.xml'))
     oraciones = tatoeba.parsear_pares(
-        _resolver(dir_fuentes, 'pares_jpn_eng.tsv', ARCHIVO_TATOEBA))
+        os.path.join(dir_fuentes, 'pares_jpn_eng.tsv'))
 
     kanjis_conocidos = {k.kanji for k in kanjis}
 
