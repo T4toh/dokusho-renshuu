@@ -6,9 +6,10 @@ Exit 0 si todo OK, exit 1 si hay errores.
 import sqlite3
 import sys
 
-from src import esquema
+from src import constructor, esquema
 
 TABLAS = ['palabras', 'kanjis', 'oraciones', 'oracion_kanji', 'oracion_palabra']
+UMBRAL_SIGNIFICADOS_VACIOS = 0.01  # 1%
 
 
 def verificar(ruta_db: str, imprimir: bool = False) -> list:
@@ -36,9 +37,36 @@ def verificar(ruta_db: str, imprimir: bool = False) -> list:
     # 4. cap de oraciones por kanji
     exceso = conn.execute(
         'SELECT kanji, COUNT(*) c FROM oracion_kanji GROUP BY kanji'
-        ' HAVING c > 50').fetchall()
+        ' HAVING c > ?', (constructor.MAX_ORACIONES_POR_KANJI,)).fetchall()
     if exceso:
-        errores.append(f'kanjis con más de 50 oraciones: {exceso[:5]}')
+        errores.append(
+            f'kanjis con más de {constructor.MAX_ORACIONES_POR_KANJI}'
+            f' oraciones: {exceso[:5]}')
+
+    # 5. cap de oraciones por palabra
+    exceso_palabra = conn.execute(
+        'SELECT termino, COUNT(*) c FROM oracion_palabra GROUP BY termino'
+        ' HAVING c > ?', (constructor.MAX_ORACIONES_POR_PALABRA,)).fetchall()
+    if exceso_palabra:
+        errores.append(
+            f'palabras con más de {constructor.MAX_ORACIONES_POR_PALABRA}'
+            f' oraciones: {exceso_palabra[:5]}')
+
+    # 6. % de palabras con significados vacíos (detecta bugs de extracción
+    # de glosas, como el de las entradas redirect de Jitendex)
+    total_palabras = conn.execute('SELECT COUNT(*) FROM palabras').fetchone()[0]
+    if total_palabras:
+        vacias = conn.execute(
+            "SELECT COUNT(*) FROM palabras WHERE significados = '[]'"
+        ).fetchone()[0]
+        porcentaje = vacias / total_palabras
+        if imprimir:
+            print(f'  palabras con significados vacíos: {vacias:,}/'
+                  f'{total_palabras:,} ({porcentaje:.2%})')
+        if porcentaje >= UMBRAL_SIGNIFICADOS_VACIOS:
+            errores.append(
+                f'{porcentaje:.2%} de las palabras tienen significados'
+                f' vacíos (umbral: {UMBRAL_SIGNIFICADOS_VACIOS:.0%})')
 
     conn.close()
     return errores
