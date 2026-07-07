@@ -8,8 +8,8 @@
 | Plan | Subsistema                                       | Estado                                                                                                               |
 | ---- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 1    | `diccionario/` — parser → diccionario.db         | ✅ Completo (PR #1 mergeado, release [db-v1](https://github.com/T4toh/dokusho-renshuu/releases/tag/db-v1) publicado) |
-| 2    | `historias/` — pipeline Aozora → JSON + catálogo | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                        |
-| 3    | `app/` — lector Android (Kotlin + Compose)       | Pendiente de Plan 2                                                                                                  |
+| 2    | `historias/` — pipeline Aozora → JSON + catálogo | ✅ Completo (PR pendiente de merge)                                                                                  |
+| 3    | `app/` — lector Android (Kotlin + Compose)       | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                        |
 | 4    | `app/` — mazos .apkg + import de texto           | Pendiente de Plan 3                                                                                                  |
 
 ## Datos operativos
@@ -19,6 +19,9 @@
 - **Fuentes** (URLs vigentes en `diccionario/README.md`): Jitendex ya NO distribuye por GitHub release assets; Tatoeba discontinuó el export directo de pares → `diccionario/fuentes_tatoeba.py` los arma desde exports por-idioma.
 - **Contrato para la app (Plan 3)**: `oracion_palabra` solo indexa términos de 2-6 chars; palabras de 1 kanji → fallback a `oracion_kanji`. Listas en el db = JSON arrays (`ensure_ascii=False`). Versión de esquema en tabla `metadata`.
 - **Entorno**: builds JVM (gradle/Android Studio, Planes 3-4) van en la PC secundaria — la principal tiene un bug de CPU que cuelga con Java. Python (Plan 2) anda en cualquiera.
+- **Catálogo**: `catalogo/catalogo.json` commiteado (4 cuentos de 楠山正雄: momotaro, urashima_taro, issunboshi, kachikachi_yama), URL raw `https://raw.githubusercontent.com/T4toh/dokusho-renshuu/main/catalogo/catalogo.json`, formato `{"version": 1, "historias": [...]}`.
+- **Contrato furigana**: `[inicio, fin, lectura]` con fin exclusivo sobre el texto de la oración; diálogo `「…」` = 1 oración (portar igual en Kotlin, Plan 3).
+- `historias/src/jlpt.py` es generado (regenerar con `genera_jlpt.py` solo si cambia KANJIDIC2).
 
 ## Backlog diferido (review final Plan 1 — no bloqueante)
 
