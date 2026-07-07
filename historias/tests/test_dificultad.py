@@ -10,7 +10,7 @@ class TestDificultad(unittest.TestCase):
             'facil')
 
     def test_dificil_por_kanji_desconocidos(self):
-        # 2 de 3 kanjis fuera del set → pct 0.67 ≥ 0.45
+        # 2 de 3 kanjis fuera del set → pct 0.67 ≥ 0.60
         self.assertEqual(
             dificultad.calcular(['鬱蒼たる森。'], kanji_conocidos={'森'}),
             'dificil')
@@ -21,9 +21,9 @@ class TestDificultad(unittest.TestCase):
             dificultad.calcular([larga], kanji_conocidos=set()), 'dificil')
 
     def test_media(self):
-        # pct 1/3 ≈ 0.33: entre 0.25 y 0.45
+        # pct 0.5: entre 0.45 y 0.60
         self.assertEqual(
-            dificultad.calcular(['山山森。'], kanji_conocidos={'山'}), 'media')
+            dificultad.calcular(['山山森森。'], kanji_conocidos={'山'}), 'media')
 
     def test_sin_kanji_es_facil(self):
         self.assertEqual(

@@ -6,10 +6,12 @@ Métrica del spec: % de ocurrencias de kanji fuera de JLPT N5-N4
 from . import japones
 from .jlpt import KANJI_N5_N4
 
-# umbrales iniciales; ajustar con los números reales del catálogo (Task 10)
-MAX_PCT_FACIL = 0.25
-MAX_LARGO_FACIL = 35
-MIN_PCT_DIFICIL = 0.45
+# umbrales calibrados con los 4 cuentos de 楠山正雄 (catálogo v1): son el piso
+# de dificultad de la app (pct_fuera real 0.35-0.48), deben clasificar facil.
+# dificil queda reservado para prosa adulta (pct ≥ 0.60 o oraciones largas).
+MAX_PCT_FACIL = 0.45
+MAX_LARGO_FACIL = 40
+MIN_PCT_DIFICIL = 0.60
 MIN_LARGO_DIFICIL = 55
 
 
