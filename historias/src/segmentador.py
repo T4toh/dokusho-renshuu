@@ -6,6 +6,12 @@ Este algoritmo se porta a Kotlin en Plan 3 — mantener simple.
 FIN_ORACION = '。！？'
 APERTURA = '「『（'
 CIERRE = '」』）'
+_PUNTUACION = FIN_ORACION + APERTURA + CIERRE
+
+
+def _es_residuo(fragmento: str) -> bool:
+    """Span sin contenido real: solo puntuación y/o espacios."""
+    return all(c in _PUNTUACION or c.isspace() for c in fragmento)
 
 
 def segmentar(texto: str) -> list:
@@ -27,7 +33,16 @@ def segmentar(texto: str) -> list:
             inicio = i + 1
     if texto[inicio:].strip():
         spans.append((inicio, len(texto)))
-    return spans
+    # fusionar spans de solo puntuación (」 residual de diálogo multi-párrafo,
+    # ？ suelto tras ！) con su vecino — regla portada igual a Kotlin en Plan 3
+    fusionados = []
+    for span in spans:
+        if fusionados and (_es_residuo(texto[span[0]:span[1]])
+                           or _es_residuo(texto[fusionados[-1][0]:fusionados[-1][1]])):
+            fusionados[-1] = (fusionados[-1][0], span[1])
+        else:
+            fusionados.append(span)
+    return fusionados
 
 
 def segmentar_parrafo(texto: str, furigana: list) -> list:

@@ -30,6 +30,18 @@ class TestSegmentar(unittest.TestCase):
     def test_texto_vacio(self):
         self.assertEqual(segmentador.segmentar(''), [])
 
+    def test_cierre_residual_se_fusiona_con_la_anterior(self):
+        # cierre de diálogo multi-párrafo: el 「 quedó en otro párrafo
+        self.assertEqual(
+            _textos('ドンブラコッコ、スッコッコ。」'),
+            ['ドンブラコッコ、スッコッコ。」'])
+
+    def test_puntuacion_consecutiva_no_genera_span_suelto(self):
+        self.assertEqual(_textos('来た！？帰る。'), ['来た！？', '帰る。'])
+
+    def test_residuo_inicial_se_fusiona_con_la_siguiente(self):
+        self.assertEqual(_textos('。ほんとう。'), ['。ほんとう。'])
+
 
 class TestSegmentarParrafo(unittest.TestCase):
     def test_furigana_se_reindexa_por_oracion(self):
