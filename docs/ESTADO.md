@@ -5,12 +5,12 @@
 
 ## Dónde estamos (2026-07-07)
 
-| Plan | Subsistema | Estado |
-|------|-----------|--------|
-| 1 | `diccionario/` — parser → diccionario.db | ✅ Completo (PR #1 mergeado, release [db-v1](https://github.com/T4toh/dokusho-renshuu/releases/tag/db-v1) publicado) |
-| 2 | `historias/` — pipeline Aozora → JSON + catálogo | ⏳ Siguiente. Plan a escribir (writing-plans) |
-| 3 | `app/` — lector Android (Kotlin + Compose) | Pendiente de Plan 2 |
-| 4 | `app/` — mazos .apkg + import de texto | Pendiente de Plan 3 |
+| Plan | Subsistema                                       | Estado                                                                                                               |
+| ---- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| 1    | `diccionario/` — parser → diccionario.db         | ✅ Completo (PR #1 mergeado, release [db-v1](https://github.com/T4toh/dokusho-renshuu/releases/tag/db-v1) publicado) |
+| 2    | `historias/` — pipeline Aozora → JSON + catálogo | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                        |
+| 3    | `app/` — lector Android (Kotlin + Compose)       | Pendiente de Plan 2                                                                                                  |
+| 4    | `app/` — mazos .apkg + import de texto           | Pendiente de Plan 3                                                                                                  |
 
 ## Datos operativos
 
@@ -22,7 +22,7 @@
 
 ## Backlog diferido (review final Plan 1 — no bloqueante)
 
-- `jitendex.py`: heurística "item lista plana = redirect" — si un release futuro de Jitendex usa listas para otra cosa, glosas con `→ ` espurio. El check de vacíos de verify_db no lo detectaría.
+- `jitendex.py`: heurística "item lista plana = redirect" — si un release futuro de Jitendex usa listas para otra cosa, glosas con `→` espurio. El check de vacíos de verify_db no lo detectaría.
 - `verify_db.py` CLI: correr sobre ruta inexistente crea un db vacío antes de fallar (falta guard `os.path.exists`).
 - `tatoeba.py` / `verify_db.py`: `int()` sin guarda — línea con id no numérico aborta el build con ValueError sin contexto.
 - `fuentes_tatoeba.py`: carga `eng_sentences.tsv` entero en memoria (OK como one-shot; si molesta, leer links primero y cargar solo ids necesarios).
