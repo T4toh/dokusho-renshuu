@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kanjidic2>
+<character>
+<literal>語</literal>
+<misc><grade>2</grade><stroke_count>14</stroke_count><jlpt>4</jlpt></misc>
+<reading_meaning><rmgroup>
+<reading r_type="ja_on">ゴ</reading>
+<reading r_type="ja_kun">かた.る</reading>
+<reading r_type="ja_kun">かた.らう</reading>
+<meaning>word</meaning>
+<meaning>speech</meaning>
+<meaning m_lang="es">palabra</meaning>
+</rmgroup></reading_meaning>
+</character>
+<character>
+<literal>物</literal>
+<misc><stroke_count>8</stroke_count></misc>
+<reading_meaning><rmgroup>
+<reading r_type="ja_on">ブツ</reading>
+<reading r_type="ja_kun">もの</reading>
+<meaning>thing</meaning>
+</rmgroup></reading_meaning>
+</character>
+</kanjidic2>

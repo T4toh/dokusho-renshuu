@@ -1,0 +1,23 @@
+[
+  ["物語", "ものがたり", "n", "", 4200,
+    [{"type": "structured-content", "content": [
+      {"tag": "ol", "content": [
+        {"tag": "li", "content": "tale"},
+        {"tag": "li", "content": [{"tag": "span", "content": "story"}, " (long)"]}
+      ]}
+    ]}],
+    1000010, "common"],
+  ["猫", "ねこ", "n", "", 9000, ["cat"], 1000020, "common animal"],
+  ["惡どい", "", "old kanji form", "adj-i", -102,
+    [{"type": "structured-content", "content": {
+      "tag": "div", "lang": "ja",
+      "data": {"content": "redirect-glossary"},
+      "content": ["⟶", {"tag": "a", "href": "?query=%E6%82%AA%E3%81%A9%E3%81%84",
+        "content": [
+          {"tag": "ruby", "content": ["悪", {"tag": "rt", "content": "あく"}]},
+          "どい"
+        ]}]
+    }},
+    ["悪どい", ["redirected from 惡どい"]]],
+    -1000260, ""]
+]
