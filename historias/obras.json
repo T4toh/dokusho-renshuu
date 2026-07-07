@@ -1,0 +1,26 @@
+[
+ {
+  "id": "momotaro",
+  "archivo": "momotaro.txt",
+  "fuente": "aozora:18376",
+  "url": "https://www.aozora.gr.jp/cards/000329/files/18376_ruby_12074.zip"
+ },
+ {
+  "id": "urashima_taro",
+  "archivo": "urashima_taro.txt",
+  "fuente": "aozora:3390",
+  "url": "https://www.aozora.gr.jp/cards/000329/files/3390_ruby_6090.zip"
+ },
+ {
+  "id": "issunboshi",
+  "archivo": "issunboshi.txt",
+  "fuente": "aozora:43457",
+  "url": "https://www.aozora.gr.jp/cards/000329/files/43457_ruby_23696.zip"
+ },
+ {
+  "id": "kachikachi_yama",
+  "archivo": "kachikachi_yama.txt",
+  "fuente": "aozora:18377",
+  "url": "https://www.aozora.gr.jp/cards/000329/files/18377_ruby_11923.zip"
+ }
+]
