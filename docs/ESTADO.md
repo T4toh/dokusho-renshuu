@@ -8,8 +8,8 @@
 | Plan | Subsistema                                       | Estado                                                                                                               |
 | ---- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 1    | `diccionario/` — parser → diccionario.db         | ✅ Completo (PR #1 mergeado, release [db-v1](https://github.com/T4toh/dokusho-renshuu/releases/tag/db-v1) publicado) |
-| 2    | `historias/` — pipeline Aozora → JSON + catálogo | ✅ Completo ([PR #2](https://github.com/T4toh/dokusho-renshuu/pull/2) pendiente de merge)                                                                                  |
-| 3    | `app/` — lector Android (Kotlin + Compose)       | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                        |
+| 2    | `historias/` — pipeline Aozora → JSON + catálogo | ✅ Completo ([PR #2](https://github.com/T4toh/dokusho-renshuu/pull/2) mergeado)                                                                                  |
+| 3    | `app/` — lector Android (Kotlin + Compose)       | 📝 Plan listo: `docs/superpowers/plans/2026-07-07-plan-3-app.md`. **Ejecutar en PC secundaria** (paso 0 del plan)     |
 | 4    | `app/` — mazos .apkg + import de texto           | Pendiente de Plan 3                                                                                                  |
 
 ## Datos operativos
