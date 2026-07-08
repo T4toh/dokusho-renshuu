@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from . import esquema, japones, jitendex, kanjidic, tatoeba
 
-MAX_ORACIONES_POR_KANJI = 50
+MAX_ORACIONES_POR_KANJI = 30
 MAX_ORACIONES_POR_PALABRA = 10
 LARGO_MIN_TERMINO = 2
 LARGO_MAX_TERMINO = 6
