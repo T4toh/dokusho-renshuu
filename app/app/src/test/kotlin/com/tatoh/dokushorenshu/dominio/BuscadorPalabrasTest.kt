@@ -1,25 +1,11 @@
 package com.tatoh.dokushorenshu.dominio
 
-import com.tatoh.dokushorenshu.datos.Diccionario
+import com.tatoh.dokushorenshu.datos.DiccionarioFake
 import com.tatoh.dokushorenshu.datos.KanjiInfo
 import com.tatoh.dokushorenshu.datos.OracionEjemplo
 import com.tatoh.dokushorenshu.datos.Palabra
 import org.junit.Assert.*
 import org.junit.Test
-
-private class DiccionarioFake : Diccionario {
-    val palabras = mutableMapOf<String, List<Palabra>>()
-    val kanjis = mutableMapOf<String, KanjiInfo>()
-    val ejemplosPalabra = mutableMapOf<String, List<OracionEjemplo>>()
-    val ejemplosKanji = mutableMapOf<String, List<OracionEjemplo>>()
-
-    override fun buscarPalabra(termino: String) = palabras[termino] ?: emptyList()
-    override fun buscarKanji(kanji: String) = kanjis[kanji]
-    override fun oracionesDePalabra(termino: String, limite: Int) =
-        ejemplosPalabra[termino] ?: emptyList()
-    override fun oracionesDeKanji(kanji: String, limite: Int) =
-        ejemplosKanji[kanji] ?: emptyList()
-}
 
 private fun token(superficie: String, base: String? = null, lectura: String? = null) =
     PalabraToken(superficie, lectura, base, 0, superficie.length, esContenido = true)
