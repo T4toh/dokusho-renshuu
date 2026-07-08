@@ -1,13 +1,14 @@
 package com.tatoh.dokushorenshu.datos
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
 
-interface ClienteHttp {
+fun interface ClienteHttp {
     /** Devuelve el cuerpo como texto o lanza IOException. */
     fun get(url: String): String
 }
@@ -33,6 +34,10 @@ class HistoriasRepo(
     private val listarAssetsHistorias: () -> List<String>,
     private val dirDescargas: File,
     private val http: ClienteHttp = ClienteHttpReal(),
+    // Inyectable solo para tests: permite compartir el TestDispatcher del ViewModel y
+    // que `advanceUntilIdle()` sea determinístico (con Dispatchers.IO real, la resolución
+    // del coroutine ocurre en un hilo de fondo fuera del control del scheduler virtual).
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     companion object {
         const val URL_CATALOGO =
@@ -81,11 +86,11 @@ class HistoriasRepo(
             ?.let { runCatching { ParserHistoria.parsear(it) }.getOrNull() }
     }
 
-    suspend fun catalogoRemoto(): Result<Catalogo> = withContext(Dispatchers.IO) {
+    suspend fun catalogoRemoto(): Result<Catalogo> = withContext(ioDispatcher) {
         runCatching { ParserHistoria.parsearCatalogo(http.get(URL_CATALOGO)) }
     }
 
-    suspend fun descargarHistoria(id: String): Result<Historia> = withContext(Dispatchers.IO) {
+    suspend fun descargarHistoria(id: String): Result<Historia> = withContext(ioDispatcher) {
         runCatching {
             val crudo = http.get(urlHistoria(id))
             val historia = ParserHistoria.parsear(crudo)  // validar ANTES de guardar
