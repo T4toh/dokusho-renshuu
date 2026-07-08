@@ -29,6 +29,7 @@ import java.io.File
  *  el contenido de las definiciones para estos tests, solo que `consultar` no crashee. */
 private class DiccionarioFake : Diccionario {
     override fun buscarPalabra(termino: String): List<Palabra> = emptyList()
+    override fun buscarPorLectura(lectura: String): List<Palabra> = emptyList()
     override fun buscarKanji(kanji: String): KanjiInfo? = null
     override fun oracionesDePalabra(termino: String, limite: Int): List<OracionEjemplo> = emptyList()
     override fun oracionesDeKanji(kanji: String, limite: Int): List<OracionEjemplo> = emptyList()

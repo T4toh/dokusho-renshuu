@@ -25,6 +25,10 @@ class BuscadorPalabras(private val diccionario: Diccionario) {
                 ?.takeIf { it != token.superficie }
                 ?.let { diccionario.buscarPalabra(it) }
                 ?: emptyList()
+        }.ifEmpty {
+            token.lecturaHiragana
+                ?.let { diccionario.buscarPorLectura(it) }
+                ?: emptyList()
         }
         val termino = definiciones.firstOrNull()?.termino ?: token.superficie
         val kanjisUnicos = token.superficie.filter(::esKanji).toList().distinct()

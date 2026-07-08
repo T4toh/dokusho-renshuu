@@ -62,6 +62,23 @@ class DiccionarioSqlite private constructor(private val db: SQLiteDatabase) : Di
             }.toList()
         }
 
+    override fun buscarPorLectura(lectura: String): List<Palabra> =
+        db.rawQuery(
+            "SELECT termino, lectura, significados, tags, popularidad FROM palabras" +
+                " WHERE lectura = ? ORDER BY popularidad DESC LIMIT 10",
+            arrayOf(lectura),
+        ).use { c ->
+            generateSequence { if (c.moveToNext()) c else null }.map {
+                Palabra(
+                    termino = c.getString(0),
+                    lectura = c.getString(1),
+                    significados = listaJson(c.getString(2)),
+                    tags = listaJson(c.getString(3)),
+                    popularidad = c.getInt(4),
+                )
+            }.toList()
+        }
+
     override fun buscarKanji(kanji: String): KanjiInfo? =
         db.rawQuery(
             "SELECT kanji, significados, on_yomi, kun_yomi, jlpt, strokes FROM kanjis WHERE kanji = ?",
