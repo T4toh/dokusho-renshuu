@@ -9,7 +9,7 @@
 | ---- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 1    | `diccionario/` — parser → diccionario.db         | ✅ Completo (PR #1 mergeado, release [db-v1](https://github.com/T4toh/dokusho-renshuu/releases/tag/db-v1) publicado) |
 | 2    | `historias/` — pipeline Aozora → JSON + catálogo | ✅ Completo ([PR #2](https://github.com/T4toh/dokusho-renshuu/pull/2) mergeado)                                                                                  |
-| 3    | `app/` — lector Android (Kotlin + Compose)       | ✅ Completo (PR pendiente de crear — actualizar con #N al abrir) — branch `feature/plan-3-app` |
+| 3    | `app/` — lector Android (Kotlin + Compose)       | ✅ Completo ([PR #3](https://github.com/T4toh/dokusho-renshuu/pull/3)) |
 | 4    | `app/` — mazos .apkg + import de texto           | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                         |
 
 ## Datos operativos
