@@ -74,7 +74,7 @@ class LectorViewModel(
                 }
             }
             // La historia puede haber sido borrada o corrompida entre que se listó en la
-            // biblioteca y que se abrió acá: nunca crashear, mostrar un estado grosero.
+            // biblioteca y que se abrió acá: nunca crashear: degradar a un estado vacío visible.
             if (datos == null) {
                 _estado.value = EstadoLector(titulo = "Historia no disponible")
                 return@launch

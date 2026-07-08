@@ -110,7 +110,7 @@ class LectorViewModelTest {
     }
 
     @Test
-    fun `cargar historia inexistente no crashea y deja estado grosero`() = runTest {
+    fun `cargar historia inexistente no crashea y degrada el estado`() = runTest {
         val dao = ProgresoDaoFake()
         val vm = vmMomotaro(dao, idHistoria = "no-existe")
         vm.cargar()
