@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -51,4 +53,36 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
+}
+
+// ---- assets generados: db del release + historias del catálogo del monorepo ----
+
+val dirAssets = layout.projectDirectory.dir("src/main/assets")
+
+val descargarDiccionario = tasks.register("descargarDiccionario") {
+    val destino = dirAssets.file("diccionario-v1.db").asFile
+    outputs.file(destino)
+    onlyIf { !destino.exists() }
+    doLast {
+        destino.parentFile.mkdirs()
+        val url = "https://github.com/T4toh/dokusho-renshuu/releases/download/db-v1/diccionario-v1.db"
+        println("Descargando diccionario-v1.db (~79 MB) de $url ...")
+        URI(url).toURL().openStream().use { entrada ->
+            destino.outputStream().use { salida -> entrada.copyTo(salida) }
+        }
+        require(destino.length() > 70_000_000) {
+            "db descargado sospechosamente chico (${destino.length()} bytes): borrar y reintentar"
+        }
+    }
+}
+
+val copiarHistorias = tasks.register<Copy>("copiarHistorias") {
+    // fuente de verdad: catalogo/ en la raíz del monorepo (un nivel arriba del proyecto gradle)
+    from(rootProject.layout.projectDirectory.dir("../catalogo/historias")) { into("historias") }
+    from(rootProject.layout.projectDirectory.file("../catalogo/catalogo.json"))
+    into(dirAssets)
+}
+
+tasks.named("preBuild") {
+    dependsOn(descargarDiccionario, copiarHistorias)
 }
