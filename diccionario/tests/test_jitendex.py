@@ -52,6 +52,57 @@ class TestJitendex(unittest.TestCase):
         }]
         self.assertEqual(jitendex.extraer_glosas(glossary), ['→ 伊達メガネ'])
 
+    def test_descarta_pos_embebido_y_ejemplo_inline(self):
+        # Reproduce el bug real (docs/ESTADO.md 2026-07-08 / backlog Plan 1
+        # "li-anidado en li se aplana en una glosa"): un <li> de sentido trae,
+        # además de las sub-glosas, un bloque de info gramatical por-sentido
+        # (más específico que def_tags/term_tags, que solo traen un set
+        # plano) y una oración de ejemplo embebida con furigana. El código
+        # actual concatena todo eso en un solo string; el fix debe descartar
+        # el bloque de PoS y el de ejemplo, y tratar cada <li> anidado como
+        # su propia glosa.
+        # Marcas verificadas contra term_bank_*.json reales (Jitendex
+        # yomitan release descargado desde
+        # github.com/stephenmk/stephenmk.github.io): la info gramatical
+        # por-sentido real usa la marca 'part-of-speech-info' (no 'pos-info'
+        # como se había hipotetizado), y aparece como varios <span> hermanos
+        # -uno por tag- en vez de uno solo envolviendo todo; acá se simplifica
+        # a un solo <span> por brevedad, sin cambiar la marca a verificar. La
+        # marca 'example-sentence' sí coincidió con la hipótesis original.
+        glossary = [{
+            "type": "structured-content",
+            "content": [
+                {"tag": "ol", "content": [
+                    {"tag": "li", "content": [
+                        {"tag": "span",
+                         "data": {"content": "part-of-speech-info"},
+                         "content": [
+                            {"tag": "i", "content": "noun"},
+                            {"tag": "i", "content": "suru"},
+                            {"tag": "i", "content": "transitive"},
+                        ]},
+                        {"tag": "ul", "content": [
+                            {"tag": "li", "content": "washing"},
+                            {"tag": "li", "content": "laundry"},
+                        ]},
+                        {"tag": "div", "data": {"content": "example-sentence"},
+                         "content": [
+                            {"tag": "div", "lang": "ja", "content": [
+                                "この",
+                                {"tag": "ruby", "content": [
+                                    "綿", {"tag": "rt", "content": "めん"}]},
+                                "の服を洗濯した",
+                            ]},
+                            {"tag": "div", "lang": "en",
+                             "content": "I washed this cotton clothing."},
+                        ]},
+                    ]},
+                ]},
+            ],
+        }]
+        self.assertEqual(jitendex.extraer_glosas(glossary),
+                          ['washing', 'laundry'])
+
 
 if __name__ == '__main__':
     unittest.main()

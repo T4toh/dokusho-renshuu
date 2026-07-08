@@ -14,27 +14,59 @@ class Palabra:
     popularidad: int = 0
 
 
-def _texto_plano(nodo) -> str:
-    """Concatena todo el texto de un nodo structured-content."""
+# Marcas 'data.content' que Jitendex usa para envolver contenido que NO es
+# texto de glosa: info gramatical por-sentido (más específica que los tags
+# planos def_tags/term_tags) y oraciones de ejemplo embebidas (los
+# ejemplos de la app ya vienen de Tatoeba por otra vía, vía
+# oracion_palabra/oracion_kanji).
+# Marcas verificadas contra term_bank_*.json reales (Jitendex yomitan release
+# descargada desde github.com/stephenmk/stephenmk.github.io): la info
+# gramatical usa 'part-of-speech-info' (varios <span> hermanos, uno por tag);
+# las oraciones de ejemplo cuelgan de un 'extra-info' pero la marca puntual
+# 'example-sentence' ya alcanza para descartarlas (incluye a su vez
+# example-sentence-a/b y attribution-footnote).
+_MARCAS_DESCARTABLES = {'part-of-speech-info', 'example-sentence'}
+
+
+def _es_descartable(nodo: dict) -> bool:
+    return nodo.get('data', {}).get('content') in _MARCAS_DESCARTABLES
+
+
+def _texto_glosa(nodo) -> str:
+    """Concatena el texto propio de un <li> para usarlo como glosa:
+    descarta furigana (<rt>), bloques marcados como descartables (PoS
+    embebido, oraciones de ejemplo) y no baja a listas anidadas
+    (<ol>/<ul>) — esas se procesan aparte, cada <li> hijo es su propia
+    glosa (ver _buscar_li)."""
     if isinstance(nodo, str):
         return nodo
     if isinstance(nodo, list):
-        return ''.join(_texto_plano(n) for n in nodo)
+        return ''.join(_texto_glosa(n) for n in nodo)
     if isinstance(nodo, dict):
-        return _texto_plano(nodo.get('content', ''))
+        tag = nodo.get('tag')
+        if tag == 'rt' or tag in ('ol', 'ul'):
+            return ''
+        if _es_descartable(nodo):
+            return ''
+        return _texto_glosa(nodo.get('content', ''))
     return ''
 
 
 def _buscar_li(nodo, acumulador: list) -> None:
-    """Junta el texto de cada nodo <li> (una glosa por li)."""
+    """Junta el texto de cada nodo <li> (una glosa por li). Un <li> puede
+    traer, además de su propio texto, una lista anidada de <li> hijos
+    (p.ej. un sentido con sub-glosas): cada hijo se agrega como glosa
+    propia, en vez de aplanarse en el texto del padre."""
     if isinstance(nodo, list):
         for n in nodo:
             _buscar_li(n, acumulador)
     elif isinstance(nodo, dict):
         if nodo.get('tag') == 'li':
-            texto = _texto_plano(nodo.get('content', '')).strip()
+            contenido = nodo.get('content', '')
+            texto = _texto_glosa(contenido).strip()
             if texto:
                 acumulador.append(texto)
+            _buscar_li(contenido, acumulador)
         else:
             _buscar_li(nodo.get('content', []), acumulador)
 
