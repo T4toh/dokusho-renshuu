@@ -61,7 +61,7 @@ dependencies {
 val dirAssets = layout.projectDirectory.dir("src/main/assets")
 
 val descargarDiccionario = tasks.register("descargarDiccionario") {
-    val destino = dirAssets.file("diccionario-v1.db").asFile
+    val destino = dirAssets.file("diccionario-v2.db").asFile
     outputs.file(destino)
     onlyIf { !destino.exists() }
     doLast {
@@ -71,8 +71,8 @@ val descargarDiccionario = tasks.register("descargarDiccionario") {
         // el require de tamaño nunca volvería a correr).
         val temporal = destino.resolveSibling("${destino.name}.tmp")
         if (temporal.exists()) temporal.delete() // descarta restos de una corrida anterior fallida
-        val url = "https://github.com/T4toh/dokusho-renshuu/releases/download/db-v1/diccionario-v1.db"
-        println("Descargando diccionario-v1.db (~79 MB) de $url ...")
+        val url = "https://github.com/T4toh/dokusho-renshuu/releases/download/db-v2/diccionario-v2.db"
+        println("Descargando diccionario-v2.db (~70 MB) de $url ...")
         try {
             URI(url).toURL().openStream().use { entrada ->
                 temporal.outputStream().use { salida -> entrada.copyTo(salida) }

@@ -7,13 +7,13 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
-/** diccionario-v1.db readonly. Se copia de assets al filesDir en el primer
+/** diccionario-v2.db readonly. Se copia de assets al filesDir en el primer
  *  arranque; si falta o la versión no valida, se re-copia (spec: nunca crash). */
 class DiccionarioSqlite private constructor(private val db: SQLiteDatabase) : Diccionario {
 
     companion object {
-        const val NOMBRE_DB = "diccionario-v1.db"
-        const val VERSION_ESPERADA = 1
+        const val NOMBRE_DB = "diccionario-v2.db"
+        const val VERSION_ESPERADA = 2
 
         fun abrir(contexto: Context): DiccionarioSqlite {
             val archivo = File(contexto.filesDir, NOMBRE_DB)
