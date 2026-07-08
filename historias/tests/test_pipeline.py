@@ -41,12 +41,18 @@ class TestProcesarObra(unittest.TestCase):
             self.ruta_txt, {'id': 'momotaro', 'fuente': 'aozora:18376'})
         self.assertEqual(historia['titulo'], '桃太郎')
         self.assertEqual(historia['autor'], '楠山正雄')
+        self.assertEqual(historia['version'], 2)
         self.assertIn(historia['dificultad'], {'facil', 'media', 'dificil'})
-        # el diálogo del fixture queda como una sola oración
+        self.assertEqual(len(historia['parrafos']), 2)
+        textos = [o['texto'] for p in historia['parrafos']
+                  for o in p['oraciones']]
+        self.assertNotIn('一', textos)
         oraciones_p2 = historia['parrafos'][1]['oraciones']
         self.assertEqual(len(oraciones_p2), 1)
         dir_catalogo = os.path.join(self.tmp, 'catalogo')
-        emisor.emitir([historia], dir_catalogo)
+        metadata = {'momotaro': {'titulo_lectura': 'ももたろう',
+                                 'titulo_en': 'Peach Boy'}}
+        emisor.emitir([historia], dir_catalogo, metadata)
         self.assertEqual(verify_catalogo.verificar(dir_catalogo), [])
 
     def test_fuente_inexistente_falla_ruidoso(self):
@@ -76,7 +82,9 @@ class TestProcesarObraDescartaEncabezados(unittest.TestCase):
                   for o in p['oraciones']]
         self.assertNotIn('一', textos)
         dir_catalogo = os.path.join(self.tmp, 'catalogo')
-        emisor.emitir([historia], dir_catalogo)
+        metadata = {'momotaro': {'titulo_lectura': 'ももたろう',
+                                 'titulo_en': 'Peach Boy'}}
+        emisor.emitir([historia], dir_catalogo, metadata)
         self.assertEqual(verify_catalogo.verificar(dir_catalogo), [])
 
 

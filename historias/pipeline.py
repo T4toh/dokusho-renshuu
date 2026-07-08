@@ -55,6 +55,7 @@ def main():
         declaraciones = json.load(f)
 
     historias = []
+    metadata = {}
     for decl in declaraciones:
         historia = procesar_obra(
             os.path.join(args.fuentes, decl['archivo']), decl)
@@ -63,8 +64,12 @@ def main():
         print(f"  {historia['id']}: {len(historia['parrafos'])} párrafos, "
               f"{n_oraciones} oraciones, dificultad {historia['dificultad']}")
         historias.append(historia)
+        metadata[historia['id']] = {
+            'titulo_lectura': decl['titulo_lectura'],
+            'titulo_en': decl.get('titulo_en'),
+        }
 
-    emisor.emitir(historias, args.salida)
+    emisor.emitir(historias, args.salida, metadata)
     print(f'✓ {len(historias)} historias emitidas en {args.salida}/')
     print('Correr verify_catalogo.py antes de commitear.')
 

@@ -2,12 +2,27 @@
 import json
 import os
 
-VERSION_CATALOGO = 1
+from . import japones
+
+VERSION_CATALOGO = 2
+VERSION_HISTORIA = 2
+
+# claves que sí van al JSON de historia en disco (schema sin cambios de v1)
+_CLAVES_HISTORIA_EN_DISCO = (
+    'id', 'titulo', 'autor', 'fuente', 'licencia', 'dificultad', 'version',
+    'parrafos')
 
 
 def construir_historia(id_, titulo, autor, fuente, licencia,
                        dificultad, parrafos) -> dict:
-    """parrafos = [[(texto, furigana), ...] por párrafo] → dict del spec."""
+    """parrafos = [[(texto, furigana), ...] por párrafo] → dict del spec.
+
+    Incluye `kanjis_unicos` y `oraciones` en el dict en memoria (insumo
+    para el catálogo v2); no forman parte del schema del JSON de historia
+    en disco — ver `_CLAVES_HISTORIA_EN_DISCO`.
+    """
+    texto_completo = ''.join(
+        texto for oraciones in parrafos for texto, _ in oraciones)
     return {
         'id': id_,
         'titulo': titulo,
@@ -15,7 +30,9 @@ def construir_historia(id_, titulo, autor, fuente, licencia,
         'fuente': fuente,
         'licencia': licencia,
         'dificultad': dificultad,
-        'version': 1,
+        'version': VERSION_HISTORIA,
+        'kanjis_unicos': len(japones.extraer_kanjis(texto_completo)),
+        'oraciones': sum(len(oraciones) for oraciones in parrafos),
         'parrafos': [
             {'oraciones': [
                 {'texto': texto, 'furigana': furigana, 'traduccion': None}
@@ -35,21 +52,32 @@ def _escribir_json(ruta: str, datos) -> None:
     os.replace(tmp, ruta)
 
 
-def emitir(historias: list, dir_catalogo: str) -> dict:
-    """Escribe historias/<id>.json + catalogo.json. Devuelve stats."""
+def emitir(historias: list, dir_catalogo: str, metadata: dict) -> dict:
+    """Escribe historias/<id>.json + catalogo.json. Devuelve stats.
+
+    `metadata` = {id: {'titulo_lectura': str, 'titulo_en': str|None}},
+    curado a mano en la config del pipeline (ver `obras.json`).
+    """
     dir_historias = os.path.join(dir_catalogo, 'historias')
     os.makedirs(dir_historias, exist_ok=True)
     entradas = []
     for historia in historias:
         ruta = os.path.join(dir_historias, f"{historia['id']}.json")
-        _escribir_json(ruta, historia)
+        datos_historia = {clave: historia[clave]
+                          for clave in _CLAVES_HISTORIA_EN_DISCO}
+        _escribir_json(ruta, datos_historia)
+        meta = metadata[historia['id']]
         entradas.append({
             'id': historia['id'],
             'titulo': historia['titulo'],
+            'titulo_lectura': meta['titulo_lectura'],
+            'titulo_en': meta['titulo_en'],
             'autor': historia['autor'],
             'dificultad': historia['dificultad'],
             'tamaño': os.path.getsize(ruta),
             'version': historia['version'],
+            'kanjis_unicos': historia['kanjis_unicos'],
+            'oraciones': historia['oraciones'],
         })
     _escribir_json(os.path.join(dir_catalogo, 'catalogo.json'),
                    {'version': VERSION_CATALOGO, 'historias': entradas})
