@@ -55,6 +55,7 @@
 - `DiccionarioSqlite` no expone `close()`; test deja ruido CloseGuard en stderr.
 - `HistoriasRepo`: doc de ClienteHttpReal dice IOException pero lanza IllegalArgumentException; `.tmp` huérfano posible si el proceso muere entre write y rename (filtrado por extensión, no rompe).
 - Gradle: tasks de assets sin group/description; `copiarHistorias` copia cualquier extensión.
+- `App`: warm-up thread de lazies sin `runCatching` — si `DiccionarioSqlite.abrir` lanza (disco lleno) mata el proceso al arranque en vez de en la primera navegación (lazy SYNCHRONIZED no cachea fallas; con runCatching el path del VM reintentaría en contexto).
 - Validación en tablet (2026-07-08, checklist 12/12 OK): glosas de Jitendex se ven concatenadas sin separador en el sheet ("nounsurutransitivewashing…") — raíz en backlog Plan 1 (li-anidado aplanado), visible ahora en UI; `DetalleKanjiScreen` y `AcercaScreen` renderizan con fondo claro fijo (no usan el background del tema — inconsistente en dark mode); primera "oración" de cada cuento es el encabezado de sección `一` de Aozora (pipeline Plan 2: considerar filtrarlo o fusionarlo).
 
 ## Proceso de trabajo usado
