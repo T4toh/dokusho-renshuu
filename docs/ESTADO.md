@@ -3,14 +3,14 @@
 > Contexto portable entre máquinas/sesiones. Actualizar al cerrar cada plan.
 > Spec: `docs/superpowers/specs/2026-07-06-dokusho-renshuu-design.md`
 
-## Dónde estamos (2026-07-07)
+## Dónde estamos (2026-07-08)
 
 | Plan | Subsistema                                       | Estado                                                                                                               |
 | ---- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 1    | `diccionario/` — parser → diccionario.db         | ✅ Completo (PR #1 mergeado, release [db-v1](https://github.com/T4toh/dokusho-renshuu/releases/tag/db-v1) publicado) |
 | 2    | `historias/` — pipeline Aozora → JSON + catálogo | ✅ Completo ([PR #2](https://github.com/T4toh/dokusho-renshuu/pull/2) mergeado)                                                                                  |
-| 3    | `app/` — lector Android (Kotlin + Compose)       | 📝 Plan listo: `docs/superpowers/plans/2026-07-07-plan-3-app.md`. **Ejecutar en PC secundaria** (paso 0 del plan)     |
-| 4    | `app/` — mazos .apkg + import de texto           | Pendiente de Plan 3                                                                                                  |
+| 3    | `app/` — lector Android (Kotlin + Compose)       | ✅ Completo ([PR #3](https://github.com/T4toh/dokusho-renshuu/pull/3)) |
+| 4    | `app/` — mazos .apkg + import de texto           | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                         |
 
 ## Datos operativos
 
@@ -22,6 +22,9 @@
 - **Catálogo**: `catalogo/catalogo.json` commiteado (4 cuentos de 楠山正雄: momotaro, urashima_taro, issunboshi, kachikachi_yama), URL raw `https://raw.githubusercontent.com/T4toh/dokusho-renshuu/main/catalogo/catalogo.json`, formato `{"version": 1, "historias": [...]}`.
 - **Contrato furigana**: `[inicio, fin, lectura]` con fin exclusivo sobre el texto de la oración; diálogo `「…」` = 1 oración (portar igual en Kotlin, Plan 3).
 - `historias/src/jlpt.py` es generado (regenerar con `genera_jlpt.py` solo si cambia KANJIDIC2).
+- **App (Plan 3)**: `app/` compila con JDK 17+ (probado JDK 21) + SDK 36 (PC secundaria); assets generados por gradle tasks (`descargarDiccionario` baja el db del release con escritura atómica tmp→rename; `copiarHistorias` empaqueta `catalogo/`). AGP 9.2 usa Kotlin built-in (sin plugin kotlin-android ni kotlinOptions).
+- **Palabras tocadas**: Room (`palabras_tocadas`) — insumo directo de Plan 4.
+- **Para Plan 4**: portar segmentador de `historias/src/segmentador.py` CON la regla de fusión de spans; formato `.apkg` = zip + SQLite (referencia genanki); IDs estables por kanji (guid Anki).
 
 ## Backlog diferido (review final Plan 1 — no bloqueante)
 
@@ -41,6 +44,19 @@
 - `pipeline`: cp932 puede decodificar UTF-8 como mojibake sin lanzar (mitigado por sanity check manual); rama fallback utf-8 sin test.
 - `emisor`: sin tests de multi-historia/ids duplicados en `emitir`.
 - `genera_jlpt`: fixture sin entrada `jlpt=3` (rama N4 sin test directo).
+
+## Backlog diferido (reviews Plan 3 — no bloqueante)
+
+- `BuscadorPalabras`: regla 2-6 chars cuenta UTF-16 units, no code points — diverge solo con kanji fuera del BMP (catálogo actual validado BMP-only; riesgo conocido #4 del plan).
+- `PalabraSheet`: muestra solo `definiciones.first()` — múltiples entradas del diccionario se descartan (verbatim del plan).
+- `lecturaDelToken`: tests no cubren overlap parcial ni borde fin==inicio; guard de `mover()` con oraciones vacías sin test.
+- `tocarPalabra`: sin guard de doble-tap (race UX last-wins, benigna).
+- Rotación re-dispara `LaunchedEffect(Unit)` → refetch de catálogo/historia (flash de Cargando; idempotente).
+- `DiccionarioSqlite` no expone `close()`; test deja ruido CloseGuard en stderr.
+- `HistoriasRepo`: doc de ClienteHttpReal dice IOException pero lanza IllegalArgumentException; `.tmp` huérfano posible si el proceso muere entre write y rename (filtrado por extensión, no rompe).
+- Gradle: tasks de assets sin group/description; `copiarHistorias` copia cualquier extensión.
+- `App`: warm-up thread de lazies sin `runCatching` — si `DiccionarioSqlite.abrir` lanza (disco lleno) mata el proceso al arranque en vez de en la primera navegación (lazy SYNCHRONIZED no cachea fallas; con runCatching el path del VM reintentaría en contexto).
+- Validación en tablet (2026-07-08, checklist 12/12 OK): glosas de Jitendex se ven concatenadas sin separador en el sheet ("nounsurutransitivewashing…") — raíz en backlog Plan 1 (li-anidado aplanado), visible ahora en UI; `DetalleKanjiScreen` y `AcercaScreen` renderizan con fondo claro fijo (no usan el background del tema — inconsistente en dark mode); primera "oración" de cada cuento es el encabezado de sección `一` de Aozora (pipeline Plan 2: considerar filtrarlo o fusionarlo).
 
 ## Proceso de trabajo usado
 
