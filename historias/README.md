@@ -29,10 +29,10 @@ mv *.txt momotaro.txt
 ## Uso
 
 ```bash
-python genera_jlpt.py                  # regenerar src/jlpt.py (solo si cambia KANJIDIC2)
-python pipeline.py                     # fuentes/ + obras.json → ../catalogo/
-python verify_catalogo.py              # verificación (exit 1 si falla)
-python -m unittest discover tests -v   # tests
+python3 genera_jlpt.py                  # regenerar src/jlpt.py (solo si cambia KANJIDIC2)
+python3 pipeline.py                     # fuentes/ + obras.json → ../catalogo/
+python3 verify_catalogo.py              # verificación (exit 1 si falla)
+python3 -m unittest discover tests -v   # tests
 ```
 
 ## Contrato de datos (app, Plan 3)
@@ -51,7 +51,7 @@ python -m unittest discover tests -v   # tests
 
 1. Agregar entrada a `obras.json` (id, archivo, fuente, url).
 2. Descargar el `.txt` a `fuentes/` (ver arriba).
-3. `python pipeline.py && python verify_catalogo.py`
+3. `python3 pipeline.py && python3 verify_catalogo.py`
 4. Commitear `catalogo/` regenerado.
 
 ## Licencias
