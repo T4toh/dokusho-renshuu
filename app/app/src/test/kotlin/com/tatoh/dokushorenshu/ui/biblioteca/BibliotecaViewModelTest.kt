@@ -1,10 +1,7 @@
 package com.tatoh.dokushorenshu.ui.biblioteca
 
 import com.tatoh.dokushorenshu.datos.HistoriasRepo
-import com.tatoh.dokushorenshu.datos.progreso.PalabraTocada
-import com.tatoh.dokushorenshu.datos.progreso.Pref
-import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
-import com.tatoh.dokushorenshu.datos.progreso.ProgresoHistoria
+import com.tatoh.dokushorenshu.datos.progreso.ProgresoDaoFake
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -19,35 +16,8 @@ import java.io.File
 import java.io.IOException
 
 // Fakes mínimos: mismo patrón que HistoriasRepoTest (http fake + assets fake) y un
-// ProgresoDao in-memory implementado a mano (map). Ver Step 3 para las firmas.
-
-/** ProgresoDao in-memory: suficiente para el ViewModel, no ejercita Room. */
-private class ProgresoDaoFake : ProgresoDao {
-    private val progresos = mutableMapOf<String, ProgresoHistoria>()
-    private val palabras = mutableListOf<PalabraTocada>()
-    private val prefs = mutableMapOf<String, String>()
-
-    override suspend fun progreso(id: String): ProgresoHistoria? = progresos[id]
-
-    override suspend fun todos(): List<ProgresoHistoria> = progresos.values.toList()
-
-    override suspend fun guardarProgreso(progreso: ProgresoHistoria) {
-        progresos[progreso.idHistoria] = progreso
-    }
-
-    override suspend fun registrarPalabra(palabra: PalabraTocada) {
-        palabras.add(palabra)
-    }
-
-    override suspend fun palabrasDe(id: String): List<PalabraTocada> =
-        palabras.filter { it.idHistoria == id }
-
-    override suspend fun pref(clave: String): String? = prefs[clave]
-
-    override suspend fun guardarPref(pref: Pref) {
-        prefs[pref.clave] = pref.valor
-    }
-}
+// ProgresoDao in-memory implementado a mano (map). ProgresoDaoFake vive en
+// datos/progreso/Fakes.kt: se comparte con LectorViewModelTest (Task 10).
 
 class BibliotecaViewModelTest {
     private val dispatcher = StandardTestDispatcher()
