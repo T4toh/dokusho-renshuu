@@ -65,13 +65,24 @@ val descargarDiccionario = tasks.register("descargarDiccionario") {
     onlyIf { !destino.exists() }
     doLast {
         destino.parentFile.mkdirs()
+        // se descarga a un archivo temporal para que una descarga interrumpida nunca deje
+        // un archivo parcial en el destino final (onlyIf lo detectaría como "ya existe" y
+        // el require de tamaño nunca volvería a correr).
+        val temporal = destino.resolveSibling("${destino.name}.tmp")
+        if (temporal.exists()) temporal.delete() // descarta restos de una corrida anterior fallida
         val url = "https://github.com/T4toh/dokusho-renshuu/releases/download/db-v1/diccionario-v1.db"
         println("Descargando diccionario-v1.db (~79 MB) de $url ...")
-        URI(url).toURL().openStream().use { entrada ->
-            destino.outputStream().use { salida -> entrada.copyTo(salida) }
-        }
-        require(destino.length() > 70_000_000) {
-            "db descargado sospechosamente chico (${destino.length()} bytes): borrar y reintentar"
+        try {
+            URI(url).toURL().openStream().use { entrada ->
+                temporal.outputStream().use { salida -> entrada.copyTo(salida) }
+            }
+            require(temporal.length() > 70_000_000) {
+                "db descargado sospechosamente chico (${temporal.length()} bytes): descartado, reintentar"
+            }
+            // recién acá, con el archivo ya validado, se promueve al destino final
+            check(temporal.renameTo(destino)) { "no se pudo mover $temporal a $destino" }
+        } finally {
+            if (temporal.exists()) temporal.delete() // limpia si algo falló antes del rename
         }
     }
 }
