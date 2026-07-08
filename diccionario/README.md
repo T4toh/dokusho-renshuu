@@ -60,8 +60,8 @@ es el fix a aplicar (con test que reproduzca el caso primero).
 ## Uso
 
 ```bash
-python parser.py                      # fuentes/ → diccionario-v1.db
-python verify_db.py diccionario-v1.db # verificación (exit 1 si falla)
+python parser.py                      # fuentes/ → diccionario-v2.db
+python verify_db.py diccionario-v2.db # verificación (exit 1 si falla)
 python -m unittest discover tests -v  # tests
 ```
 
@@ -73,12 +73,18 @@ mostrar oraciones de ejemplo.
 
 ## Release
 
-1. `python parser.py && python verify_db.py diccionario-v1.db`
+1. `python parser.py && python verify_db.py diccionario-v2.db`
 2. Chequeo manual: abrir el db, buscar 2-3 palabras conocidas (`verify_db.py`
-   ya hace spot-checks de 語/物/日/人 y 物語)
-3. `gh release create db-v1 diccionario/diccionario-v1.db --title "diccionario.db v1" \
+   ya hace spot-checks de 語/物/日/人 y 物語); confirmar a ojo que
+   `significados` de una palabra con varios sentidos (p.ej. 洗濯) no trae
+   tags gramaticales ni oraciones de ejemplo pegadas al texto.
+3. Si `diccionario-v2.db` supera 80 MB: bajar `MAX_ORACIONES_POR_KANJI`
+   en `src/constructor.py`, reconstruir y repetir el chequeo de tamaño.
+4. `gh release create db-v2 diccionario/diccionario-v2.db --title "diccionario.db v2" \
     --notes "Jitendex v(fecha del zip descargado) + KANJIDIC2 <fecha> + Tatoeba <fecha>"`
-4. La app (Plan 3) baja este asset a `app/src/main/assets/`
+5. La app (Plan 3.5 Frente C) baja este asset a `app/src/main/assets/`
+   (`VERSION_ESPERADA = 2`,
+   `https://github.com/T4toh/dokusho-renshuu/releases/download/db-v2/diccionario-v2.db`)
 
 ## Licencias
 
