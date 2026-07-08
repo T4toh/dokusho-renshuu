@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -23,6 +24,9 @@ fun BibliotecaScreen(
 ) {
     val locales by vm.locales.collectAsState()
     val catalogo by vm.catalogo.collectAsState()
+
+    // carga inicial al entrar a la pantalla
+    LaunchedEffect(Unit) { vm.cargar() }
 
     Scaffold(topBar = {
         TopAppBar(
