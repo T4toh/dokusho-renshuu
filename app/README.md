@@ -1,0 +1,33 @@
+# app/ — Dokusho Renshū (Android)
+
+Lector de japonés: historias de `catalogo/` con furigana, diccionario offline
+(`diccionario-v1.db`) y detalle de kanji. Kotlin + Jetpack Compose, minSdk 26.
+
+## Build
+
+```bash
+./gradlew assembleDebug     # baja el db del release + copia historias (tasks de assets)
+./gradlew test              # tests JVM/Robolectric
+./gradlew installDebug      # instalar en dispositivo
+```
+
+Requiere JDK 17+ (probado con JDK 21) y Android SDK 36. Los assets NO se commitean:
+`descargarDiccionario` baja `diccionario-v1.db` del release `db-v1` (una vez);
+`copiarHistorias` copia `../catalogo/` en cada build.
+
+## Arquitectura
+
+- `datos/` — DiccionarioSqlite (readonly, copiado de assets al primer arranque),
+  HistoriasRepo (assets + descargas + catálogo remoto), Room (progreso, palabras
+  tocadas — insumo del Plan 4 —, prefs).
+- `dominio/` — Tokenizador (Kuromoji IPADIC) y BuscadorPalabras (contrato db:
+  `oracion_palabra` 2-6 chars, fallback `oracion_kanji`). JVM puro.
+- `ui/` — Compose M3: Biblioteca, Lector (furigana pre-alineada del JSON,
+  fin exclusivo), Detalle kanji, Acerca de (atribuciones).
+
+## Actualizar datos
+
+- Nuevo db: publicar release `db-vN`, actualizar URL/`VERSION_ESPERADA`, borrar
+  `app/src/main/assets/diccionario-v1.db` y rebuildear.
+- Nuevas historias: regenerar `catalogo/` (ver `historias/README.md`) — el build
+  las re-empaqueta solo.
