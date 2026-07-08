@@ -146,6 +146,163 @@ class TestJitendex(unittest.TestCase):
         self.assertEqual(jitendex.extraer_glosas(glossary),
                           ['compression (of data)'])
 
+    def test_descarta_xref_forms_y_attribution(self):
+        # Reproduce el bug real con 洗濯 (term_bank_36.json, review final
+        # 2026-07-08 sobre diccionario-v2.db): un sense-group trae un xref
+        # embebido ("See also" + palabra referenciada + su glosa) y, además
+        # del <ul> de sense-groups, hay un <li> HERMANO con data.content
+        # 'forms' (variantes de escritura/lectura) y un <div> 'attribution'
+        # (créditos JMdict/Tatoeba) fuera de cualquier <li>.
+        # Sin el fix: ['washing', 'laundry',
+        #   'See also命の洗濯casting off the drudgery...',
+        #   'relaxation', 'rejuvenation', 'melting away (...)',
+        #   'forms洗濯せんたくせんだく']
+        # Con el fix, el xref y el <li> 'forms' desaparecen (attribution no
+        # está dentro de ningún <li> así que ya no ensucia ninguna glosa,
+        # pero se descarta igual por si en otras entradas sí lo está).
+        glossary = [{
+            "type": "structured-content",
+            "content": [
+                {"tag": "ul", "data": {"content": "sense-groups"}, "content": [
+                    {"tag": "li", "data": {"content": "sense-group"}, "content": [
+                        {"tag": "span", "data": {"content": "part-of-speech-info"},
+                         "content": "noun"},
+                        {"tag": "div", "data": {"content": "sense"}, "content": [
+                            {"tag": "ul", "data": {"content": "glossary"}, "content": [
+                                {"tag": "li", "content": "washing"},
+                                {"tag": "li", "content": "laundry"},
+                            ]},
+                        ]},
+                    ]},
+                    {"tag": "li", "data": {"content": "sense-group"}, "content": [
+                        {"tag": "div", "data": {"content": "sense"}, "content": [
+                            {"tag": "ul", "data": {"content": "glossary"}, "content": [
+                                {"tag": "li", "content": "relaxation"},
+                                {"tag": "li", "content": "rejuvenation"},
+                            ]},
+                            {"tag": "div", "data": {"content": "extra-info"}, "content": [
+                                {"tag": "div", "data": {"content": "xref"}, "content": [
+                                    {"tag": "div", "data": {"content": "xref-content"}, "content": [
+                                        {"tag": "span", "data": {"content": "reference-label"},
+                                         "content": "See also"},
+                                        {"tag": "a", "content": [
+                                            {"tag": "ruby", "content": [
+                                                "命", {"tag": "rt", "content": "いのち"}]},
+                                            "の",
+                                            {"tag": "ruby", "content": [
+                                                "洗", {"tag": "rt", "content": "せん"}]},
+                                            {"tag": "ruby", "content": [
+                                                "濯", {"tag": "rt", "content": "たく"}]},
+                                        ]},
+                                    ]},
+                                    {"tag": "div", "data": {"content": "xref-glossary"},
+                                     "content": "casting off the drudgery of everyday life"},
+                                ]},
+                            ]},
+                        ]},
+                    ]},
+                    {"tag": "li", "data": {"content": "forms"}, "content": [
+                        {"tag": "span", "data": {"content": "forms-label"},
+                         "content": "forms"},
+                        {"tag": "table", "content": [
+                            {"tag": "tr", "content": [
+                                {"tag": "th", "content": "せんたく"},
+                                {"tag": "td", "content": "洗濯"},
+                            ]},
+                        ]},
+                    ]},
+                ]},
+                {"tag": "div", "data": {"content": "attribution"}, "content": [
+                    {"tag": "a", "content": "JMdict"},
+                ]},
+            ],
+        }]
+        self.assertEqual(
+            jitendex.extraer_glosas(glossary),
+            ['washing', 'laundry', 'relaxation', 'rejuvenation'])
+
+    def test_mantiene_info_gloss_pero_descarta_su_rotulo_y_sense_note(self):
+        # Reproduce el caso real de のか (partícula, sin entrada en JMdict con
+        # glosario plano): cada sentido NO trae un <ul data-content=glossary>
+        # -toda la definición vive en un bloque 'info-gloss' ("Explanation: ...")-
+        # y además trae un 'sense-note' ("Note: sentence ending particle").
+        # info-gloss NO puede descartarse en bloque: para ~78 sentidos reales
+        # (p.ej. ヾ, ゝ, 々, のか) es la ÚNICA fuente de definición y
+        # descartarlo entero dejaría la glosa vacía. Sí hay que descartar su
+        # rótulo fijo ('info-gloss-label' = "Explanation") para no concatenar
+        # "Explanationendorsing and questioning...". sense-note nunca aparece
+        # solo (siempre junto a glossary o info-gloss reales, verificado
+        # contra las ~350k fuentes reales) así que se descarta entero sin
+        # riesgo de vaciar la glosa.
+        info_gloss = {"tag": "div", "data": {"content": "info-gloss"}, "content": [
+            {"tag": "div", "data": {"content": "info-gloss-label"},
+             "content": "Explanation"},
+            {"tag": "div", "data": {"content": "info-gloss-content"},
+             "content": "endorsing and questioning the preceding statement"},
+        ]}
+        sense_note = {"tag": "div", "data": {"content": "sense-note"}, "content": [
+            {"tag": "div", "data": {"content": "sense-note-label"}, "content": "Note"},
+            {"tag": "div", "data": {"content": "sense-note-content"},
+             "content": "sentence ending particle"},
+        ]}
+        sense_li = {"tag": "li", "data": {"content": "sense"}, "content": {
+            "tag": "div", "data": {"content": "extra-info"}, "content": [
+                info_gloss,
+                sense_note,
+            ],
+        }}
+        sense_group_li = {"tag": "li", "data": {"content": "sense-group"}, "content": [
+            {"tag": "span", "data": {"content": "part-of-speech-info"},
+             "content": "particle"},
+            {"tag": "ol", "content": [sense_li]},
+        ]}
+        glossary = [{
+            "type": "structured-content",
+            "content": [
+                {"tag": "ul", "data": {"content": "sense-groups"},
+                 "content": sense_group_li},
+            ],
+        }]
+        self.assertEqual(
+            jitendex.extraer_glosas(glossary),
+            ['endorsing and questioning the preceding statement'])
+
+    def test_descarta_lang_source_misc_dialect_y_graphic(self):
+        # lang-source (etimología, p.ej. "Language of Origin: Portuguese:
+        # espada") no es marca hipotetizada por el plan original: apareció en
+        # la investigación empírica de esta task (10496 hits en fuentes
+        # reales) y nunca es la única fuente de una glosa (siempre acompaña a
+        # glossary o info-gloss reales). misc-info/dialect-info son tags de
+        # una palabra (como field-info, ya descartado) y graphic envuelve una
+        # imagen con su crédito.
+        glossary = [{
+            "type": "structured-content",
+            "content": [
+                {"tag": "ol", "content": [
+                    {"tag": "li", "content": [
+                        {"tag": "span", "data": {"content": "misc-info"}, "content": "abbr."},
+                        {"tag": "span", "data": {"content": "dialect-info"}, "content": "Kansai"},
+                        {"tag": "ul", "data": {"content": "glossary"},
+                         "content": {"tag": "li", "content": "espada (sword)"}},
+                        {"tag": "div", "data": {"content": "extra-info"}, "content": [
+                            {"tag": "div", "data": {"content": "lang-source"}, "content": [
+                                {"tag": "div", "data": {"content": "lang-source-label"},
+                                 "content": "Language of Origin"},
+                                {"tag": "div", "data": {"content": "lang-source-content"},
+                                 "content": "Portuguese: \"espada\""},
+                            ]},
+                            {"tag": "div", "data": {"content": "graphic"}, "content": [
+                                {"tag": "img", "path": "jitendex/graphics/x.avif"},
+                                {"tag": "div", "data": {"content": "graphic-attribution"},
+                                 "content": [{"tag": "a", "content": "Wikimedia Commons"}]},
+                            ]},
+                        ]},
+                    ]},
+                ]},
+            ],
+        }]
+        self.assertEqual(jitendex.extraer_glosas(glossary), ['espada (sword)'])
+
 
 if __name__ == '__main__':
     unittest.main()
