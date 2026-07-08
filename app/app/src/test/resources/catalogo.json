@@ -1,0 +1,37 @@
+{
+ "version": 1,
+ "historias": [
+  {
+   "id": "momotaro",
+   "titulo": "桃太郎",
+   "autor": "楠山正雄",
+   "dificultad": "facil",
+   "tamaño": 67523,
+   "version": 1
+  },
+  {
+   "id": "urashima_taro",
+   "titulo": "浦島太郎",
+   "autor": "楠山正雄",
+   "dificultad": "facil",
+   "tamaño": 38101,
+   "version": 1
+  },
+  {
+   "id": "issunboshi",
+   "titulo": "一寸法師",
+   "autor": "楠山正雄",
+   "dificultad": "media",
+   "tamaño": 73787,
+   "version": 1
+  },
+  {
+   "id": "kachikachi_yama",
+   "titulo": "かちかち山",
+   "autor": "楠山正雄",
+   "dificultad": "facil",
+   "tamaño": 45839,
+   "version": 1
+  }
+ ]
+}
