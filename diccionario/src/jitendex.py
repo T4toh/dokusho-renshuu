@@ -16,16 +16,26 @@ class Palabra:
 
 # Marcas 'data.content' que Jitendex usa para envolver contenido que NO es
 # texto de glosa: info gramatical por-sentido (más específica que los tags
-# planos def_tags/term_tags) y oraciones de ejemplo embebidas (los
+# planos def_tags/term_tags), oraciones de ejemplo embebidas (los
 # ejemplos de la app ya vienen de Tatoeba por otra vía, vía
-# oracion_palabra/oracion_kanji).
+# oracion_palabra/oracion_kanji), info específica del dominio/campo (p.ej.
+# "computing"), y antónimos embebidos en la glosa.
 # Marcas verificadas contra term_bank_*.json reales (Jitendex yomitan release
 # descargada desde github.com/stephenmk/stephenmk.github.io): la info
 # gramatical usa 'part-of-speech-info' (varios <span> hermanos, uno por tag);
 # las oraciones de ejemplo cuelgan de un 'extra-info' pero la marca puntual
 # 'example-sentence' ya alcanza para descartarlas (incluye a su vez
-# example-sentence-a/b y attribution-footnote).
-_MARCAS_DESCARTABLES = {'part-of-speech-info', 'example-sentence'}
+# example-sentence-a/b y attribution-footnote); field-info es más específica
+# que los tags planos pero incluirla ensucia las glosas (decisión review
+# 2026-07-08: descartar es más limpio que mantener); antonym-content y
+# antonym-glossary envuelven la referencia al antónimo y su definición.
+_MARCAS_DESCARTABLES = {
+    'part-of-speech-info',
+    'example-sentence',
+    'field-info',
+    'antonym-content',
+    'antonym-glossary'
+}
 
 
 def _es_descartable(nodo: dict) -> bool:

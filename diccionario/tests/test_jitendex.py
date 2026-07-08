@@ -103,6 +103,49 @@ class TestJitendex(unittest.TestCase):
         self.assertEqual(jitendex.extraer_glosas(glossary),
                           ['washing', 'laundry'])
 
+    def test_descarta_field_info_y_antonym_markers(self):
+        # Reproduce el bug real con 圧縮 (term_bank_13.json): un sentido
+        # (sense) trae info específica del campo (field-info, p.ej.
+        # "computing") y un bloque antonym con dos marcas:
+        # - antonym-content: el rótulo "Antonym" y el kanji referenciado
+        # - antonym-glossary: la glosa del antónimo
+        # Ambas marcas deben descartarse para que la glosa final sea limpia.
+        # Sin el fix, la glosa incluiría: "computing" + "Antonym解凍②..." +
+        # glosa real. Con el fix, solo la glosa real.
+        glossary = [{
+            "type": "structured-content",
+            "content": [
+                {"tag": "ol", "content": [
+                    {"tag": "li", "content": [
+                        {"tag": "span",
+                         "title": "computing",
+                         "data": {"content": "field-info"},
+                         "content": "computing"},
+                        {"tag": "ul", "data": {"content": "glossary"},
+                         "content": {"tag": "li", "content": "compression (of data)"}},
+                        {"tag": "div", "data": {"content": "extra-info"},
+                         "content": [
+                             {"tag": "div", "data": {"content": "antonym-content"},
+                              "content": [
+                                  {"tag": "span", "content": "Antonym"},
+                                  {"tag": "a", "content": [
+                                      {"tag": "ruby", "content": [
+                                          "解", {"tag": "rt", "content": "かい"}]},
+                                      {"tag": "ruby", "content": [
+                                          "凍", {"tag": "rt", "content": "とう"}]},
+                                  ]},
+                              ]},
+                             {"tag": "div", "data": {"content": "antonym-glossary"},
+                              "content": "② decompression (of data); extraction; unpacking; unzipping"},
+                         ]},
+                    ]},
+                ]},
+            ],
+        }]
+        # La glosa debe contener solo "compression (of data)", sin marcadores.
+        self.assertEqual(jitendex.extraer_glosas(glossary),
+                          ['compression (of data)'])
+
 
 if __name__ == '__main__':
     unittest.main()
