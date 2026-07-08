@@ -51,4 +51,20 @@ class ParserHistoriaTest {
     fun `json roto lanza IllegalArgumentException tambien`() {
         assertThrows(IllegalArgumentException::class.java) { ParserHistoria.parsear("no es json") }
     }
+
+    @Test
+    fun `dificultad invalida lanza`() {
+        val json = """{"id":"x","titulo":"t","autor":"a","fuente":"f","licencia":"l",
+            "dificultad":"imposible","version":1,
+            "parrafos":[{"oraciones":[{"texto":"ab","furigana":[[0,1,"あ"]]}]}]}"""
+        val e = assertThrows(IllegalArgumentException::class.java) { ParserHistoria.parsear(json) }
+        assertTrue(e.message!!.contains("dificultad"))
+    }
+
+    @Test
+    fun `catalogo dificultad invalida lanza`() {
+        val json = """{"version":1,"historias":[{"id":"x","titulo":"t","autor":"a","dificultad":"xx","tamaño":1,"version":1}]}"""
+        val e = assertThrows(IllegalArgumentException::class.java) { ParserHistoria.parsearCatalogo(json) }
+        assertTrue(e.message!!.contains("dificultad"))
+    }
 }

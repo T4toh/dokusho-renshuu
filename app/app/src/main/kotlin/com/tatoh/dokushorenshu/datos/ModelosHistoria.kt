@@ -31,15 +31,15 @@ object ParserHistoria {
 
     fun parsear(texto: String): Historia = try {
         val raiz = json.parseToJsonElement(texto).jsonObject
-        // Validate all text fields first (fail fast on missing fields)
+        // Validar primero los campos de texto (fail fast si falta alguno)
         val id = raiz.texto("id")
         val titulo = raiz.texto("titulo")
         val autor = raiz.texto("autor")
         val fuente = raiz.texto("fuente")
         val licencia = raiz.texto("licencia")
-        val dificultad = raiz.texto("dificultad")
+        val dificultad = validarDificultad(raiz.texto("dificultad"))
         val version = raiz.req("version").jsonPrimitive.int
-        // Then process parrafos
+        // Después procesar los párrafos
         val parrafos = raiz.req("parrafos").jsonArray.map { p ->
             Parrafo(p.jsonObject.req("oraciones").jsonArray.map { parsearOracion(it.jsonObject) })
         }
@@ -59,7 +59,7 @@ object ParserHistoria {
                 val o = e.jsonObject
                 EntradaCatalogo(
                     id = o.texto("id"), titulo = o.texto("titulo"), autor = o.texto("autor"),
-                    dificultad = o.texto("dificultad"),
+                    dificultad = validarDificultad(o.texto("dificultad")),
                     tamanio = o.req("tamaño").jsonPrimitive.content.toLong(),
                     version = o.req("version").jsonPrimitive.int,
                 )
@@ -86,6 +86,11 @@ object ParserHistoria {
             Furigana(inicio, fin, lectura)
         } ?: emptyList()
         return Oracion(textoOracion, furigana)
+    }
+
+    private fun validarDificultad(valor: String): String {
+        require(valor in setOf("facil", "media", "dificil")) { "dificultad inválida: '$valor'" }
+        return valor
     }
 
     private fun JsonObject.req(clave: String) =
