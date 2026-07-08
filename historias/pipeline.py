@@ -28,8 +28,9 @@ def procesar_obra(ruta_txt: str, declaracion: dict) -> dict:
     """Un .txt de Aozora → dict de historia listo para emitir."""
     obra = aozora.parsear(leer_fuente(ruta_txt))
     parrafos = [
-        segmentador.segmentar_parrafo(texto, furigana)
+        oraciones
         for texto, furigana in obra['parrafos']
+        if (oraciones := segmentador.segmentar_parrafo(texto, furigana))
     ]
     textos = [t for oraciones in parrafos for t, _ in oraciones]
     return emisor.construir_historia(

@@ -9,6 +9,9 @@ from src import emisor
 
 FIXTURE = os.path.join(os.path.dirname(__file__), 'fixtures',
                        'fragmento_aozora.txt')
+FIXTURE_CON_ENCABEZADO = os.path.join(
+    os.path.dirname(__file__), 'fixtures',
+    'fragmento_aozora_con_encabezado.txt')
 
 
 class TestLeerFuente(unittest.TestCase):
@@ -51,6 +54,30 @@ class TestProcesarObra(unittest.TestCase):
             pipeline.procesar_obra(
                 os.path.join(self.tmp, 'nada.txt'),
                 {'id': 'x', 'fuente': 'aozora:0'})
+
+
+class TestProcesarObraDescartaEncabezados(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp)
+        with open(FIXTURE_CON_ENCABEZADO, encoding='utf-8') as f:
+            contenido = f.read()
+        self.ruta_txt = os.path.join(self.tmp, 'momotaro.txt')
+        with open(self.ruta_txt, 'w', encoding='cp932') as f:
+            f.write(contenido)
+
+    def test_encabezado_de_seccion_no_genera_parrafo(self):
+        # el fixture agrega una línea "一" (encabezado de sección Aozora)
+        # antes del párrafo real; no debe sobrevivir a procesar_obra
+        historia = pipeline.procesar_obra(
+            self.ruta_txt, {'id': 'momotaro', 'fuente': 'aozora:18376'})
+        self.assertEqual(len(historia['parrafos']), 2)
+        textos = [o['texto'] for p in historia['parrafos']
+                  for o in p['oraciones']]
+        self.assertNotIn('一', textos)
+        dir_catalogo = os.path.join(self.tmp, 'catalogo')
+        emisor.emitir([historia], dir_catalogo)
+        self.assertEqual(verify_catalogo.verificar(dir_catalogo), [])
 
 
 if __name__ == '__main__':

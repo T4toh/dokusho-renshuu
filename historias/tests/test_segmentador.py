@@ -54,5 +54,34 @@ class TestSegmentarParrafo(unittest.TestCase):
         ])
 
 
+class TestEsEncabezadoSeccion(unittest.TestCase):
+    def test_numeral_simple_es_encabezado(self):
+        self.assertTrue(segmentador.es_encabezado_seccion('一'))
+
+    def test_numeral_con_espacios_es_encabezado(self):
+        self.assertTrue(segmentador.es_encabezado_seccion('　二　'))
+        self.assertTrue(segmentador.es_encabezado_seccion(' 三 '))
+
+    def test_numeral_compuesto_es_encabezado(self):
+        self.assertTrue(segmentador.es_encabezado_seccion('十一'))
+
+    def test_oracion_real_no_es_encabezado(self):
+        self.assertFalse(segmentador.es_encabezado_seccion('一つ、二つ。'))
+
+    def test_texto_vacio_o_solo_espacios_no_es_encabezado(self):
+        self.assertFalse(segmentador.es_encabezado_seccion(''))
+        self.assertFalse(segmentador.es_encabezado_seccion('　'))
+
+
+class TestSegmentarParrafoDescartaEncabezados(unittest.TestCase):
+    def test_parrafo_de_solo_encabezado_queda_vacio(self):
+        self.assertEqual(segmentador.segmentar_parrafo('一', []), [])
+
+    def test_encabezado_no_deja_furigana_huerfana(self):
+        # un encabezado nunca trae furigana real, pero si la tuviera
+        # (dato corrupto) el descarte no debe romper el reindexado
+        self.assertEqual(segmentador.segmentar_parrafo('二', []), [])
+
+
 if __name__ == '__main__':
     unittest.main()
