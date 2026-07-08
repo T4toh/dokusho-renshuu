@@ -44,14 +44,14 @@ class LectorViewModelTest {
     private val momotaroJson =
         javaClass.classLoader!!.getResourceAsStream("momotaro.json")!!.readBytes().decodeToString()
 
-    private fun vmMomotaro(dao: ProgresoDaoFake): LectorViewModel {
+    private fun vmMomotaro(dao: ProgresoDaoFake, idHistoria: String = "momotaro"): LectorViewModel {
         val repo = HistoriasRepo(
             leerAsset = { n -> if (n == "historias/momotaro.json") momotaroJson else null },
             listarAssetsHistorias = { listOf("momotaro.json") },
             dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
         )
         return LectorViewModel(
-            idHistoria = "momotaro",
+            idHistoria = idHistoria,
             historiasRepo = repo,
             progresoDao = dao,
             prefs = PrefsRepo(dao),
@@ -107,6 +107,17 @@ class LectorViewModelTest {
         vm.alternarFurigana(); advanceUntilIdle()
         assertFalse(vm.estado.value.furiganaActiva)
         assertEquals("off", dao.pref("furigana"))
+    }
+
+    @Test
+    fun `cargar historia inexistente no crashea y deja estado grosero`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao, idHistoria = "no-existe")
+        vm.cargar()
+        advanceUntilIdle()
+        val estado = vm.estado.value
+        assertEquals("Historia no disponible", estado.titulo)
+        assertTrue(estado.oraciones.isEmpty())
     }
 
     // --- lecturaDelToken: lógica pura de intersección de spans (Step 4) ---

@@ -62,13 +62,22 @@ class LectorViewModel(
         viewModelScope.launch {
             val datos = withContext(ioDispatcher) {
                 val historia = historiasRepo.cargarHistoria(idHistoria)
-                    ?: error("historia $idHistoria no encontrada")
-                val planas = historia.parrafos.flatMapIndexed { p, parrafo ->
-                    parrafo.oraciones.mapIndexed { o, oracion ->
-                        OracionPlana(p, o, oracion, tokenizador.tokenizar(oracion.texto))
+                if (historia == null) {
+                    null
+                } else {
+                    val planas = historia.parrafos.flatMapIndexed { p, parrafo ->
+                        parrafo.oraciones.mapIndexed { o, oracion ->
+                            OracionPlana(p, o, oracion, tokenizador.tokenizar(oracion.texto))
+                        }
                     }
+                    DatosCarga(historia, planas, prefs.furiganaActiva(), progresoDao.progreso(idHistoria))
                 }
-                DatosCarga(historia, planas, prefs.furiganaActiva(), progresoDao.progreso(idHistoria))
+            }
+            // La historia puede haber sido borrada o corrompida entre que se listó en la
+            // biblioteca y que se abrió acá: nunca crashear, mostrar un estado grosero.
+            if (datos == null) {
+                _estado.value = EstadoLector(titulo = "Historia no disponible")
+                return@launch
             }
             val indice = datos.progreso?.let { guardado ->
                 datos.planas.indexOfFirst {

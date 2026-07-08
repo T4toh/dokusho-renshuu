@@ -10,8 +10,10 @@ import com.tatoh.dokushorenshu.dominio.BuscadorPalabras
 import com.tatoh.dokushorenshu.dominio.Tokenizador
 
 /** DI manual. Todo lazy: el primer acceso a `diccionario` copia el db de assets
- *  (79 MB) y el de `tokenizador` carga el diccionario IPADIC (~1s) — accederlos
- *  SIEMPRE desde Dispatchers.IO (los ViewModels lo hacen), nunca del main thread. */
+ *  (79 MB) y el de `tokenizador` carga el diccionario IPADIC (~1s). Ojo: las
+ *  factories de los ViewModels los dereferencian en composición, en el main
+ *  thread — por eso `App.onCreate()` los calienta en un thread de fondo antes
+ *  de que cualquier pantalla los necesite. */
 class Contenedor(private val app: Application) {
     val progresoDb by lazy { ProgresoDb.crear(app) }
     val prefs by lazy { PrefsRepo(progresoDb.dao()) }
@@ -28,5 +30,13 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         contenedor = Contenedor(this)
+        // Calentar las dependencias caras (Kuromoji ~1s, copia del db 79 MB) fuera del
+        // main thread: la factory del ViewModel las dereferencia en composición si
+        // llegan frías.
+        Thread {
+            val c = contenedor
+            c.buscador
+            c.tokenizador
+        }.start()
     }
 }
