@@ -303,6 +303,36 @@ class TestJitendex(unittest.TestCase):
         }]
         self.assertEqual(jitendex.extraer_glosas(glossary), ['espada (sword)'])
 
+    def test_descarta_contenedor_descartable_que_envuelve_li_anidado(self):
+        # Hardening: si un nodo descartable (p.ej. xref-glossary) envuelve un
+        # <li> anidado, ese li completo debe descartarse. Sin el fix, _buscar_li
+        # solo chequea _es_descartable en la rama 'tag == li', así que al
+        # recursar por el else-branch (nodo no es li), entra en el contenedor
+        # descartable sin chequear su marca, y extrae el <li> hijo como glosa.
+        #
+        # Scenario: un sense-group trae un xref a otra palabra, cuya definición
+        # (xref-glossary) envuelve un <li>. Esperado: ese li se descarta
+        # completamente, no se filtra como glosa legítima.
+        glossary = [{
+            "type": "structured-content",
+            "content": [
+                {"tag": "ol", "content": [
+                    {"tag": "li", "content": [
+                        {"tag": "ul", "data": {"content": "glossary"}, "content": [
+                            {"tag": "li", "content": "main gloss"},
+                        ]},
+                        # Contenedor descartable que envuelve un <li> hijo
+                        {"tag": "div", "data": {"content": "xref-glossary"}, "content": [
+                            {"tag": "li", "content": "leaked gloss (should be discarded)"},
+                        ]},
+                    ]},
+                ]},
+            ],
+        }]
+        # Sin fix: ['main gloss', 'leaked gloss (should be discarded)']
+        # Con fix: ['main gloss']
+        self.assertEqual(jitendex.extraer_glosas(glossary), ['main gloss'])
+
 
 if __name__ == '__main__':
     unittest.main()

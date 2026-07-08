@@ -120,14 +120,17 @@ def _buscar_li(nodo, acumulador: list) -> None:
     _es_descartable ACÁ, antes de extraer texto o bajar a hijos: si no,
     _texto_glosa nunca llega a mirar la marca del propio <li> (solo mira la
     de sus descendientes) y ese <li> completo se cuela como una glosa
-    (bug real: "forms洗濯せんたくせんだく" en 洗濯, term_bank_36.json)."""
+    (bug real: "forms洗濯せんたくせんだく" en 洗濯, term_bank_36.json).
+    También aplica a nodos no-<li> descartables (p.ej. xref-glossary) que
+    envuelven <li> anidados: los <li> dentro NO deben filtrarse como glosas."""
     if isinstance(nodo, list):
         for n in nodo:
             _buscar_li(n, acumulador)
     elif isinstance(nodo, dict):
+        # Chequear _es_descartable en TODO nodo, antes de bifurcar por tag
+        if _es_descartable(nodo):
+            return
         if nodo.get('tag') == 'li':
-            if _es_descartable(nodo):
-                return
             contenido = nodo.get('content', '')
             texto = _texto_glosa(contenido).strip()
             if texto:
