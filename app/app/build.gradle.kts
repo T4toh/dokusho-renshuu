@@ -27,6 +27,9 @@ android {
         unitTests {
             isIncludeAndroidResources = true  // Robolectric
         }
+        unitTests.all {
+            it.maxHeapSize = "2g"  // Kuromoji ~1GB pico al cargar IPADIC; default 512m causaba OOM intermitente
+        }
     }
     packaging {
         // kuromoji-ipadic y kuromoji-core traen metadata duplicada (licencias/autores).
