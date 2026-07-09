@@ -31,7 +31,7 @@ fun BibliotecaScreen(
     Scaffold(topBar = {
         TopAppBar(
             title = { Text("Dokusho Renshū") },
-            actions = { TextButton(onClick = onAcerca) { Text("Acerca de") } },
+            actions = { TextButton(onClick = onAcerca) { Text("About") } },
         )
     }) { relleno ->
         // grid adaptativo: 1 columna en teléfono vertical, 2-3 en tablet/landscape
@@ -44,11 +44,27 @@ fun BibliotecaScreen(
             items(locales, key = { it.historia.id }) { item ->
                 Card(Modifier.fillMaxWidth().clickable { onAbrirHistoria(item.historia.id) }) {
                     Column(Modifier.padding(16.dp)) {
+                        item.metadata?.tituloLectura?.let {
+                            Text(
+                                it, style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Text(item.historia.titulo, style = MaterialTheme.typography.titleLarge)
+                        item.metadata?.tituloEn?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium)
+                        }
                         Text(
                             "${item.historia.autor} · ${item.historia.dificultad}",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp),
                         )
+                        item.metadata?.let { meta ->
+                            Text(
+                                "${meta.kanjisUnicos} kanji · ${meta.oraciones} sentences",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                         if (item.progresoPct > 0) {
                             LinearProgressIndicator(
                                 progress = { item.progresoPct / 100f },

@@ -76,6 +76,11 @@ class HistoriasRepo(
         return porId.values.toList()
     }
 
+    /** Catálogo embebido en assets (copiado por copiarHistorias en cada build):
+     *  metadata offline-first para portada/cards, sin depender de red. */
+    fun catalogoLocal(): Catalogo? =
+        leerAsset("catalogo.json")?.let { runCatching { ParserHistoria.parsearCatalogo(it) }.getOrNull() }
+
     fun cargarHistoria(id: String): Historia? {
         val descargada = File(dirDescargas, "$id.json")
         if (descargada.exists()) {

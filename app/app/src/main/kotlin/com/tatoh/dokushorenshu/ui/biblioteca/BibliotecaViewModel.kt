@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class ItemBiblioteca(val historia: Historia, val progresoPct: Int)
+data class ItemBiblioteca(val historia: Historia, val progresoPct: Int, val metadata: EntradaCatalogo?)
 
 sealed interface EstadoCatalogo {
     data object Cargando : EstadoCatalogo
@@ -37,11 +37,13 @@ class BibliotecaViewModel(
     fun cargar() {
         viewModelScope.launch {
             _locales.value = withContext(ioDispatcher) {
+                val catalogoLocal = historiasRepo.catalogoLocal()
                 historiasRepo.historiasLocales().map { historia ->
                     val progreso = progresoDao.progreso(historia.id)
                     val pct = if (progreso == null || historia.parrafos.isEmpty()) 0
                     else (progreso.parrafo * 100) / historia.parrafos.size
-                    ItemBiblioteca(historia, pct)
+                    val metadata = catalogoLocal?.historias?.firstOrNull { it.id == historia.id }
+                    ItemBiblioteca(historia, pct, metadata)
                 }
             }
             refrescarCatalogo()
@@ -56,7 +58,7 @@ class BibliotecaViewModel(
                 onSuccess = { catalogo ->
                     EstadoCatalogo.Ok(catalogo.historias.filter { it.id !in idsLocales })
                 },
-                onFailure = { EstadoCatalogo.Error("No se pudo cargar el catálogo") },
+                onFailure = { EstadoCatalogo.Error("Couldn't load the catalog") },
             )
         }
     }
@@ -65,7 +67,7 @@ class BibliotecaViewModel(
         viewModelScope.launch {
             historiasRepo.descargarHistoria(id)
                 .onSuccess { cargar() }
-                .onFailure { _catalogo.value = EstadoCatalogo.Error("Descarga fallida: $id") }
+                .onFailure { _catalogo.value = EstadoCatalogo.Error("Download failed: $id") }
         }
     }
 }

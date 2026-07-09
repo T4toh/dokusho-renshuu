@@ -31,7 +31,13 @@ class BibliotecaViewModelTest {
         javaClass.classLoader!!.getResourceAsStream("catalogo.json")!!.readBytes().decodeToString()
 
     private fun repo(conRed: Boolean): HistoriasRepo = HistoriasRepo(
-        leerAsset = { n -> if (n == "historias/momotaro.json") momotaroJson else null },
+        leerAsset = { n ->
+            when (n) {
+                "historias/momotaro.json" -> momotaroJson
+                "catalogo.json" -> catalogoJson
+                else -> null
+            }
+        },
         listarAssetsHistorias = { listOf("momotaro.json") },
         dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
         http = { url ->
@@ -65,5 +71,15 @@ class BibliotecaViewModelTest {
         advanceUntilIdle()
         assertEquals(1, vm.locales.value.size)
         assertTrue(vm.catalogo.value is EstadoCatalogo.Error)
+    }
+
+    @Test
+    fun `item de biblioteca local expone metadata del catalogo`() = runTest {
+        val vm = vm(conRed = false)
+        vm.cargar(); advanceUntilIdle()
+        val item = vm.locales.value.first { it.historia.id == "momotaro" }
+        assertEquals("ももたろう", item.metadata?.tituloLectura)
+        // valor del fixture real catalogo.json (test/resources) para "momotaro"
+        assertEquals(174, item.metadata?.oraciones)
     }
 }

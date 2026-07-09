@@ -66,4 +66,28 @@ class HistoriasRepoTest {
         assertNotNull(repo.cargarHistoria("urashima_taro"))
         assertEquals(2, repo.historiasLocales().size)
     }
+
+    @Test
+    fun `catalogoLocal lee el catalogo embebido en assets sin red`() {
+        val catalogoJsonLocal = catalogoJson  // ya cargado arriba desde test resources
+        val repoConCatalogoLocal = HistoriasRepo(
+            leerAsset = { n ->
+                when (n) {
+                    "historias/momotaro.json" -> momotaroJson
+                    "catalogo.json" -> catalogoJsonLocal
+                    else -> null
+                }
+            },
+            listarAssetsHistorias = { listOf("momotaro.json") },
+            dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+        )
+        val catalogo = repoConCatalogoLocal.catalogoLocal()
+        assertNotNull(catalogo)
+        assertEquals(4, catalogo!!.historias.size)
+    }
+
+    @Test
+    fun `catalogoLocal sin asset devuelve null`() {
+        assertNull(repo().catalogoLocal())
+    }
 }
