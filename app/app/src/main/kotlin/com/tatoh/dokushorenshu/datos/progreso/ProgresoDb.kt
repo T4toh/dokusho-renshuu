@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
@@ -64,13 +66,23 @@ interface ProgresoDao {
     @Upsert
     suspend fun guardarPref(pref: Pref)
 
-    /** Inserta con dificultad=NULL si es la primera vez; si ya existe, solo
-     *  actualiza el timestamp — nunca pisa una dificultad ya taggeada. */
-    @Query(
-        "INSERT INTO kanjis_tocados (kanji, dificultad, timestamp) VALUES (:kanji, NULL, :timestamp)" +
-            " ON CONFLICT(kanji) DO UPDATE SET timestamp = :timestamp",
-    )
-    suspend fun registrarAperturaKanji(kanji: String, timestamp: Long)
+    /** Inserta la fila si no existe (IGNORE evita pisar una fila con dificultad
+     *  ya taggeada); si el INSERT no aplicó (-1L => ya existía) actualiza solo
+     *  el timestamp. Evitamos `INSERT ... ON CONFLICT DO UPDATE` (SQLite >= 3.24)
+     *  porque minSdk 26 puede traer SQLite 3.18 y esa sintaxis lanza
+     *  SQLiteException en tiempo de ejecución en esos dispositivos. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertarKanjiSiNoExiste(kanjiTocado: KanjiTocado): Long
+
+    @Query("UPDATE kanjis_tocados SET timestamp = :timestamp WHERE kanji = :kanji")
+    suspend fun actualizarTimestampKanji(kanji: String, timestamp: Long)
+
+    suspend fun registrarAperturaKanji(kanji: String, timestamp: Long) {
+        val filaNueva = insertarKanjiSiNoExiste(KanjiTocado(kanji, null, timestamp))
+        if (filaNueva == -1L) {
+            actualizarTimestampKanji(kanji, timestamp)
+        }
+    }
 
     @Query("UPDATE kanjis_tocados SET dificultad = :dificultad WHERE kanji = :kanji")
     suspend fun setDificultadKanji(kanji: String, dificultad: String?)

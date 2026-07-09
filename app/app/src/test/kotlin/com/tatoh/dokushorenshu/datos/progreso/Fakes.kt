@@ -34,6 +34,16 @@ class ProgresoDaoFake : ProgresoDao {
         kanjisTocados[kanji] = KanjiTocado(kanji, existente?.dificultad, timestamp)
     }
 
+    override suspend fun insertarKanjiSiNoExiste(kanjiTocado: KanjiTocado): Long {
+        if (kanjisTocados.containsKey(kanjiTocado.kanji)) return -1L
+        kanjisTocados[kanjiTocado.kanji] = kanjiTocado
+        return 0L
+    }
+
+    override suspend fun actualizarTimestampKanji(kanji: String, timestamp: Long) {
+        kanjisTocados[kanji]?.let { kanjisTocados[kanji] = it.copy(timestamp = timestamp) }
+    }
+
     override suspend fun setDificultadKanji(kanji: String, dificultad: String?) {
         kanjisTocados[kanji]?.let { kanjisTocados[kanji] = it.copy(dificultad = dificultad) }
     }

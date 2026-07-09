@@ -41,4 +41,17 @@ class ProgresoDaoTest {
         repo.setFuriganaActiva(false)
         assertFalse(repo.furiganaActiva())
     }
+
+    @Test
+    fun `reabrir un kanji taggeado preserva la dificultad y actualiza el timestamp`() = runTest {
+        val dao = db().dao()
+        dao.registrarAperturaKanji("洗", 1L)
+        dao.setDificultadKanji("洗", "hard")
+        dao.registrarAperturaKanji("洗", 2L)
+
+        val tocado = dao.kanjiTocado("洗")
+        assertEquals("hard", tocado?.dificultad)
+        assertEquals(2L, tocado?.timestamp)
+        assertEquals(1, dao.kanjisPorDificultad("hard").size)  // una sola fila, no duplicada
+    }
 }
