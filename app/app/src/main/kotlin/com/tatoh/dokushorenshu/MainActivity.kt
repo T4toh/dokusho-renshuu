@@ -3,6 +3,7 @@ package com.tatoh.dokushorenshu
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -21,6 +22,14 @@ import com.tatoh.dokushorenshu.ui.tema.TemaDokusho
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Android 15+ (targetSdk 36) impone edge-to-edge por defecto y deprecó
+        // statusBarColor/navigationBarColor: en vez de fijar colores a mano se usa
+        // enableEdgeToEdge(), que detecta modo claro/oscuro del sistema (mismo criterio
+        // que isSystemInDarkTheme() de Compose, vía TemaDokusho) y ajusta el contraste
+        // de los íconos de status/navigation bar automáticamente. Los flags
+        // windowLightStatusBar/windowLightNavigationBar en themes.xml solo cubren el
+        // primer frame, antes de que corra esta línea.
+        enableEdgeToEdge()
         val contenedor = (application as App).contenedor
         setContent {
             TemaDokusho {

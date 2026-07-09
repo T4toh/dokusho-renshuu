@@ -14,6 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+// Mapea la dificultad cruda a display en inglés
+private fun dificultadDisplay(dificultad: String): String = when (dificultad) {
+    "facil" -> "Easy"
+    "media" -> "Medium"
+    "dificil" -> "Hard"
+    else -> dificultad.replaceFirstChar { it.uppercase() }  // Mapear tags en inglés minúsculas (easy/medium/hard) a capitalizadas
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BibliotecaScreen(
@@ -72,7 +80,7 @@ fun BibliotecaScreen(
                                 Text(it, style = MaterialTheme.typography.bodyMedium)
                             }
                             Text(
-                                "${item.historia.autor} · ${item.historia.dificultad}",
+                                "${item.historia.autor} · ${dificultadDisplay(item.historia.dificultad)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.padding(top = 4.dp),
                             )
@@ -104,7 +112,7 @@ fun BibliotecaScreen(
                                 Text(entrada.titulo, style = MaterialTheme.typography.titleLarge)
                                 entrada.tituloEn?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                                 Text(
-                                    "${entrada.autor} · ${entrada.dificultad}",
+                                    "${entrada.autor} · ${dificultadDisplay(entrada.dificultad)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     modifier = Modifier.padding(top = 4.dp),
                                 )
@@ -141,7 +149,7 @@ fun BibliotecaScreen(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     Text(
-                                        tarjeta.dificultad.replaceFirstChar { it.uppercase() },
+                                        dificultadDisplay(tarjeta.dificultad),
                                         style = MaterialTheme.typography.labelMedium,
                                     )
                                     when (tarjeta) {

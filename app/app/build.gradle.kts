@@ -37,6 +37,17 @@ android {
             excludes += "/META-INF/{AUTHORS,CONTRIBUTORS,LICENSE,LICENSE.txt,NOTICE,NOTICE.txt,DEPENDENCIES}*"
         }
     }
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // App de uso personal (sin publicar en una store): se firma con el keystore
+            // de debug para poder instalar el release directamente vía adb, sin generar
+            // ni gestionar un keystore de producción.
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
 }
 
 dependencies {

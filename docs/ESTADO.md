@@ -11,6 +11,7 @@
 | 2    | `historias/` — pipeline Aozora → JSON + catálogo | ✅ Completo ([PR #2](https://github.com/T4toh/dokusho-renshuu/pull/2) mergeado)                                                                                  |
 | 3    | `app/` — lector Android (Kotlin + Compose)       | ✅ Completo ([PR #3](https://github.com/T4toh/dokusho-renshuu/pull/3)) |
 | 3.5  | pulido + repaso básico (db-v2, catálogo v2, app) | ✅ Completo ([PR #4](https://github.com/T4toh/dokusho-renshuu/pull/4)) |
+| 3.6  | detalles de UI (barras, lector scroll libre, kanji 2col) | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
 | 4    | `app/` — mazos .apkg + import de texto           | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                         |
 
 ## Datos operativos
@@ -58,20 +59,19 @@
 ## Backlog diferido (Plan 3.5 — no bloqueante)
 
 - db-v2: marcadores `〔… only〕` de restricción de formas siguen filtrando a las glosas (3.645 entradas, 904 como primera glosa) — el span no tiene `data.content` (solo `title="valid only for these forms and/or readings"` / hijos `form-special`), invisible al blacklist actual; requiere rebuild db-v2.1 con descarte por `title`.
-- Status bar con íconos claros sobre fondo claro en light mode (falta windowLightStatusBar en el theme); ídem barra de gestos/navigation bar — debería adaptarse al tema (feedback 2026-07-09).
 - Portada muestra "0% read" con progreso <1% (truncado a int; el botón Continue/Start ya se arregló en 7ab6b7d).
 - Progreso guardado se corre ~1 posición cuando se regenera el catálogo (índices sobre JSON nuevo; one-time, benigno).
 - jitendex: xref/sense-note descartados enteros — "See also" se pierde (aceptado; revisar si se quiere conservar con label).
 - verify_db no detecta un sentido individual borrado en palabra multi-sentido.
 - MigrationTestHelper no usado (exportSchema=false); ProgresoDaoFake overridea registrarAperturaKanji (primitivas dead-code en fake).
 - Review section: kanjisPorDificultad consultado 2x por dificultad.
-- Cards de biblioteca muestran dificultad cruda `facil/media/dificil` en UI inglesa (mapear a Easy/Medium/Hard); lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
+- lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
 
-## Feedback pendiente (2026-07-09 — candidatos a Plan 3.6/4)
+- **historias/pipeline (BUG de datos, hallado 2026-07-09)**: el alineador de furigana emite spans que se solapan entre sí — en momotaro.json real: `[7,8,"いま"]` (今) y `[7,9,"かえ"]` (帰, arranca 1 char antes de lo debido). La app clampa y lo tolera (fix bf50f05), pero hay que arreglar el alineador y regenerar `catalogo/`.
 
-- Scroll con el dedo en el lector (arriba/abajo) además de los botones Previous/Next.
-- Toggle de lectura para katakana: mostrar pronunciación en hiragana sobre tokens katakana — NO requiere otro diccionario (Kuromoji ya da lecturas y `katakanaAHiragana` existe en Tokenizador); toggle tipo furigana.
-- Detalle de kanji adaptable: en tablet sobra ancho (layout 2 columnas: kanji+chips | secciones); en teléfono reducir scroll.
+## Feedback pendiente (candidatos a próximo plan)
+
+- **Katakana → hiragana (toggle de lectura): PLANEAR con brainstorming propio antes de implementar.** Decisiones abiertas: dónde vive el toggle, convivencia con el toggle de furigana, formato del ruby, ¿solo tokens katakana o también mixtos?. La conversión ya existe (`katakanaAHiragana` en Tokenizador). NO requiere otro diccionario.
 
 ## Proceso de trabajo usado
 

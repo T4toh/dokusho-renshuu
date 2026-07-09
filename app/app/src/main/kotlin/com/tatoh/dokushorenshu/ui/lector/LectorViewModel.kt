@@ -26,6 +26,10 @@ data class OracionPlana(
     val oracionEnParrafo: Int,
     val oracion: Oracion,
     val tokens: List<PalabraToken>,
+    // Precomputado en cargar() (fix de performance, Plan 3.6 feedback de dispositivo):
+    // antes TextoConFurigana calculaba esto (agruparTokens + segmentosDeGrupo) en cada
+    // recomposición de item durante el scroll. Ver doc de [calcularGruposFurigana].
+    val gruposFurigana: List<GrupoFurigana>,
 )
 
 /** indiceActual == -1 representa la portada (Task C3): título, autor, stats y
@@ -42,6 +46,14 @@ data class EstadoLector(
     // a -1 al retroceder hasta la portada, así la portada puede distinguir "Continue
     // reading" (hay progreso guardado) de "Start reading" (nunca se avanzó).
     val progresoGuardado: Int = -1,
+    // Contador de centrados EXPLÍCITOS pedidos (Plan 3.6 Task 2 fix — rubberbanding):
+    // solo mover() (Previous/Next, incluido el salto Start/Continue desde la portada) y
+    // cargar() lo incrementan. enfocar() (foco por asentado de scroll libre o tap sobre
+    // una oración no-actual) NUNCA lo toca. LectorScreen solo dispara el auto-scroll de
+    // centrado cuando este contador cambia, así el centrado tras soltar el dedo (que ya
+    // queda centrado por el snap del fling) no dispara una SEGUNDA corrección — esa
+    // doble corrección era el "rubberbanding" reportado.
+    val centradoPedido: Int = 0,
 ) {
     val enPortada: Boolean get() = indiceActual == -1
     val porcentajeLeido: Int get() =
@@ -79,7 +91,11 @@ class LectorViewModel(
                 val metadata = historiasRepo.catalogoLocal()?.historias?.firstOrNull { it.id == idHistoria }
                 val planas = historia.parrafos.flatMapIndexed { p, parrafo ->
                     parrafo.oraciones.mapIndexed { o, oracion ->
-                        OracionPlana(p, o, oracion, tokenizador.tokenizar(oracion.texto))
+                        val tokens = tokenizador.tokenizar(oracion.texto)
+                        // agruparTokens/segmentosDeGrupo (vía calcularGruposFurigana) corren
+                        // acá, en ioDispatcher, UNA sola vez por oración — no en cada
+                        // recomposición de item (ver doc en TextoConFurigana.kt).
+                        OracionPlana(p, o, oracion, tokens, calcularGruposFurigana(tokens, oracion.furigana))
                     }
                 }
                 DatosCarga(historia, metadata, planas, prefs.furiganaActiva(), progresoDao.progreso(idHistoria))
@@ -105,6 +121,10 @@ class LectorViewModel(
                 indiceActual = indice,
                 furiganaActiva = datos.furiganaActiva,
                 progresoGuardado = indice,
+                // carga inicial: cuenta como centrado explícito para que, si esta carga
+                // restaura una posición ya avanzada (no portada), la lista se abra
+                // centrada en esa oración.
+                centradoPedido = 1,
             )
         }
     }
@@ -120,12 +140,34 @@ class LectorViewModel(
         _estado.value = estado.copy(
             indiceActual = nuevo,
             progresoGuardado = if (nuevo >= 0) nuevo else estado.progresoGuardado,
+            centradoPedido = estado.centradoPedido + 1,
         )
         if (nuevo >= 0) {
-            val plana = estado.oraciones[nuevo]
-            viewModelScope.launch(ioDispatcher) {
-                progresoDao.guardarProgreso(ProgresoHistoria(idHistoria, plana.parrafo, plana.oracionEnParrafo))
-            }
+            persistirProgreso(estado.oraciones[nuevo])
+        }
+    }
+
+    /** Foco directo a un índice de oración (scroll libre estilo letras, Plan 3.6 Task 2):
+     *  lo dispara tanto el asentado del scroll (oración más cercana al centro del
+     *  viewport) como el tap sobre cualquier oración visible. A diferencia de mover(),
+     *  recibe el índice absoluto en vez de un delta, y NUNCA apunta a la portada (-1):
+     *  ese índice no forma parte de la lista de oraciones tappeable/scrolleable, solo
+     *  Previous puede volver a la portada. Se ignora si el índice está fuera de rango
+     *  o si el estado está degradado (oraciones vacías, historia no encontrada).
+     *  A propósito NO toca [EstadoLector.centradoPedido]: este foco no debe disparar el
+     *  auto-scroll de centrado en LectorScreen (ver doc de ese campo). */
+    fun enfocar(indice: Int) {
+        val estado = _estado.value
+        if (estado.oraciones.isEmpty()) return
+        if (indice < 0 || indice > estado.oraciones.lastIndex) return
+        if (indice == estado.indiceActual) return
+        _estado.value = estado.copy(indiceActual = indice, progresoGuardado = indice)
+        persistirProgreso(estado.oraciones[indice])
+    }
+
+    private fun persistirProgreso(plana: OracionPlana) {
+        viewModelScope.launch(ioDispatcher) {
+            progresoDao.guardarProgreso(ProgresoHistoria(idHistoria, plana.parrafo, plana.oracionEnParrafo))
         }
     }
 
