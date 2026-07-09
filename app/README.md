@@ -31,3 +31,9 @@ Requiere JDK 17+ (probado con JDK 21) y Android SDK 36. Los assets NO se commite
   `app/src/main/assets/diccionario-v2.db` y rebuildear.
 - Nuevas historias: regenerar `catalogo/` (ver `historias/README.md`) — el build
   las re-empaqueta solo.
+
+## Ícono
+
+`app/arte/logo.jpg` es arte de Saitama (ONE / Yusuke Murata, One Punch Man) —
+**uso personal únicamente**. No redistribuir ni publicar esta app en stores
+con este ícono: el arte tiene copyright de sus autores.
