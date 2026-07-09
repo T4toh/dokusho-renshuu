@@ -9,6 +9,8 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Entity(tableName = "progreso")
 data class ProgresoHistoria(
@@ -26,6 +28,18 @@ data class PalabraTocada(
 
 @Entity(tableName = "prefs")
 data class Pref(@PrimaryKey val clave: String, val valor: String)
+
+/** Insumo del repaso básico (Home > Review, Task 12) y de los mazos de Plan 4.
+ *  dificultad ∈ {easy, medium, hard} o null (visto pero no taggeado). timestamp
+ *  se actualiza en cada apertura de Detalle kanji: funciona como "última vez
+ *  visto", así el repaso rota entre los taggeados (el menos visto recientemente
+ *  aparece primero). */
+@Entity(tableName = "kanjis_tocados")
+data class KanjiTocado(
+    @PrimaryKey val kanji: String,
+    val dificultad: String?,
+    val timestamp: Long,
+)
 
 @Dao
 interface ProgresoDao {
@@ -49,11 +63,39 @@ interface ProgresoDao {
 
     @Upsert
     suspend fun guardarPref(pref: Pref)
+
+    /** Inserta con dificultad=NULL si es la primera vez; si ya existe, solo
+     *  actualiza el timestamp — nunca pisa una dificultad ya taggeada. */
+    @Query(
+        "INSERT INTO kanjis_tocados (kanji, dificultad, timestamp) VALUES (:kanji, NULL, :timestamp)" +
+            " ON CONFLICT(kanji) DO UPDATE SET timestamp = :timestamp",
+    )
+    suspend fun registrarAperturaKanji(kanji: String, timestamp: Long)
+
+    @Query("UPDATE kanjis_tocados SET dificultad = :dificultad WHERE kanji = :kanji")
+    suspend fun setDificultadKanji(kanji: String, dificultad: String?)
+
+    @Query("SELECT * FROM kanjis_tocados WHERE kanji = :kanji")
+    suspend fun kanjiTocado(kanji: String): KanjiTocado?
+
+    @Query("SELECT * FROM kanjis_tocados WHERE dificultad = :dificultad ORDER BY timestamp ASC")
+    suspend fun kanjisPorDificultad(dificultad: String): List<KanjiTocado>
+}
+
+/** No destructiva: agrega la tabla nueva, conserva progreso/palabras_tocadas/prefs. */
+val MIGRACION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `kanjis_tocados` (" +
+                "`kanji` TEXT NOT NULL, `dificultad` TEXT, `timestamp` INTEGER NOT NULL," +
+                " PRIMARY KEY(`kanji`))",
+        )
+    }
 }
 
 @Database(
-    entities = [ProgresoHistoria::class, PalabraTocada::class, Pref::class],
-    version = 1,
+    entities = [ProgresoHistoria::class, PalabraTocada::class, Pref::class, KanjiTocado::class],
+    version = 2,
     exportSchema = false,
 )
 abstract class ProgresoDb : RoomDatabase() {
@@ -61,6 +103,8 @@ abstract class ProgresoDb : RoomDatabase() {
 
     companion object {
         fun crear(contexto: Context): ProgresoDb =
-            Room.databaseBuilder(contexto, ProgresoDb::class.java, "progreso.db").build()
+            Room.databaseBuilder(contexto, ProgresoDb::class.java, "progreso.db")
+                .addMigrations(MIGRACION_1_2)
+                .build()
     }
 }

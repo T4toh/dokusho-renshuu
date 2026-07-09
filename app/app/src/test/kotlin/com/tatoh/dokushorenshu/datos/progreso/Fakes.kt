@@ -6,6 +6,7 @@ class ProgresoDaoFake : ProgresoDao {
     private val progresos = mutableMapOf<String, ProgresoHistoria>()
     private val palabras = mutableListOf<PalabraTocada>()
     private val prefs = mutableMapOf<String, String>()
+    private val kanjisTocados = mutableMapOf<String, KanjiTocado>()
 
     override suspend fun progreso(id: String): ProgresoHistoria? = progresos[id]
 
@@ -27,4 +28,18 @@ class ProgresoDaoFake : ProgresoDao {
     override suspend fun guardarPref(pref: Pref) {
         prefs[pref.clave] = pref.valor
     }
+
+    override suspend fun registrarAperturaKanji(kanji: String, timestamp: Long) {
+        val existente = kanjisTocados[kanji]
+        kanjisTocados[kanji] = KanjiTocado(kanji, existente?.dificultad, timestamp)
+    }
+
+    override suspend fun setDificultadKanji(kanji: String, dificultad: String?) {
+        kanjisTocados[kanji]?.let { kanjisTocados[kanji] = it.copy(dificultad = dificultad) }
+    }
+
+    override suspend fun kanjiTocado(kanji: String): KanjiTocado? = kanjisTocados[kanji]
+
+    override suspend fun kanjisPorDificultad(dificultad: String): List<KanjiTocado> =
+        kanjisTocados.values.filter { it.dificultad == dificultad }.sortedBy { it.timestamp }
 }

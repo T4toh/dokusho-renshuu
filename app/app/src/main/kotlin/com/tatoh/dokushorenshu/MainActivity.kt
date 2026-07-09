@@ -53,7 +53,9 @@ class MainActivity : ComponentActivity() {
                     composable("kanji/{kanji}") { entrada ->
                         val kanji = entrada.arguments!!.getString("kanji")!!
                         val vm: DetalleKanjiViewModel = viewModel(factory = viewModelFactory {
-                            initializer { DetalleKanjiViewModel(kanji, contenedor.diccionario) }
+                            initializer {
+                                DetalleKanjiViewModel(kanji, contenedor.diccionario, contenedor.progresoDb.dao())
+                            }
                         })
                         // DetalleKanjiScreen dispara vm.cargar() con LaunchedEffect (mismo patrón).
                         DetalleKanjiScreen(vm)
