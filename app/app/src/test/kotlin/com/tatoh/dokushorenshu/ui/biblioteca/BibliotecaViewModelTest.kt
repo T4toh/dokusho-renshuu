@@ -1,6 +1,8 @@
 package com.tatoh.dokushorenshu.ui.biblioteca
 
+import com.tatoh.dokushorenshu.datos.DiccionarioFake
 import com.tatoh.dokushorenshu.datos.HistoriasRepo
+import com.tatoh.dokushorenshu.datos.KanjiInfo
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDaoFake
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -50,8 +52,8 @@ class BibliotecaViewModelTest {
         ioDispatcher = dispatcher,
     )
 
-    private fun vm(conRed: Boolean) =
-        BibliotecaViewModel(repo(conRed), ProgresoDaoFake(), ioDispatcher = dispatcher)
+    private fun vm(conRed: Boolean, dao: ProgresoDaoFake = ProgresoDaoFake(), dic: DiccionarioFake = DiccionarioFake()) =
+        BibliotecaViewModel(repo(conRed), dao, dic, ioDispatcher = dispatcher)
 
     @Test
     fun `carga locales con progreso y catalogo con disponibles`() = runTest {
@@ -81,5 +83,47 @@ class BibliotecaViewModelTest {
         assertEquals("ももたろう", item.metadata?.tituloLectura)
         // valor del fixture real catalogo.json (test/resources) para "momotaro"
         assertEquals(174, item.metadata?.oraciones)
+    }
+
+    @Test
+    fun `sin kanjis taggeados la seccion review esta vacia`() = runTest {
+        val vm = vm(conRed = false)
+        vm.cargar(); advanceUntilIdle()
+        assertTrue(vm.review.value.isEmpty())
+    }
+
+    @Test
+    fun `kanji taggeado easy aparece en review, medium y hard con hint`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.registrarAperturaKanji("語", 100L)
+        dao.setDificultadKanji("語", "easy")
+        val dic = DiccionarioFake()
+        dic.kanjis["語"] = KanjiInfo("語", listOf("word", "language"), listOf("ゴ"), listOf("かた.る"), 4, 14)
+        val vm = vm(conRed = false, dao = dao, dic = dic)
+        vm.cargar(); advanceUntilIdle()
+
+        val tarjetas = vm.review.value
+        assertEquals(3, tarjetas.size)
+        val easy = tarjetas.first { it.dificultad == "easy" } as TarjetaReview.ConKanji
+        assertEquals("語", easy.kanji.kanji)
+        assertEquals("word", easy.kanji.significados.first())
+        assertTrue(tarjetas.first { it.dificultad == "medium" } is TarjetaReview.Vacia)
+        assertTrue(tarjetas.first { it.dificultad == "hard" } is TarjetaReview.Vacia)
+    }
+
+    @Test
+    fun `kanji taggeado que ya no esta en el db se salta al siguiente mas antiguo`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.registrarAperturaKanji("龘", 50L)   // más antiguo, ya no existe en el db nuevo
+        dao.setDificultadKanji("龘", "hard")
+        dao.registrarAperturaKanji("山", 200L)  // más nuevo, sí existe
+        dao.setDificultadKanji("山", "hard")
+        val dic = DiccionarioFake()
+        dic.kanjis["山"] = KanjiInfo("山", listOf("mountain"), emptyList(), listOf("やま"), 8, 3)
+        val vm = vm(conRed = false, dao = dao, dic = dic)
+        vm.cargar(); advanceUntilIdle()
+
+        val hard = vm.review.value.first { it.dificultad == "hard" } as TarjetaReview.ConKanji
+        assertEquals("山", hard.kanji.kanji)  // 龘 se saltea (query defensiva)
     }
 }

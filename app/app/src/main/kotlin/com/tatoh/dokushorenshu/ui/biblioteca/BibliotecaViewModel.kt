@@ -2,9 +2,11 @@ package com.tatoh.dokushorenshu.ui.biblioteca
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tatoh.dokushorenshu.datos.Diccionario
 import com.tatoh.dokushorenshu.datos.EntradaCatalogo
 import com.tatoh.dokushorenshu.datos.Historia
 import com.tatoh.dokushorenshu.datos.HistoriasRepo
+import com.tatoh.dokushorenshu.datos.KanjiInfo
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -21,9 +23,22 @@ sealed interface EstadoCatalogo {
     data class Ok(val disponibles: List<EntradaCatalogo>) : EstadoCatalogo
 }
 
+/** Tarjeta de la sección Review del home: una por dificultad (easy/medium/hard). */
+sealed interface TarjetaReview {
+    val dificultad: String
+    data class ConKanji(override val dificultad: String, val kanji: KanjiInfo, val lecturaPrincipal: String?) : TarjetaReview
+    data class Vacia(override val dificultad: String) : TarjetaReview
+}
+
+private val DIFICULTADES = listOf("easy", "medium", "hard")
+// cuántos candidatos taggeados probar antes de dar por vacía la tarjeta (kanjis
+// borrados del db nuevo se saltean — query defensiva, spec "Manejo de errores").
+private const val CANDIDATOS_POR_DIFICULTAD = 5
+
 class BibliotecaViewModel(
     private val historiasRepo: HistoriasRepo,
     private val progresoDao: ProgresoDao,
+    private val diccionario: Diccionario,
     // Inyectable solo para tests (ver HistoriasRepo.ioDispatcher): en producción siempre
     // Dispatchers.IO, nunca el hilo principal.
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -33,6 +48,9 @@ class BibliotecaViewModel(
 
     private val _catalogo = MutableStateFlow<EstadoCatalogo>(EstadoCatalogo.Cargando)
     val catalogo: StateFlow<EstadoCatalogo> = _catalogo
+
+    private val _review = MutableStateFlow<List<TarjetaReview>>(emptyList())
+    val review: StateFlow<List<TarjetaReview>> = _review
 
     fun cargar() {
         viewModelScope.launch {
@@ -46,8 +64,25 @@ class BibliotecaViewModel(
                     ItemBiblioteca(historia, pct, metadata)
                 }
             }
+            _review.value = withContext(ioDispatcher) { cargarReview() }
             refrescarCatalogo()
         }
+    }
+
+    private suspend fun cargarReview(): List<TarjetaReview> {
+        val tarjetas = DIFICULTADES.map { dificultad ->
+            val candidatos = progresoDao.kanjisPorDificultad(dificultad).take(CANDIDATOS_POR_DIFICULTAD)
+            val encontrado = candidatos.firstNotNullOfOrNull { tocado ->
+                diccionario.buscarKanji(tocado.kanji)?.let { info -> info }
+            }
+            if (encontrado == null) TarjetaReview.Vacia(dificultad)
+            else TarjetaReview.ConKanji(
+                dificultad, encontrado,
+                lecturaPrincipal = encontrado.kunYomi.firstOrNull() ?: encontrado.onYomi.firstOrNull(),
+            )
+        }
+        val hayAlgunTaggeado = DIFICULTADES.any { progresoDao.kanjisPorDificultad(it).isNotEmpty() }
+        return if (hayAlgunTaggeado) tarjetas else emptyList()
     }
 
     fun refrescarCatalogo() {
