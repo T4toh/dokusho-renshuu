@@ -1,5 +1,6 @@
 package com.tatoh.dokushorenshu.ui.lector
 
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
@@ -87,7 +88,12 @@ fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
  *    `enfocar()`. Centramos la oración `indiceActual` vigente al momento del cambio. La
  *    primera vez que esta lista se monta usamos `scrollToItem` (salto instantáneo, sin
  *    animación: así restaurar el progreso guardado no arranca con un scroll largo
- *    animado); de ahí en más, `animateScrollToItem`.
+ *    animado); de ahí en más, `animateScrollToItem`. En ambos casos el centrado se hace
+ *    en dos fases para igualar el criterio de centro real que usa el snap (abajo): fase 1
+ *    lleva el TECHO del item al centro del viewport (aproximación, el alto real del item
+ *    todavía no se conoce porque no está layouteado); fase 2, ya con el item layouteado,
+ *    lo corre la mitad de su alto para que su CENTRO quede exactamente en el centro del
+ *    viewport — mismo resultado final que `SnapPosition.Center`.
  *  - scroll del usuario → foco: la `LazyColumn` usa `rememberSnapFlingBehavior` con
  *    `SnapPosition.Center`, así que soltar el dedo YA asienta la oración más cercana
  *    exactamente centrada (sin necesidad de corrección posterior). Cuando ese asentado
@@ -124,10 +130,10 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
                 return@LaunchedEffect
             }
             scrollProgramatico = true
-            // Offset negativo (aproximación documentada en el brief): el alto real de la
-            // oración no se conoce antes de layoutear, así que centramos "a ojo" corriendo
-            // el borde superior del item 1/3 de viewport hacia abajo del techo de la lista.
-            val offset = -(listaEstado.layoutInfo.viewportSize.height / 3)
+            // Fase 1 (aproximación): el alto real de la oración no se conoce antes de
+            // layoutear, así que centramos "a ojo" alineando el TECHO del item con el
+            // centro del viewport (offset negativo de medio viewport).
+            val offset = -(listaEstado.layoutInfo.viewportSize.height / 2)
             try {
                 if (primeraVez) {
                     listaEstado.scrollToItem(estado.indiceActual, offset)
@@ -135,9 +141,18 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
                 } else {
                     listaEstado.animateScrollToItem(estado.indiceActual, offset)
                 }
+                // Fase 2 (corrección): con el item ya layouteado tras la fase 1, lo
+                // corremos la mitad de su alto para que su CENTRO —no su techo— quede en
+                // el centro del viewport: el mismo criterio exacto de centrado real que
+                // usa el snap del scroll manual (SnapPosition.Center, más abajo). Si ya
+                // no está entre los visibles (cambió el foco de nuevo antes de llegar
+                // acá) no corregimos nada.
+                listaEstado.layoutInfo.visibleItemsInfo
+                    .find { item -> item.index == estado.indiceActual }
+                    ?.let { item -> listaEstado.animateScrollBy((item.size / 2).toFloat()) }
             } catch (c: CancellationException) {
-                // Si el gesto del usuario cancela la animación, limpiamos el flag para que
-                // el siguiente asentado legítimo no se consuma sin reenfocar.
+                // Si el gesto del usuario cancela la animación (fase 1 o 2), limpiamos el
+                // flag para que el siguiente asentado legítimo no se consuma sin reenfocar.
                 scrollProgramatico = false
                 throw c
             }
