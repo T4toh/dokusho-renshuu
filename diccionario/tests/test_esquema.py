@@ -25,6 +25,12 @@ class TestEsquema(unittest.TestCase):
         self.assertIsInstance(esquema.DB_VERSION, int)
         self.assertGreater(esquema.DB_VERSION, 0)
 
+    def test_version_es_2(self):
+        # Plan 3.5 Frente A: bump de esquema por el fix de glosas de Jitendex
+        # (Task 1) — la app exige version==2 (VERSION_ESPERADA, fuera de esta
+        # scope) y el nombre del asset publicado es diccionario-v2.db.
+        self.assertEqual(esquema.DB_VERSION, 2)
+
     def test_indices_existen(self):
         indices = {
             fila[0] for fila in self.conn.execute(

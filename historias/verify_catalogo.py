@@ -7,8 +7,12 @@ import json
 import os
 import sys
 
+VERSION_CATALOGO = 2
+VERSION_HISTORIA = 2
 DIFICULTADES = {'facil', 'media', 'dificil'}
-CLAVES_CATALOGO = {'id', 'titulo', 'autor', 'dificultad', 'tamaño', 'version'}
+CLAVES_CATALOGO = {'id', 'titulo', 'titulo_lectura', 'titulo_en', 'autor',
+                   'dificultad', 'tamaño', 'version', 'kanjis_unicos',
+                   'oraciones'}
 CLAVES_HISTORIA = {'id', 'titulo', 'autor', 'fuente', 'licencia',
                    'dificultad', 'version', 'parrafos'}
 # ※ queda si hubo gaiji ［＃...］ sin resolver: también es residuo
@@ -26,6 +30,9 @@ def _verificar_historia(ruta: str, id_: str) -> list:
         errores.append(f"{id_}: id interno {historia['id']!r} no coincide")
     if historia['dificultad'] not in DIFICULTADES:
         errores.append(f"{id_}: dificultad {historia['dificultad']!r} inválida")
+    if historia['version'] != VERSION_HISTORIA:
+        errores.append(
+            f"{id_}: version {historia['version']!r} != {VERSION_HISTORIA}")
     if not historia['parrafos']:
         errores.append(f'{id_}: sin párrafos')
     for p, parrafo in enumerate(historia['parrafos']):
@@ -56,6 +63,25 @@ def _verificar_historia(ruta: str, id_: str) -> list:
     return errores
 
 
+def _verificar_entrada_catalogo(entrada: dict) -> list:
+    errores = []
+    id_ = entrada.get('id')
+    if entrada.get('version') != VERSION_CATALOGO:
+        errores.append(
+            f"{id_}: version de catálogo {entrada.get('version')!r} "
+            f"!= {VERSION_CATALOGO}")
+    if not isinstance(entrada.get('titulo_lectura'), str) or not entrada['titulo_lectura']:
+        errores.append(f'{id_}: titulo_lectura inválida {entrada.get("titulo_lectura")!r}')
+    titulo_en = entrada.get('titulo_en')
+    if titulo_en is not None and not isinstance(titulo_en, str):
+        errores.append(f'{id_}: titulo_en inválido {titulo_en!r}')
+    for campo in ('kanjis_unicos', 'oraciones'):
+        valor = entrada.get(campo)
+        if not isinstance(valor, int) or isinstance(valor, bool) or valor < 0:
+            errores.append(f'{id_}: {campo} inválido {valor!r}')
+    return errores
+
+
 def verificar(dir_catalogo: str, imprimir: bool = False) -> list:
     errores = []
     ruta_catalogo = os.path.join(dir_catalogo, 'catalogo.json')
@@ -63,6 +89,9 @@ def verificar(dir_catalogo: str, imprimir: bool = False) -> list:
         return [f'no existe {ruta_catalogo}']
     with open(ruta_catalogo, encoding='utf-8') as f:
         catalogo = json.load(f)
+    if catalogo.get('version') != VERSION_CATALOGO:
+        errores.append(
+            f"catálogo: version {catalogo.get('version')!r} != {VERSION_CATALOGO}")
     entradas = catalogo.get('historias', [])
     if not entradas:
         errores.append('catálogo sin historias')
@@ -72,6 +101,7 @@ def verificar(dir_catalogo: str, imprimir: bool = False) -> list:
             errores.append(
                 f"catálogo {entrada.get('id')}: faltan {sorted(faltantes)}")
             continue
+        errores.extend(_verificar_entrada_catalogo(entrada))
         ruta = os.path.join(dir_catalogo, 'historias',
                             f"{entrada['id']}.json")
         if not os.path.exists(ruta):

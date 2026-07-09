@@ -29,19 +29,23 @@ mv *.txt momotaro.txt
 ## Uso
 
 ```bash
-python genera_jlpt.py                  # regenerar src/jlpt.py (solo si cambia KANJIDIC2)
-python pipeline.py                     # fuentes/ + obras.json → ../catalogo/
-python verify_catalogo.py              # verificación (exit 1 si falla)
-python -m unittest discover tests -v   # tests
+python3 genera_jlpt.py                  # regenerar src/jlpt.py (solo si cambia KANJIDIC2)
+python3 pipeline.py                     # fuentes/ + obras.json → ../catalogo/
+python3 verify_catalogo.py              # verificación (exit 1 si falla)
+python3 -m unittest discover tests -v   # tests
 ```
 
-## Contrato de datos (app, Plan 3)
+## Contrato de datos (app, catálogo v2)
 
 - `furigana` = `[inicio, fin, lectura]`, **fin exclusivo**, índices sobre el
   `texto` de la oración.
-- `traduccion` siempre `null` en v1 (reservado para el toggle a inglés).
-- `catalogo.json` = `{"version": 1, "historias": [{id, titulo, autor,
-  dificultad, tamaño, version}]}` — `tamaño` en bytes del JSON de la historia.
+- `traduccion` siempre `null` (reservado para el toggle a inglés).
+- `catalogo.json` = `{"version": 2, "historias": [{id, titulo, titulo_lectura,
+  titulo_en, autor, dificultad, tamaño, version, kanjis_unicos, oraciones}]}`
+  — `tamaño` en bytes del JSON de la historia; `titulo_lectura` es la lectura
+  en kana del título; `titulo_en` la traducción al inglés; `kanjis_unicos` y
+  `oraciones` son stats agregadas de la historia completa (metadata curada,
+  no presente en el JSON individual de la historia en `catalogo/historias/`).
 - `dificultad` ∈ `{facil, media, dificil}` (umbral en `src/dificultad.py`).
 - El diálogo `「...。...。」` es UNA oración (el segmentador no corta dentro
   de comillas) — mismo algoritmo a portar en Kotlin (Plan 3). Ninguna oración
@@ -51,7 +55,7 @@ python -m unittest discover tests -v   # tests
 
 1. Agregar entrada a `obras.json` (id, archivo, fuente, url).
 2. Descargar el `.txt` a `fuentes/` (ver arriba).
-3. `python pipeline.py && python verify_catalogo.py`
+3. `python3 pipeline.py && python3 verify_catalogo.py`
 4. Commitear `catalogo/` regenerado.
 
 ## Licencias

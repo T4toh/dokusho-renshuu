@@ -1,37 +1,53 @@
 {
- "version": 1,
+ "version": 2,
  "historias": [
   {
    "id": "momotaro",
    "titulo": "桃太郎",
+   "titulo_lectura": "ももたろう",
+   "titulo_en": "Peach Boy",
    "autor": "楠山正雄",
    "dificultad": "facil",
-   "tamaño": 67523,
-   "version": 1
+   "tamaño": 67083,
+   "version": 2,
+   "kanjis_unicos": 217,
+   "oraciones": 174
   },
   {
    "id": "urashima_taro",
    "titulo": "浦島太郎",
+   "titulo_lectura": "うらしまたろう",
+   "titulo_en": "Urashima Tarō",
    "autor": "楠山正雄",
-   "dificultad": "facil",
-   "tamaño": 38101,
-   "version": 1
+   "dificultad": "media",
+   "tamaño": 37661,
+   "version": 2,
+   "kanjis_unicos": 173,
+   "oraciones": 148
   },
   {
    "id": "issunboshi",
    "titulo": "一寸法師",
+   "titulo_lectura": "いっすんぼうし",
+   "titulo_en": "The Inch-High Samurai",
    "autor": "楠山正雄",
    "dificultad": "media",
-   "tamaño": 73787,
-   "version": 1
+   "tamaño": 73347,
+   "version": 2,
+   "kanjis_unicos": 280,
+   "oraciones": 173
   },
   {
    "id": "kachikachi_yama",
    "titulo": "かちかち山",
+   "titulo_lectura": "かちかちやま",
+   "titulo_en": "Kachi-Kachi Mountain",
    "autor": "楠山正雄",
    "dificultad": "facil",
-   "tamaño": 45839,
-   "version": 1
+   "tamaño": 45399,
+   "version": 2,
+   "kanjis_unicos": 154,
+   "oraciones": 144
   }
  ]
 }

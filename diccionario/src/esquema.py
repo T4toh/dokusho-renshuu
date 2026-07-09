@@ -1,6 +1,6 @@
 """Esquema SQLite de diccionario.db. Ver spec: docs/superpowers/specs/."""
 
-DB_VERSION = 1
+DB_VERSION = 2
 
 DDL = """
 CREATE TABLE metadata (

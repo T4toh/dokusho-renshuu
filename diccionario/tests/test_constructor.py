@@ -67,7 +67,7 @@ class TestConstructor(unittest.TestCase):
 
 
 class TestCaps(unittest.TestCase):
-    """Los caps por kanji (50) y por palabra (10) retienen las más cortas."""
+    """Los caps por kanji y por palabra retienen las oraciones más cortas."""
 
     @classmethod
     def setUpClass(cls):
@@ -103,9 +103,12 @@ class TestCaps(unittest.TestCase):
         self.assertEqual(cuenta, constructor.MAX_ORACIONES_POR_KANJI)
 
     def test_cap_por_kanji_retiene_las_mas_cortas(self):
+        # Plan 3.5: no hardcodear el cap — MAX_ORACIONES_POR_KANJI puede
+        # bajar (palanca de tamaño de diccionario-v2.db, ver README/brief).
         ids = {f[0] for f in self.conn.execute(
             "SELECT id_oracion FROM oracion_kanji WHERE kanji='物'")}
-        self.assertEqual(ids, set(range(1, 51)))
+        self.assertEqual(
+            ids, set(range(1, constructor.MAX_ORACIONES_POR_KANJI + 1)))
 
     def test_cap_por_palabra(self):
         cuenta = self.conn.execute(

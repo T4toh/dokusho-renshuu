@@ -23,12 +23,37 @@ class ParserHistoriaTest {
     }
 
     @Test
-    fun `parsea catalogo real`() {
+    fun `parsea catalogo v2 con campos nuevos`() {
         val catalogo = ParserHistoria.parsearCatalogo(recurso("catalogo.json"))
-        assertEquals(1, catalogo.version)
+        assertEquals(2, catalogo.version)
         assertEquals(4, catalogo.historias.size)
-        assertTrue(catalogo.historias.any { it.id == "momotaro" && it.dificultad == "facil" })
+        val momotaro = catalogo.historias.first { it.id == "momotaro" }
+        assertEquals("ももたろう", momotaro.tituloLectura)
+        assertEquals("Peach Boy", momotaro.tituloEn)
+        assertEquals(217, momotaro.kanjisUnicos)
+        assertEquals(174, momotaro.oraciones)
+        // urashima_taro cambió de dificultad al regenerarse el catálogo (facil -> media)
+        val urashima = catalogo.historias.first { it.id == "urashima_taro" }
+        assertEquals("media", urashima.dificultad)
         assertTrue(catalogo.historias.all { it.tamanio > 0 })
+    }
+
+    @Test
+    fun `titulo_en null se parsea como null`() {
+        val json = """{"version":2,"historias":[{"id":"x","titulo":"t","titulo_lectura":"てぃー",
+            "titulo_en":null,"autor":"a","dificultad":"facil","tamaño":1,"version":2,
+            "kanjis_unicos":1,"oraciones":1}]}"""
+        val catalogo = ParserHistoria.parsearCatalogo(json)
+        assertNull(catalogo.historias.first().tituloEn)
+    }
+
+    @Test
+    fun `catalogo con version distinta de 2 lanza`() {
+        val json = """{"version":1,"historias":[]}"""
+        val e = assertThrows(IllegalArgumentException::class.java) {
+            ParserHistoria.parsearCatalogo(json)
+        }
+        assertTrue(e.message!!.contains("versión"))
     }
 
     @Test
@@ -63,7 +88,9 @@ class ParserHistoriaTest {
 
     @Test
     fun `catalogo dificultad invalida lanza`() {
-        val json = """{"version":1,"historias":[{"id":"x","titulo":"t","autor":"a","dificultad":"xx","tamaño":1,"version":1}]}"""
+        val json = """{"version":2,"historias":[{"id":"x","titulo":"t","titulo_lectura":"てぃー",
+            "titulo_en":null,"autor":"a","dificultad":"xx","tamaño":1,"version":2,
+            "kanjis_unicos":1,"oraciones":1}]}"""
         val e = assertThrows(IllegalArgumentException::class.java) { ParserHistoria.parsearCatalogo(json) }
         assertTrue(e.message!!.contains("dificultad"))
     }

@@ -32,6 +32,13 @@ class DiccionarioSqliteTest {
     }
 
     @Test
+    fun `buscar por lectura devuelve el termino en kanji`() {
+        val resultados = abrirFixture().buscarPorLectura("ものがたり")
+        assertEquals(1, resultados.size)
+        assertEquals("物語", resultados[0].termino)
+    }
+
+    @Test
     fun `buscar kanji con jlpt y sin jlpt`() {
         val dic = abrirFixture()
         val go = dic.buscarKanji("語")!!

@@ -5,17 +5,8 @@
  "fuente": "aozora:18377",
  "licencia": "dominio público",
  "dificultad": "facil",
- "version": 1,
+ "version": 2,
  "parrafos": [
-  {
-   "oraciones": [
-    {
-     "texto": "一",
-     "furigana": [],
-     "traduccion": null
-    }
-   ]
-  },
   {
    "oraciones": [
     {
@@ -1232,15 +1223,6 @@
   {
    "oraciones": [
     {
-     "texto": "二",
-     "furigana": [],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
      "texto": "さてたぬきはおじいさんのうちを逃げ出してから、何だかこわいものですから、どこへも出ずに穴にばかり引っ込んでいました。",
      "furigana": [
       [
@@ -2023,15 +2005,6 @@
   {
    "oraciones": [
     {
-     "texto": "三",
-     "furigana": [],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
      "texto": "そのあくる日、うさぎはおみその中に唐がらしをすり込んでこうやくをこしらえて、それを持ってたぬきのところへお見舞いにやって来ました。",
      "furigana": [
       [
@@ -2275,15 +2248,6 @@
        "かえ"
       ]
      ],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
-     "texto": "四",
-     "furigana": [],
      "traduccion": null
     }
    ]

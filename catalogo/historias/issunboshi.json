@@ -5,17 +5,8 @@
  "fuente": "aozora:43457",
  "licencia": "dominio público",
  "dificultad": "media",
- "version": 1,
+ "version": 2,
  "parrafos": [
-  {
-   "oraciones": [
-    {
-     "texto": "一",
-     "furigana": [],
-     "traduccion": null
-    }
-   ]
-  },
   {
    "oraciones": [
     {
@@ -534,15 +525,6 @@
        "いっすんぼうし"
       ]
      ],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
-     "texto": "二",
-     "furigana": [],
      "traduccion": null
     }
    ]
@@ -2021,15 +2003,6 @@
        "お"
       ]
      ],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
-     "texto": "三",
-     "furigana": [],
      "traduccion": null
     }
    ]
@@ -4651,15 +4624,6 @@
        "き"
       ]
      ],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
-     "texto": "四",
-     "furigana": [],
      "traduccion": null
     }
    ]

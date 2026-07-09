@@ -4,18 +4,9 @@
  "autor": "楠山正雄",
  "fuente": "aozora:3390",
  "licencia": "dominio público",
- "dificultad": "facil",
- "version": 1,
+ "dificultad": "media",
+ "version": 2,
  "parrafos": [
-  {
-   "oraciones": [
-    {
-     "texto": "一",
-     "furigana": [],
-     "traduccion": null
-    }
-   ]
-  },
   {
    "oraciones": [
     {
@@ -539,15 +530,6 @@
   {
    "oraciones": [
     {
-     "texto": "二",
-     "furigana": [],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
      "texto": "まもなく、かめはまた出てきて、",
      "furigana": [],
      "traduccion": null
@@ -997,15 +979,6 @@
   {
    "oraciones": [
     {
-     "texto": "三",
-     "furigana": [],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
      "texto": "毎日おもしろい、めずらしいことが、それからそれとつづいて、あまりりゅう宮がたのしいので、なんということもおもわずに、うかうかあそんでくらすうち、三年の月日がたちました。",
      "furigana": [],
      "traduccion": null
@@ -1332,15 +1305,6 @@
        "ゆ"
       ]
      ],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
-     "texto": "四",
-     "furigana": [],
      "traduccion": null
     }
    ]

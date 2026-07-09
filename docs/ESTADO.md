@@ -3,27 +3,26 @@
 > Contexto portable entre máquinas/sesiones. Actualizar al cerrar cada plan.
 > Spec: `docs/superpowers/specs/2026-07-06-dokusho-renshuu-design.md`
 
-## Dónde estamos (2026-07-08)
+## Dónde estamos (2026-07-09)
 
 | Plan | Subsistema                                       | Estado                                                                                                               |
 | ---- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 1    | `diccionario/` — parser → diccionario.db         | ✅ Completo (PR #1 mergeado, release [db-v1](https://github.com/T4toh/dokusho-renshuu/releases/tag/db-v1) publicado) |
 | 2    | `historias/` — pipeline Aozora → JSON + catálogo | ✅ Completo ([PR #2](https://github.com/T4toh/dokusho-renshuu/pull/2) mergeado)                                                                                  |
 | 3    | `app/` — lector Android (Kotlin + Compose)       | ✅ Completo ([PR #3](https://github.com/T4toh/dokusho-renshuu/pull/3)) |
+| 3.5  | pulido + repaso básico (db-v2, catálogo v2, app) | ✅ Completo ([PR #4](https://github.com/T4toh/dokusho-renshuu/pull/4)) |
 | 4    | `app/` — mazos .apkg + import de texto           | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                         |
 
 ## Datos operativos
 
-- **Release db**: `db-v1` = `diccionario-v1.db` (79 MB). La app lo baja de GitHub Releases a `app/src/main/assets/`.
-- **Tamaño db**: 79 MB, a ~1 MB del umbral de 80 del spec. Palanca acordada si se pasa: bajar `MAX_ORACIONES_POR_KANJI` (verify_db lo chequea automático).
+- **Release db vigente**: `db-v2` = `diccionario-v2.db` (73.3 MB, metadata version=2, glosas limpias: parser Jitendex descarta 23 marcadores de structured content; MAX_ORACIONES_POR_KANJI=30). db-v1 queda obsoleto.
 - **Fuentes** (URLs vigentes en `diccionario/README.md`): Jitendex ya NO distribuye por GitHub release assets; Tatoeba discontinuó el export directo de pares → `diccionario/fuentes_tatoeba.py` los arma desde exports por-idioma.
 - **Contrato para la app (Plan 3)**: `oracion_palabra` solo indexa términos de 2-6 chars; palabras de 1 kanji → fallback a `oracion_kanji`. Listas en el db = JSON arrays (`ensure_ascii=False`). Versión de esquema en tabla `metadata`.
+- **Catálogo**: schema v2 (`titulo_lectura`, `titulo_en` nullable, `kanjis_unicos`, `oraciones`; sin encabezados de sección; urashima_taro ahora `media`). La app exige version==2. URL raw `https://raw.githubusercontent.com/T4toh/dokusho-renshuu/main/catalogo/catalogo.json`.
 - **Entorno**: builds JVM (gradle/Android Studio, Planes 3-4) van en la PC secundaria — la principal tiene un bug de CPU que cuelga con Java. Python (Plan 2) anda en cualquiera.
-- **Catálogo**: `catalogo/catalogo.json` commiteado (4 cuentos de 楠山正雄: momotaro, urashima_taro, issunboshi, kachikachi_yama), URL raw `https://raw.githubusercontent.com/T4toh/dokusho-renshuu/main/catalogo/catalogo.json`, formato `{"version": 1, "historias": [...]}`.
 - **Contrato furigana**: `[inicio, fin, lectura]` con fin exclusivo sobre el texto de la oración; diálogo `「…」` = 1 oración (portar igual en Kotlin, Plan 3).
 - `historias/src/jlpt.py` es generado (regenerar con `genera_jlpt.py` solo si cambia KANJIDIC2).
-- **App (Plan 3)**: `app/` compila con JDK 17+ (probado JDK 21) + SDK 36 (PC secundaria); assets generados por gradle tasks (`descargarDiccionario` baja el db del release con escritura atómica tmp→rename; `copiarHistorias` empaqueta `catalogo/`). AGP 9.2 usa Kotlin built-in (sin plugin kotlin-android ni kotlinOptions).
-- **Palabras tocadas**: Room (`palabras_tocadas`) — insumo directo de Plan 4.
+- **App (Plan 3)**: `app/` compila con JDK 17+ (probado JDK 21) + SDK 36 (PC secundaria); assets generados por gradle tasks (`descargarDiccionario` baja el db del release con escritura atómica tmp→rename; `copiarHistorias` empaqueta `catalogo/`). AGP 9.2 usa Kotlin built-in (sin plugin kotlin-android ni kotlinOptions). UI en inglés; tabla Room `kanjis_tocados` (kanji, dificultad nullable easy/medium/hard, timestamp — migración 1→2 no destructiva) — insumo Plan 4 junto con `palabras_tocadas`; tests con maxHeapSize 2g (OOM Kuromoji).
 - **Para Plan 4**: portar segmentador de `historias/src/segmentador.py` CON la regla de fusión de spans; formato `.apkg` = zip + SQLite (referencia genanki); IDs estables por kanji (guid Anki).
 
 ## Backlog diferido (review final Plan 1 — no bloqueante)
@@ -48,7 +47,6 @@
 ## Backlog diferido (reviews Plan 3 — no bloqueante)
 
 - `BuscadorPalabras`: regla 2-6 chars cuenta UTF-16 units, no code points — diverge solo con kanji fuera del BMP (catálogo actual validado BMP-only; riesgo conocido #4 del plan).
-- `PalabraSheet`: muestra solo `definiciones.first()` — múltiples entradas del diccionario se descartan (verbatim del plan).
 - `lecturaDelToken`: tests no cubren overlap parcial ni borde fin==inicio; guard de `mover()` con oraciones vacías sin test.
 - `tocarPalabra`: sin guard de doble-tap (race UX last-wins, benigna).
 - Rotación re-dispara `LaunchedEffect(Unit)` → refetch de catálogo/historia (flash de Cargando; idempotente).
@@ -56,7 +54,24 @@
 - `HistoriasRepo`: doc de ClienteHttpReal dice IOException pero lanza IllegalArgumentException; `.tmp` huérfano posible si el proceso muere entre write y rename (filtrado por extensión, no rompe).
 - Gradle: tasks de assets sin group/description; `copiarHistorias` copia cualquier extensión.
 - `App`: warm-up thread de lazies sin `runCatching` — si `DiccionarioSqlite.abrir` lanza (disco lleno) mata el proceso al arranque en vez de en la primera navegación (lazy SYNCHRONIZED no cachea fallas; con runCatching el path del VM reintentaría en contexto).
-- Validación en tablet (2026-07-08, checklist 12/12 OK): glosas de Jitendex se ven concatenadas sin separador en el sheet ("nounsurutransitivewashing…") — raíz en backlog Plan 1 (li-anidado aplanado), visible ahora en UI; `DetalleKanjiScreen` y `AcercaScreen` renderizan con fondo claro fijo (no usan el background del tema — inconsistente en dark mode); primera "oración" de cada cuento es el encabezado de sección `一` de Aozora (pipeline Plan 2: considerar filtrarlo o fusionarlo).
+
+## Backlog diferido (Plan 3.5 — no bloqueante)
+
+- db-v2: marcadores `〔… only〕` de restricción de formas siguen filtrando a las glosas (3.645 entradas, 904 como primera glosa) — el span no tiene `data.content` (solo `title="valid only for these forms and/or readings"` / hijos `form-special`), invisible al blacklist actual; requiere rebuild db-v2.1 con descarte por `title`.
+- Status bar con íconos claros sobre fondo claro en light mode (falta windowLightStatusBar en el theme); ídem barra de gestos/navigation bar — debería adaptarse al tema (feedback 2026-07-09).
+- Portada muestra "0% read" con progreso <1% (truncado a int; el botón Continue/Start ya se arregló en 7ab6b7d).
+- Progreso guardado se corre ~1 posición cuando se regenera el catálogo (índices sobre JSON nuevo; one-time, benigno).
+- jitendex: xref/sense-note descartados enteros — "See also" se pierde (aceptado; revisar si se quiere conservar con label).
+- verify_db no detecta un sentido individual borrado en palabra multi-sentido.
+- MigrationTestHelper no usado (exportSchema=false); ProgresoDaoFake overridea registrarAperturaKanji (primitivas dead-code en fake).
+- Review section: kanjisPorDificultad consultado 2x por dificultad.
+- Cards de biblioteca muestran dificultad cruda `facil/media/dificil` en UI inglesa (mapear a Easy/Medium/Hard); lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
+
+## Feedback pendiente (2026-07-09 — candidatos a Plan 3.6/4)
+
+- Scroll con el dedo en el lector (arriba/abajo) además de los botones Previous/Next.
+- Toggle de lectura para katakana: mostrar pronunciación en hiragana sobre tokens katakana — NO requiere otro diccionario (Kuromoji ya da lecturas y `katakanaAHiragana` existe en Tokenizador); toggle tipo furigana.
+- Detalle de kanji adaptable: en tablet sobra ancho (layout 2 columnas: kanji+chips | secciones); en teléfono reducir scroll.
 
 ## Proceso de trabajo usado
 

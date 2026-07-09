@@ -29,6 +29,7 @@ import java.io.File
  *  el contenido de las definiciones para estos tests, solo que `consultar` no crashee. */
 private class DiccionarioFake : Diccionario {
     override fun buscarPalabra(termino: String): List<Palabra> = emptyList()
+    override fun buscarPorLectura(lectura: String): List<Palabra> = emptyList()
     override fun buscarKanji(kanji: String): KanjiInfo? = null
     override fun oracionesDePalabra(termino: String, limite: Int): List<OracionEjemplo> = emptyList()
     override fun oracionesDeKanji(kanji: String, limite: Int): List<OracionEjemplo> = emptyList()
@@ -43,10 +44,18 @@ class LectorViewModelTest {
 
     private val momotaroJson =
         javaClass.classLoader!!.getResourceAsStream("momotaro.json")!!.readBytes().decodeToString()
+    private val catalogoJson =
+        javaClass.classLoader!!.getResourceAsStream("catalogo.json")!!.readBytes().decodeToString()
 
     private fun vmMomotaro(dao: ProgresoDaoFake, idHistoria: String = "momotaro"): LectorViewModel {
         val repo = HistoriasRepo(
-            leerAsset = { n -> if (n == "historias/momotaro.json") momotaroJson else null },
+            leerAsset = { n ->
+                when (n) {
+                    "historias/momotaro.json" -> momotaroJson
+                    "catalogo.json" -> catalogoJson
+                    else -> null
+                }
+            },
             listarAssetsHistorias = { listOf("momotaro.json") },
             dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
         )
@@ -76,6 +85,35 @@ class LectorViewModelTest {
     }
 
     @Test
+    fun `sin progreso guardado arranca en portada (indice -1)`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        assertEquals(-1, vm.estado.value.indiceActual)
+    }
+
+    @Test
+    fun `previous desde la primera oracion vuelve a la portada`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.guardarProgreso(ProgresoHistoria("momotaro", parrafo = 0, oracion = 0))
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        assertEquals(0, vm.estado.value.indiceActual)
+        vm.retroceder(); advanceUntilIdle()
+        assertEquals(-1, vm.estado.value.indiceActual)
+    }
+
+    @Test
+    fun `portada expone metadata del catalogo local cuando existe`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        // valores del fixture real catalogo.json (test/resources) para "momotaro"
+        assertEquals("Peach Boy", vm.estado.value.metadata?.tituloEn)
+        assertEquals(217, vm.estado.value.metadata?.kanjisUnicos)
+    }
+
+    @Test
     fun `avanzar guarda progreso`() = runTest {
         val dao = ProgresoDaoFake()
         val vm = vmMomotaro(dao)
@@ -91,6 +129,7 @@ class LectorViewModelTest {
         val dao = ProgresoDaoFake()
         val vm = vmMomotaro(dao)
         vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()  // sale de la portada (-1) antes de indexar oraciones
         val token = vm.estado.value.oraciones[vm.estado.value.indiceActual]
             .tokens.first { it.esContenido }
         vm.tocarPalabra(token); advanceUntilIdle()
@@ -116,7 +155,7 @@ class LectorViewModelTest {
         vm.cargar()
         advanceUntilIdle()
         val estado = vm.estado.value
-        assertEquals("Historia no disponible", estado.titulo)
+        assertEquals("Story not available", estado.titulo)
         assertTrue(estado.oraciones.isEmpty())
     }
 

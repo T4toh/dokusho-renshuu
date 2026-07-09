@@ -7,19 +7,23 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
-/** diccionario-v1.db readonly. Se copia de assets al filesDir en el primer
+/** diccionario-v2.db readonly. Se copia de assets al filesDir en el primer
  *  arranque; si falta o la versión no valida, se re-copia (spec: nunca crash). */
 class DiccionarioSqlite private constructor(private val db: SQLiteDatabase) : Diccionario {
 
     companion object {
-        const val NOMBRE_DB = "diccionario-v1.db"
-        const val VERSION_ESPERADA = 1
+        const val NOMBRE_DB = "diccionario-v2.db"
+        const val VERSION_ESPERADA = 2
 
         fun abrir(contexto: Context): DiccionarioSqlite {
+            // limpieza post-upgrade: dispositivos que migraron desde v1 se quedan con
+            // diccionario-v1.db huérfano (~79 MB) en filesDir; delete() es no-op si no existe.
+            File(contexto.filesDir, "diccionario-v1.db").delete()
             val archivo = File(contexto.filesDir, NOMBRE_DB)
             if (!archivo.exists() || !versionValida(archivo)) {
                 copiarDesdeAssets(contexto, archivo)
             }
+            File(contexto.filesDir, "diccionario-v1.db").delete()
             return desdeArchivo(archivo.path)
         }
 
@@ -50,6 +54,23 @@ class DiccionarioSqlite private constructor(private val db: SQLiteDatabase) : Di
             "SELECT termino, lectura, significados, tags, popularidad FROM palabras" +
                 " WHERE termino = ? ORDER BY popularidad DESC LIMIT 10",
             arrayOf(termino),
+        ).use { c ->
+            generateSequence { if (c.moveToNext()) c else null }.map {
+                Palabra(
+                    termino = c.getString(0),
+                    lectura = c.getString(1),
+                    significados = listaJson(c.getString(2)),
+                    tags = listaJson(c.getString(3)),
+                    popularidad = c.getInt(4),
+                )
+            }.toList()
+        }
+
+    override fun buscarPorLectura(lectura: String): List<Palabra> =
+        db.rawQuery(
+            "SELECT termino, lectura, significados, tags, popularidad FROM palabras" +
+                " WHERE lectura = ? ORDER BY popularidad DESC LIMIT 10",
+            arrayOf(lectura),
         ).use { c ->
             generateSequence { if (c.moveToNext()) c else null }.map {
                 Palabra(

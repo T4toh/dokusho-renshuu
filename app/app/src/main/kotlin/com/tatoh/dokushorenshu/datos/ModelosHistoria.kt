@@ -1,6 +1,7 @@
 package com.tatoh.dokushorenshu.datos
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -18,8 +19,9 @@ data class Historia(
     val parrafos: List<Parrafo>,
 )
 data class EntradaCatalogo(
-    val id: String, val titulo: String, val autor: String,
-    val dificultad: String, val tamanio: Long, val version: Int,
+    val id: String, val titulo: String, val tituloLectura: String, val tituloEn: String?,
+    val autor: String, val dificultad: String, val tamanio: Long, val version: Int,
+    val kanjisUnicos: Int, val oraciones: Int,
 )
 data class Catalogo(val version: Int, val historias: List<EntradaCatalogo>)
 
@@ -53,15 +55,22 @@ object ParserHistoria {
 
     fun parsearCatalogo(texto: String): Catalogo = try {
         val raiz = json.parseToJsonElement(texto).jsonObject
+        val version = raiz.req("version").jsonPrimitive.int
+        require(version == 2) { "catálogo: versión no soportada ($version, se espera 2)" }
         Catalogo(
-            version = raiz.req("version").jsonPrimitive.int,
+            version = version,
             historias = raiz.req("historias").jsonArray.map { e ->
                 val o = e.jsonObject
                 EntradaCatalogo(
-                    id = o.texto("id"), titulo = o.texto("titulo"), autor = o.texto("autor"),
+                    id = o.texto("id"), titulo = o.texto("titulo"),
+                    tituloLectura = o.texto("titulo_lectura"),
+                    tituloEn = o["titulo_en"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content,
+                    autor = o.texto("autor"),
                     dificultad = validarDificultad(o.texto("dificultad")),
                     tamanio = o.req("tamaño").jsonPrimitive.content.toLong(),
                     version = o.req("version").jsonPrimitive.int,
+                    kanjisUnicos = o.req("kanjis_unicos").jsonPrimitive.int,
+                    oraciones = o.req("oraciones").jsonPrimitive.int,
                 )
             },
         )

@@ -28,13 +28,14 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = nav, startDestination = "biblioteca") {
                     composable("biblioteca") {
                         val vm: BibliotecaViewModel = viewModel(factory = viewModelFactory {
-                            initializer { BibliotecaViewModel(contenedor.historias, contenedor.progresoDb.dao()) }
+                            initializer { BibliotecaViewModel(contenedor.historias, contenedor.progresoDb.dao(), contenedor.diccionario) }
                         })
                         // BibliotecaScreen dispara vm.cargar() con LaunchedEffect (Task 9).
                         BibliotecaScreen(
                             vm = vm,
                             onAbrirHistoria = { id -> nav.navigate("lector/$id") },
                             onAcerca = { nav.navigate("acerca") },
+                            onVerKanji = { k -> nav.navigate("kanji/$k") },
                         )
                     }
                     composable("lector/{id}") { entrada ->
@@ -53,7 +54,9 @@ class MainActivity : ComponentActivity() {
                     composable("kanji/{kanji}") { entrada ->
                         val kanji = entrada.arguments!!.getString("kanji")!!
                         val vm: DetalleKanjiViewModel = viewModel(factory = viewModelFactory {
-                            initializer { DetalleKanjiViewModel(kanji, contenedor.diccionario) }
+                            initializer {
+                                DetalleKanjiViewModel(kanji, contenedor.diccionario, contenedor.progresoDb.dao())
+                            }
                         })
                         // DetalleKanjiScreen dispara vm.cargar() con LaunchedEffect (mismo patrón).
                         DetalleKanjiScreen(vm)

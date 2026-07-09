@@ -62,4 +62,13 @@ class BuscadorPalabrasTest {
         val consulta = BuscadorPalabras(dic).consultar(token("洗濯"))
         assertEquals("洗う。", consulta.ejemplos[0].japones)
     }
+
+    @Test
+    fun `palabra en kana cae a busqueda por lectura`() {
+        val dic = DiccionarioFake()
+        dic.palabras["お祖父さん"] = listOf(palabra("お祖父さん").copy(lectura = "おじいさん"))
+        val consulta = BuscadorPalabras(dic).consultar(token("おじいさん", lectura = "おじいさん"))
+        assertFalse(consulta.sinDefinicion)
+        assertEquals("お祖父さん", consulta.definiciones[0].termino)
+    }
 }

@@ -3,7 +3,6 @@ package com.tatoh.dokushorenshu.ui.biblioteca
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
@@ -21,9 +20,11 @@ fun BibliotecaScreen(
     vm: BibliotecaViewModel,
     onAbrirHistoria: (String) -> Unit,
     onAcerca: () -> Unit,
+    onVerKanji: (String) -> Unit,
 ) {
     val locales by vm.locales.collectAsState()
     val catalogo by vm.catalogo.collectAsState()
+    val review by vm.review.collectAsState()
 
     // carga inicial al entrar a la pantalla
     LaunchedEffect(Unit) { vm.cargar() }
@@ -31,56 +32,136 @@ fun BibliotecaScreen(
     Scaffold(topBar = {
         TopAppBar(
             title = { Text("Dokusho Renshū") },
-            actions = { TextButton(onClick = onAcerca) { Text("Acerca de") } },
+            actions = { TextButton(onClick = onAcerca) { Text("About") } },
         )
     }) { relleno ->
-        // grid adaptativo: 1 columna en teléfono vertical, 2-3 en tablet/landscape
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 300.dp),
-            modifier = Modifier.padding(relleno).padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(locales, key = { it.historia.id }) { item ->
-                Card(Modifier.fillMaxWidth().clickable { onAbrirHistoria(item.historia.id) }) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(item.historia.titulo, style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            "${item.historia.autor} · ${item.historia.dificultad}",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        if (item.progresoPct > 0) {
-                            LinearProgressIndicator(
-                                progress = { item.progresoPct / 100f },
-                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        Column(Modifier.padding(relleno)) {
+            if (catalogo is EstadoCatalogo.Error) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text((catalogo as EstadoCatalogo.Error).mensaje, style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = vm::refrescarCatalogo) { Text("Retry") }
+                }
+            }
+            // grid adaptativo: 1 columna en teléfono vertical, 2-3 en tablet/landscape.
+            // unificado (Task 12): locales descargadas + remotas sin descargar (con botón
+            // Download en la card) — ya no hay una sección "Catálogo" separada.
+            // weight(1f): limita el grid al espacio restante para que la sección Review
+            // (fuera de este LazyColumn) no quede empujada fuera de pantalla cuando el
+            // catálogo crece.
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 300.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(locales, key = { it.historia.id }) { item ->
+                    Card(Modifier.fillMaxWidth().clickable { onAbrirHistoria(item.historia.id) }) {
+                        Column(Modifier.padding(16.dp)) {
+                            item.metadata?.tituloLectura?.let {
+                                Text(
+                                    it, style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text(item.historia.titulo, style = MaterialTheme.typography.titleLarge)
+                            item.metadata?.tituloEn?.let {
+                                Text(it, style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Text(
+                                "${item.historia.autor} · ${item.historia.dificultad}",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 4.dp),
                             )
+                            item.metadata?.let { meta ->
+                                Text(
+                                    "${meta.kanjisUnicos} kanji · ${meta.oraciones} sentences",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            if (item.progresoPct > 0) {
+                                LinearProgressIndicator(
+                                    progress = { item.progresoPct / 100f },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+                if (catalogo is EstadoCatalogo.Ok) {
+                    items((catalogo as EstadoCatalogo.Ok).disponibles, key = { it.id }) { entrada ->
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(16.dp)) {
+                                entrada.tituloLectura.let {
+                                    Text(
+                                        it, style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Text(entrada.titulo, style = MaterialTheme.typography.titleLarge)
+                                entrada.tituloEn?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                                Text(
+                                    "${entrada.autor} · ${entrada.dificultad}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
+                                Text(
+                                    "${entrada.kanjisUnicos} kanji · ${entrada.oraciones} sentences",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Button(onClick = { vm.descargar(entrada.id) }, modifier = Modifier.padding(top = 8.dp)) {
+                                    Text("Download")
+                                }
+                            }
                         }
                     }
                 }
             }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text("Catálogo", style = MaterialTheme.typography.titleMedium)
-            }
-            when (val estado = catalogo) {
-                is EstadoCatalogo.Cargando -> item { CircularProgressIndicator() }
-                is EstadoCatalogo.Error -> item(span = { GridItemSpan(maxLineSpan) }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(estado.mensaje)
-                        TextButton(onClick = vm::refrescarCatalogo) { Text("Reintentar") }
-                    }
-                }
-                is EstadoCatalogo.Ok -> items(estado.disponibles, key = { it.id }) { entrada ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Row(
-                            Modifier.padding(16.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column {
-                                Text(entrada.titulo, style = MaterialTheme.typography.titleMedium)
-                                Text(entrada.dificultad, style = MaterialTheme.typography.bodySmall)
+            if (review.isNotEmpty()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Review", style = MaterialTheme.typography.titleMedium)
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        for (tarjeta in review) {
+                            Card(
+                                Modifier.weight(1f).let { m ->
+                                    when (tarjeta) {
+                                        is TarjetaReview.ConKanji -> m.clickable { onVerKanji(tarjeta.kanji.kanji) }
+                                        is TarjetaReview.Vacia -> m
+                                    }
+                                },
+                            ) {
+                                Column(
+                                    Modifier.padding(12.dp).fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Text(
+                                        tarjeta.dificultad.replaceFirstChar { it.uppercase() },
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                    when (tarjeta) {
+                                        is TarjetaReview.ConKanji -> {
+                                            Text(tarjeta.kanji.kanji, style = MaterialTheme.typography.displaySmall)
+                                            tarjeta.lecturaPrincipal?.let {
+                                                Text(it, style = MaterialTheme.typography.bodySmall)
+                                            }
+                                            tarjeta.kanji.significados.firstOrNull()?.let {
+                                                Text(it, style = MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+                                        is TarjetaReview.Vacia -> Text(
+                                            "Tag kanji from their detail view",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
                             }
-                            TextButton(onClick = { vm.descargar(entrada.id) }) { Text("Descargar") }
                         }
                     }
                 }

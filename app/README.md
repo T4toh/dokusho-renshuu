@@ -1,7 +1,7 @@
 # app/ — Dokusho Renshū (Android)
 
 Lector de japonés: historias de `catalogo/` con furigana, diccionario offline
-(`diccionario-v1.db`) y detalle de kanji. Kotlin + Jetpack Compose, minSdk 26.
+(`diccionario-v2.db`) y detalle de kanji. Kotlin + Jetpack Compose, minSdk 26.
 
 ## Build
 
@@ -12,7 +12,7 @@ Lector de japonés: historias de `catalogo/` con furigana, diccionario offline
 ```
 
 Requiere JDK 17+ (probado con JDK 21) y Android SDK 36. Los assets NO se commitean:
-`descargarDiccionario` baja `diccionario-v1.db` del release `db-v1` (una vez);
+`descargarDiccionario` baja `diccionario-v2.db` del release `db-v2` (una vez);
 `copiarHistorias` copia `../catalogo/` en cada build.
 
 ## Arquitectura
@@ -28,6 +28,12 @@ Requiere JDK 17+ (probado con JDK 21) y Android SDK 36. Los assets NO se commite
 ## Actualizar datos
 
 - Nuevo db: publicar release `db-vN`, actualizar URL/`VERSION_ESPERADA`, borrar
-  `app/src/main/assets/diccionario-v1.db` y rebuildear.
+  `app/src/main/assets/diccionario-v2.db` y rebuildear.
 - Nuevas historias: regenerar `catalogo/` (ver `historias/README.md`) — el build
   las re-empaqueta solo.
+
+## Ícono
+
+`app/arte/logo.jpg` es arte de Saitama (ONE / Yusuke Murata, One Punch Man) —
+**uso personal únicamente**. No redistribuir ni publicar esta app en stores
+con este ícono: el arte tiene copyright de sus autores.

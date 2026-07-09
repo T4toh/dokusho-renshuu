@@ -9,6 +9,8 @@ class DiccionarioFake : Diccionario {
     val ejemplosKanji = mutableMapOf<String, List<OracionEjemplo>>()
 
     override fun buscarPalabra(termino: String) = palabras[termino] ?: emptyList()
+    override fun buscarPorLectura(lectura: String): List<Palabra> =
+        palabras.values.flatten().filter { it.lectura == lectura }
     override fun buscarKanji(kanji: String) = kanjis[kanji]
     override fun oracionesDePalabra(termino: String, limite: Int) =
         (ejemplosPalabra[termino] ?: emptyList()).take(limite)
