@@ -269,59 +269,116 @@ class LectorViewModelTest {
         assertNull(lecturaDelToken(oracion, token))
     }
 
-    // --- segmentosDeToken: split de token en sub-segmentos alineados a furigana exacta
-    // (Plan 3.6 fix: furigana corrida sobre okurigana, p.ej. 刈り con lectura か solo
-    // sobre 刈) ---
+    // --- segmentosDeGrupo: split de un GRUPO de tokens en sub-segmentos alineados a
+    // furigana exacta (Plan 3.6 fix "furigana corrida" sobre okurigana, p.ej. 刈り con
+    // lectura か solo sobre 刈; luego Plan 3.6.pulido fix "furigana duplicada" sobre
+    // clusters — ver tests de `agruparTokens` más abajo) ---
 
     @Test
-    fun `token totalmente cubierto por una furigana da un solo segmento con esa lectura`() {
+    fun `token aislado totalmente cubierto por una furigana da un solo segmento con esa lectura`() {
         val token = PalabraToken("桃太郎", null, null, inicio = 0, fin = 3, esContenido = true)
         val furigana = listOf(Furigana(0, 3, "ももたろう"))
         assertEquals(
-            listOf(Segmento("桃太郎", "ももたろう")),
-            segmentosDeToken(token, furigana),
+            listOf(Segmento("桃太郎", "ももたろう", token)),
+            segmentosDeGrupo(GrupoRenderizado(listOf(token)), furigana),
         )
     }
 
     @Test
-    fun `token con okurigana parcialmente cubierto separa kanji con lectura del kana sin lectura`() {
+    fun `token aislado con okurigana parcialmente cubierto separa kanji con lectura del kana sin lectura`() {
         // 刈り: el kanji 刈 (index 5) tiene furigana か; り (index 6) es kana, sin furigana.
         val token = PalabraToken("刈り", null, null, inicio = 5, fin = 7, esContenido = true)
         val furigana = listOf(Furigana(5, 6, "か"))
         assertEquals(
-            listOf(Segmento("刈", "か"), Segmento("り", null)),
-            segmentosDeToken(token, furigana),
+            listOf(Segmento("刈", "か", token), Segmento("り", null, token)),
+            segmentosDeGrupo(GrupoRenderizado(listOf(token)), furigana),
         )
     }
 
     @Test
-    fun `token sin furigana solapada da un solo segmento sin lectura`() {
+    fun `token aislado sin furigana solapada da un solo segmento sin lectura`() {
         val token = PalabraToken("むかし", null, null, inicio = 0, fin = 3, esContenido = true)
         assertEquals(
-            listOf(Segmento("むかし", null)),
-            segmentosDeToken(token, emptyList()),
+            listOf(Segmento("むかし", null, token)),
+            segmentosDeGrupo(GrupoRenderizado(listOf(token)), emptyList()),
         )
     }
 
     @Test
-    fun `token con dos furigana independientes da dos segmentos, cada uno con su lectura`() {
+    fun `token aislado con dos furigana independientes da dos segmentos, cada uno con su lectura`() {
         val token = PalabraToken("大人", null, null, inicio = 0, fin = 2, esContenido = true)
         val furigana = listOf(Furigana(0, 1, "おと"), Furigana(1, 2, "な"))
         assertEquals(
-            listOf(Segmento("大", "おと"), Segmento("人", "な")),
-            segmentosDeToken(token, furigana),
+            listOf(Segmento("大", "おと", token), Segmento("人", "な", token)),
+            segmentosDeGrupo(GrupoRenderizado(listOf(token)), furigana),
         )
     }
 
     @Test
-    fun `furigana que cruza el limite del token cae a centrado de todo el token (fallback)`() {
-        // furigana [1,4) empieza ANTES del token (inicio=2): no entra limpio en un
-        // sub-segmento, así que se centra todo el token con la lectura completa (v1).
+    fun `furigana que se sale del rango del grupo se recorta defensivamente (dato inconsistente)`() {
+        // furigana [1,4) empieza ANTES del grupo (inicio=2): red de seguridad ante datos
+        // inconsistentes (no debería pasar, tokens y furigana vienen del mismo texto).
         val token = PalabraToken("五に", null, null, inicio = 2, fin = 4, esContenido = true)
         val furigana = listOf(Furigana(1, 4, "じゅうごに"))
         assertEquals(
-            listOf(Segmento("五に", "じゅうごに")),
-            segmentosDeToken(token, furigana),
+            listOf(Segmento("五に", "じゅうごに", token)),
+            segmentosDeGrupo(GrupoRenderizado(listOf(token)), furigana),
+        )
+    }
+
+    // --- agruparTokens: agrupa tokens consecutivos cruzados por una misma furigana
+    // (Plan 3.6.pulido fix "furigana duplicada": antes 二人, tokenizado 二+人 con una sola
+    // furigana ふたり que cruza el límite entre ambos, renderizaba "ふたりふたり" porque
+    // CADA token overlapeado repetía la lectura completa) ---
+
+    @Test
+    fun `tokens sin furigana que cruce quedan cada uno en su propio grupo (sin cambios)`() {
+        val a = PalabraToken("桃", null, null, inicio = 0, fin = 1, esContenido = true)
+        val b = PalabraToken("太郎", null, null, inicio = 1, fin = 3, esContenido = true)
+        val furigana = listOf(Furigana(0, 1, "もも"), Furigana(1, 3, "たろう"))
+        assertEquals(
+            listOf(GrupoRenderizado(listOf(a)), GrupoRenderizado(listOf(b))),
+            agruparTokens(listOf(a, b), furigana),
+        )
+    }
+
+    @Test
+    fun `dos tokens cruzados por una furigana quedan en un solo grupo`() {
+        val ni = PalabraToken("二", null, null, inicio = 0, fin = 1, esContenido = true)
+        val hito = PalabraToken("人", null, null, inicio = 1, fin = 2, esContenido = true)
+        val furigana = listOf(Furigana(0, 2, "ふたり"))
+        assertEquals(
+            listOf(GrupoRenderizado(listOf(ni, hito))),
+            agruparTokens(listOf(ni, hito), furigana),
+        )
+    }
+
+    @Test
+    fun `cluster de 2 tokens con una furigana cruzada da una sola lectura sin duplicar`() {
+        val ni = PalabraToken("二", null, null, inicio = 0, fin = 1, esContenido = true)
+        val hito = PalabraToken("人", null, null, inicio = 1, fin = 2, esContenido = true)
+        val furigana = listOf(Furigana(0, 2, "ふたり"))
+        val grupo = agruparTokens(listOf(ni, hito), furigana).single()
+        assertEquals(
+            listOf(Segmento("二人", "ふたり", ni)),
+            segmentosDeGrupo(grupo, furigana),
+        )
+    }
+
+    @Test
+    fun `cluster mixto con furigana cruzada mas furigana interna no duplica ninguna lectura`() {
+        // Grupo de 2 tokens: A="一" [0,1) y B="二三" [1,3). Una furigana cruza el límite
+        // A-B (cubre [0,2), "一二") y OTRA cae enteramente dentro de B, en la parte que la
+        // primera no cubre ([2,3), "三"). El bug haría que B repitiera "AB" + "C"
+        // concatenado; el fix debe dar exactamente un segmento por tramo, sin repetir.
+        val a = PalabraToken("一", null, null, inicio = 0, fin = 1, esContenido = true)
+        val b = PalabraToken("二三", null, null, inicio = 1, fin = 3, esContenido = true)
+        val cruza = Furigana(0, 2, "AB")
+        val interna = Furigana(2, 3, "C")
+        val grupo = agruparTokens(listOf(a, b), listOf(cruza, interna)).single()
+        assertEquals(
+            listOf(Segmento("一二", "AB", a), Segmento("三", "C", b)),
+            segmentosDeGrupo(grupo, listOf(cruza, interna)),
         )
     }
 }

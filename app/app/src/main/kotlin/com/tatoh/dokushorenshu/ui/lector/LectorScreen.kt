@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,11 +137,20 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
                 return@LaunchedEffect
             }
             scrollProgramatico = true
-            // Fase 1 (aproximación): el alto real de la oración no se conoce antes de
-            // layoutear, así que centramos "a ojo" alineando el TECHO del item con el
-            // centro del viewport (offset negativo de medio viewport).
-            val offset = -(listaEstado.layoutInfo.viewportSize.height / 2)
             try {
+                // Esperamos a que el viewport tenga alto medido: en el primer frame
+                // (carga inicial o navegación explícita justo al entrar a la pantalla)
+                // el layout todavía no corrió y viewportSize.height es 0, lo que hacía
+                // que el offset de fase 1 (abajo) fuera 0 en vez de "medio viewport
+                // hacia arriba" — la oración enfocada quedaba pegada arriba en vez de
+                // centrada (bug validado en dispositivo). Este await queda DENTRO del
+                // try para que una cancelación durante la espera también limpie el flag
+                // (catch de abajo).
+                snapshotFlow { listaEstado.layoutInfo.viewportSize.height }.first { it > 0 }
+                // Fase 1 (aproximación): el alto real de la oración no se conoce antes
+                // de layoutear, así que centramos "a ojo" alineando el TECHO del item
+                // con el centro del viewport (offset negativo de medio viewport).
+                val offset = -(listaEstado.layoutInfo.viewportSize.height / 2)
                 if (primeraVez) {
                     listaEstado.scrollToItem(estado.indiceActual, offset)
                     primeraVez = false
