@@ -1,5 +1,7 @@
 package com.tatoh.dokushorenshu.ui.lector
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -74,10 +76,14 @@ fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
 
 /** Lector estilo letras de reproductor (Plan 3.6 Task 2): TODAS las oraciones viven en
  *  una única `LazyColumn` con scroll libre (el dedo manda), no una ventana acotada como
- *  antes. La oración [EstadoLector.indiceActual] se resalta (grande, opaca) y queda
- *  centrada en el viewport; el resto se ve atenuada pero sigue siendo tappeable: tocar
- *  cualquier palabra de contenido de CUALQUIER oración visible la enfoca y abre el sheet
- *  (mismo `vm.tocarPalabra`, comportamiento del sheet intacto).
+ *  antes. La oración [EstadoLector.indiceActual] se resalta (opaca, alpha 1f) y queda
+ *  centrada en el viewport; el resto se ve atenuada (alpha 0.35f, con fundido animado de
+ *  ~250ms) pero sigue siendo tappeable: tocar cualquier palabra de contenido de CUALQUIER
+ *  oración visible la enfoca y abre el sheet (mismo `vm.tocarPalabra`, comportamiento del
+ *  sheet intacto). TODAS las oraciones se renderizan al MISMO tamaño (ver
+ *  [TextoConFurigana]) — el foco nunca cambia el alto del item, así el reflow de la
+ *  `LazyColumn` a mitad de scroll (el bug de "la animación es confusa" reportado) queda
+ *  eliminado de raíz: solo el scroll mueve cosas, el foco solo cambia de color.
  *
  *  Hay dos flujos que mueven el foco y hace falta que NUNCA se disparen entre sí (fix
  *  del "rubberbanding" reportado: la oración saltaba de posición sola justo después de
@@ -195,12 +201,20 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
         ) {
             itemsIndexed(estado.oraciones, key = { indice, _ -> indice }) { indice, plana ->
                 val esActual = indice == estado.indiceActual
-                Box(Modifier.alpha(if (esActual) 1f else 0.4f).fillMaxWidth()) {
+                // Foco SOLO por alpha (animado), nunca por tamaño: todas las oraciones
+                // tienen la misma altura de item siempre, así que cambiar el foco jamás
+                // reflowea la LazyColumn — únicamente el scroll mueve cosas. El fundido
+                // de ~250ms hace que el foco se deslice entre oraciones en vez de saltar.
+                val alphaAnimada by animateFloatAsState(
+                    targetValue = if (esActual) 1f else 0.35f,
+                    animationSpec = tween(durationMillis = 250),
+                    label = "alphaOracion",
+                )
+                Box(Modifier.alpha(alphaAnimada).fillMaxWidth()) {
                     TextoConFurigana(
                         oracion = plana.oracion,
                         tokens = plana.tokens,
                         furiganaActiva = estado.furiganaActiva,
-                        grande = esActual,
                         onTapPalabra = { token ->
                             vm.enfocar(indice)
                             vm.tocarPalabra(token)

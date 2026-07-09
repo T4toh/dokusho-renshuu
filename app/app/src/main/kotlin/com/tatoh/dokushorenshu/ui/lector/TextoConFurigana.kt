@@ -13,24 +13,30 @@ import com.tatoh.dokushorenshu.datos.Oracion
 import com.tatoh.dokushorenshu.dominio.PalabraToken
 
 /** Render por token: columna [furigana chica / superficie]. La furigana viene
- *  de la pre-alineada del JSON (spans solapados con el token), NUNCA de Kuromoji. */
+ *  de la pre-alineada del JSON (spans solapados con el token), NUNCA de Kuromoji.
+ *
+ *  Todas las oraciones se renderizan al MISMO tamaño (headlineMedium / furigana
+ *  12.sp), foco o no — fix del bug "la animación es confusa" (Plan 3.6 feedback):
+ *  antes la oración enfocada crecía y la anterior encogía, cambiando la altura del
+ *  item en la `LazyColumn` a mitad de scroll, lo que se sentía como que la vista
+ *  entera (o la oración) se arrastraba sola. Con tamaño fijo la altura de cada item
+ *  es constante y el foco se indica solo con color/alpha en el llamador
+ *  ([ListaOracionesLibre]), nunca con un reflow de layout. */
 @Composable
 fun TextoConFurigana(
     oracion: Oracion,
     tokens: List<PalabraToken>,
     furiganaActiva: Boolean,
-    grande: Boolean,
     onTapPalabra: ((PalabraToken) -> Unit)?,
 ) {
-    val estiloBase = if (grande) MaterialTheme.typography.headlineMedium
-    else MaterialTheme.typography.bodyLarge
+    val estiloBase = MaterialTheme.typography.headlineMedium
     FlowRow {
         for (token in tokens) {
             val lectura = if (furiganaActiva) lecturaDelToken(oracion, token) else null
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = lectura ?: " ",
-                    fontSize = if (grande) 12.sp else 9.sp,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
