@@ -12,10 +12,16 @@ import com.tatoh.dokushorenshu.dominio.ConsultaPalabra
 @Composable
 fun PalabraSheet(consulta: ConsultaPalabra, onVerKanji: (String) -> Unit) {
     Column(
+        // heightIn(max) en vez de fillMaxHeight: con skipPartiallyExpanded, el sheet ya
+        // sizea al contenido — si es corto (sin ejemplos/kanjis) se ve envuelto y compacto;
+        // si es largo, este máximo lo cap-ea y el verticalScroll interno lo hace navegable.
+        // 600.dp (subido de 480.dp) da más margen a antes de cortar contenido corto/medio
+        // en tablets, sin arriesgar overflow: ModalBottomSheet ya limita el alto disponible
+        // a la pantalla, así que el scroll cubre cualquier resto.
         Modifier
             .padding(16.dp)
             .fillMaxWidth()
-            .heightIn(max = 480.dp)
+            .heightIn(max = 600.dp)
             .verticalScroll(rememberScrollState()),
     ) {
         Text(consulta.termino, style = MaterialTheme.typography.headlineMedium)

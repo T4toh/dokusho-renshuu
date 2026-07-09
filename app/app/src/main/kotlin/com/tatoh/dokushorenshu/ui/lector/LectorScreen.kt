@@ -16,6 +16,12 @@ import androidx.compose.ui.unit.dp
 fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
     val estado by vm.estado.collectAsState()
     val listaEstado = rememberLazyListState()
+    // skipPartiallyExpanded = true: el sheet de palabra abre directo al alto de su
+    // contenido (o al máximo si es largo) en vez de quedar a mitad de pantalla.
+    // Sin esto, en dispositivos reales el estado partially-expanded queda "trabado"
+    // (el drag-up del handle y el scroll interno no lo expanden) dejando contenido
+    // inalcanzable — bug validado en tablet.
+    val estadoSheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // carga inicial al entrar a la pantalla (mismo patrón que BibliotecaScreen, Task 9)
     LaunchedEffect(Unit) { vm.cargar() }
@@ -87,7 +93,7 @@ fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
     }
 
     estado.consulta?.let { consulta ->
-        ModalBottomSheet(onDismissRequest = vm::cerrarSheet) {
+        ModalBottomSheet(onDismissRequest = vm::cerrarSheet, sheetState = estadoSheet) {
             PalabraSheet(consulta, onVerKanji)
         }
     }
