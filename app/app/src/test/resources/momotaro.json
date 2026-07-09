@@ -5,17 +5,8 @@
  "fuente": "aozora:18376",
  "licencia": "dominio público",
  "dificultad": "facil",
- "version": 1,
+ "version": 2,
  "parrafos": [
-  {
-   "oraciones": [
-    {
-     "texto": "一",
-     "furigana": [],
-     "traduccion": null
-    }
-   ]
-  },
   {
    "oraciones": [
     {
@@ -964,15 +955,6 @@
   {
    "oraciones": [
     {
-     "texto": "二",
-     "furigana": [],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
      "texto": "おじいさんとおばあさんは、それはそれはだいじにして桃太郎を育てました。",
      "furigana": [
       [
@@ -1855,15 +1837,6 @@
        "みおく"
       ]
      ],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
-     "texto": "三",
-     "furigana": [],
      "traduccion": null
     }
    ]
@@ -3238,15 +3211,6 @@
        "き"
       ]
      ],
-     "traduccion": null
-    }
-   ]
-  },
-  {
-   "oraciones": [
-    {
-     "texto": "四",
-     "furigana": [],
      "traduccion": null
     }
    ]
