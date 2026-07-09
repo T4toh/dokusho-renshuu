@@ -266,6 +266,18 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp),
         )
+
+        // Contraparte espejada del indicador de centro, en el margen derecho (Plan 3.6):
+        // misma línea vertical central, misma altura, mismo estilo/alpha — así la marca
+        // de centro queda simétrica en vez de sugerir (erróneamente) que el punto de
+        // referencia está pegado a la izquierda. También vive fuera de la LazyColumn y
+        // sin modifiers de gestos, por los mismos motivos que su par de la izquierda.
+        Text(
+            text = "◂",
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
+        )
     }
 }
 
