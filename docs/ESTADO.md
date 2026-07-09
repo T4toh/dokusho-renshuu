@@ -67,6 +67,8 @@
 - Review section: kanjisPorDificultad consultado 2x por dificultad.
 - lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
 
+- **historias/pipeline (BUG de datos, hallado 2026-07-09)**: el alineador de furigana emite spans que se solapan entre sí — en momotaro.json real: `[7,8,"いま"]` (今) y `[7,9,"かえ"]` (帰, arranca 1 char antes de lo debido). La app clampa y lo tolera (fix bf50f05), pero hay que arreglar el alineador y regenerar `catalogo/`.
+
 ## Feedback pendiente (candidatos a próximo plan)
 
 - **Katakana → hiragana (toggle de lectura): PLANEAR con brainstorming propio antes de implementar.** Decisiones abiertas: dónde vive el toggle, convivencia con el toggle de furigana, formato del ruby, ¿solo tokens katakana o también mixtos?. La conversión ya existe (`katakanaAHiragana` en Tokenizador). NO requiere otro diccionario.
