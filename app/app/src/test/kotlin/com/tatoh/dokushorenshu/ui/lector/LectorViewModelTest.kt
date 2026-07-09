@@ -381,4 +381,57 @@ class LectorViewModelTest {
             segmentosDeGrupo(grupo, listOf(cruza, interna)),
         )
     }
+
+    @Test
+    fun `furigana solapada entre si (dato real inconsistente) no duplica el caracter compartido`() {
+        // Caso REAL de momotaro.json (dispositivo, oración 「おばあさん、今帰ったよ。」):
+        // dos furigana pisadas entre sí, [7,8,"いま"] para 今 y [7,9,"かえ"] para 帰 —
+        // esta última debería empezar en 8, no en 7 (dato de catálogo mal alineado), pero
+        // el render tiene que ser una red de seguridad: NUNCA repetir un carácter del
+        // texto original aunque la furigana de entrada se solape consigo misma. Antes de
+        // el fix, el segundo span (que arranca ANTES de donde terminó el cursor) volvía a
+        // emitir "今" adentro de su propio segmento ("今帰"), duplicando el carácter.
+        val hoy = PalabraToken("今", null, null, inicio = 7, fin = 8, esContenido = true)
+        val volver = PalabraToken("帰った", null, null, inicio = 8, fin = 11, esContenido = true)
+        val furigana = listOf(Furigana(7, 8, "いま"), Furigana(7, 9, "かえ"))
+        val grupo = agruparTokens(listOf(hoy, volver), furigana).single()
+        val segmentos = segmentosDeGrupo(grupo, furigana)
+        assertEquals("今帰った", segmentos.joinToString("") { it.texto })
+        assertEquals(
+            listOf(Segmento("今", "いま", hoy), Segmento("帰", "かえ", volver), Segmento("った", null, volver)),
+            segmentos,
+        )
+    }
+
+    @Test
+    fun `invariante- ninguna oracion de momotaro duplica ni omite texto al segmentar furigana`() {
+        // Invariante de [TextoConFurigana]: para CUALQUIER oración real (tokenizada con
+        // el Tokenizador real, JVM-puro), concatenar el texto de todos los segmentos de
+        // todos los grupos, en orden, debe reproducir EXACTAMENTE `oracion.texto` — ni un
+        // carácter de más (duplicado, el bug de "今今帰ったよ") ni de menos (omitido).
+        val repo = HistoriasRepo(
+            leerAsset = { n -> if (n == "historias/momotaro.json") momotaroJson else null },
+            listarAssetsHistorias = { listOf("momotaro.json") },
+            dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+        )
+        val historia = repo.cargarHistoria("momotaro")!!
+        val tokenizador = Tokenizador()
+        var oracionesRevisadas = 0
+        for (parrafo in historia.parrafos) {
+            for (oracion in parrafo.oraciones) {
+                val tokens = tokenizador.tokenizar(oracion.texto)
+                val grupos = agruparTokens(tokens, oracion.furigana)
+                val reconstruido = grupos.joinToString("") { grupo ->
+                    segmentosDeGrupo(grupo, oracion.furigana).joinToString("") { it.texto }
+                }
+                assertEquals(
+                    "oración \"${oracion.texto}\" quedó mal segmentada: \"$reconstruido\"",
+                    oracion.texto,
+                    reconstruido,
+                )
+                oracionesRevisadas++
+            }
+        }
+        assertTrue("no se revisó ninguna oración", oracionesRevisadas > 0)
+    }
 }

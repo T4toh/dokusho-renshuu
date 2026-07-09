@@ -3,6 +3,7 @@ package com.tatoh.dokushorenshu.ui.lector
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
@@ -96,11 +97,12 @@ fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
  *    primera vez que esta lista se monta usamos `scrollToItem` (salto instantáneo, sin
  *    animación: así restaurar el progreso guardado no arranca con un scroll largo
  *    animado); de ahí en más, `animateScrollToItem`. En ambos casos el centrado se hace
- *    en dos fases para igualar el criterio de centro real que usa el snap (abajo): fase 1
- *    lleva el TECHO del item al centro del viewport (aproximación, el alto real del item
- *    todavía no se conoce porque no está layouteado); fase 2, ya con el item layouteado,
- *    lo corre la mitad de su alto para que su CENTRO quede exactamente en el centro del
- *    viewport — mismo resultado final que `SnapPosition.Center`.
+ *    en dos fases: fase 1 lleva el TECHO del item exactamente al ancla `scrollOffset = 0`
+ *    (la única posición garantizada sin conocer el alto real del item, que todavía no
+ *    está layouteado); fase 2, ya con el item layouteado, lo corre para que su CENTRO
+ *    —calculado con `viewportStartOffset`/`viewportEndOffset`, el mismo sistema de
+ *    coordenadas que usa `item.offset`— quede exactamente en el centro real del viewport,
+ *    mismo resultado final que `SnapPosition.Center`.
  *  - scroll del usuario → foco: la `LazyColumn` usa `rememberSnapFlingBehavior` con
  *    `SnapPosition.Center`, así que soltar el dedo YA asienta la oración más cercana
  *    exactamente centrada (sin necesidad de corrección posterior). Cuando ese asentado
@@ -140,32 +142,55 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
             try {
                 // Esperamos a que el viewport tenga alto medido: en el primer frame
                 // (carga inicial o navegación explícita justo al entrar a la pantalla)
-                // el layout todavía no corrió y viewportSize.height es 0, lo que hacía
-                // que el offset de fase 1 (abajo) fuera 0 en vez de "medio viewport
-                // hacia arriba" — la oración enfocada quedaba pegada arriba en vez de
-                // centrada (bug validado en dispositivo). Este await queda DENTRO del
-                // try para que una cancelación durante la espera también limpie el flag
-                // (catch de abajo).
+                // el layout todavía no corrió y viewportSize.height es 0. Este await
+                // queda DENTRO del try para que una cancelación durante la espera
+                // también limpie el flag (catch de abajo).
                 snapshotFlow { listaEstado.layoutInfo.viewportSize.height }.first { it > 0 }
-                // Fase 1 (aproximación): el alto real de la oración no se conoce antes
-                // de layoutear, así que centramos "a ojo" alineando el TECHO del item
-                // con el centro del viewport (offset negativo de medio viewport).
-                val offset = -(listaEstado.layoutInfo.viewportSize.height / 2)
-                if (primeraVez) {
-                    listaEstado.scrollToItem(estado.indiceActual, offset)
+                // Fase 1: llevamos el TECHO del item exactamente al techo del viewport
+                // (`scrollOffset = 0`, el valor por default). A diferencia de una
+                // aproximación "a ojo" con un offset estimado (medio viewport hacia
+                // arriba, el intento anterior), offset 0 es la ÚNICA posición que
+                // Compose garantiza SIN depender de ninguna medida previa: el item
+                // pasa a ser el ancla del scroll, así que SIEMPRE termina dentro de
+                // `visibleItemsInfo` al terminar esta llamada — sin importar cuántas
+                // líneas ocupe. El offset estimado sí podía, para una oración larga,
+                // dejar el item fuera del rango medido: el `find` de la fase 2 no lo
+                // encontraba, no corregía nada, y la oración enfocada (la única con
+                // alpha 1f) terminaba sin siquiera componerse — bug validado en
+                // dispositivo con la oración #28 de `momotaro` (ninguna oración
+                // visible alcanzaba alpha 1f y ninguna quedaba centrada).
+                val esInstantaneo = primeraVez
+                if (esInstantaneo) {
+                    listaEstado.scrollToItem(estado.indiceActual)
                     primeraVez = false
                 } else {
-                    listaEstado.animateScrollToItem(estado.indiceActual, offset)
+                    listaEstado.animateScrollToItem(estado.indiceActual)
                 }
-                // Fase 2 (corrección): con el item ya layouteado tras la fase 1, lo
-                // corremos la mitad de su alto para que su CENTRO —no su techo— quede en
-                // el centro del viewport: el mismo criterio exacto de centrado real que
-                // usa el snap del scroll manual (SnapPosition.Center, más abajo). Si ya
-                // no está entre los visibles (cambió el foco de nuevo antes de llegar
-                // acá) no corregimos nada.
+                // Fase 2 (corrección exacta): con el item YA garantizado visible y
+                // layouteado tras la fase 1, leemos su alto REAL y lo corremos para
+                // que su CENTRO —no su techo— quede en el centro del viewport. El
+                // centro se calcula con `viewportStartOffset`/`viewportEndOffset` —
+                // NUNCA con `viewportSize.height / 2` — porque `item.offset` está
+                // medido en el mismo sistema de coordenadas que esos dos campos, que
+                // NO arranca en el borde visible sino que resta el `contentPadding`
+                // (acá, medio viewport arriba/abajo para poder centrar la primera y la
+                // última oración): con `paddingCentrado` grande, `viewportStartOffset`
+                // termina siendo `-viewportSize.height / 2`, así que usar
+                // `viewportSize.height / 2` como centro quedaba corrido exactamente esa
+                // mitad de viewport — la oración enfocada terminaba pegada abajo en vez
+                // de centrada (bug validado en dispositivo, oración #23 de `momotaro`:
+                // el cálculo daba un `delta` con el signo/magnitud de una pantalla
+                // entera de más). Este es el MISMO criterio que ya usa, correctamente,
+                // el detector de asentado del scroll manual (`centroViewport`, más
+                // abajo) — antes duplicado con una fórmula distinta e inconsistente.
                 listaEstado.layoutInfo.visibleItemsInfo
                     .find { item -> item.index == estado.indiceActual }
-                    ?.let { item -> listaEstado.animateScrollBy((item.size / 2).toFloat()) }
+                    ?.let { item ->
+                        val info = listaEstado.layoutInfo
+                        val centroViewport = (info.viewportStartOffset + info.viewportEndOffset) / 2f
+                        val delta = (item.size / 2f) - centroViewport
+                        if (esInstantaneo) listaEstado.scrollBy(delta) else listaEstado.animateScrollBy(delta)
+                    }
             } catch (c: CancellationException) {
                 // Si el gesto del usuario cancela la animación (fase 1 o 2), limpiamos el
                 // flag para que el siguiente asentado legítimo no se consuma sin reenfocar.

@@ -132,7 +132,17 @@ internal fun agruparTokens(tokens: List<PalabraToken>, furigana: List<Furigana>)
  *  debería pasar porque tokens y furigana vienen del mismo texto y toda furigana que
  *  cruza un límite entre tokens los agrupa (ver [agruparTokens]), pero se guarda como
  *  red de seguridad ante datos inconsistentes— se recorta al rango del grupo en vez de
- *  desbordarlo. */
+ *  desbordarlo.
+ *
+ *  Otra red de seguridad, esta vez contra furigana que se solapa CONSIGO MISMA (dato de
+ *  catálogo mal alineado — visto en producción: `momotaro.json`, oración
+ *  「おばあさん、今帰ったよ。」, trae `[7,8,"いま"]` para 今 y `[7,9,"かえ"]` para 帰, con
+ *  el segundo span arrancando en 7 en vez de 8): el `desde` de cada tramo se recorta
+ *  también al `cursor` (lo ya emitido por un span anterior), nunca solo al rango del
+ *  grupo. Sin este clamp, un span que arranca ANTES de donde terminó el anterior volvía
+ *  a incluir esos caracteres ya emitidos —el bug de "今今帰ったよ", un carácter
+ *  duplicado— y si el span queda enteramente cubierto por el anterior (`hasta <= desde`)
+ *  se descarta entero en vez de emitir un segmento vacío o de ancho negativo. */
 internal fun segmentosDeGrupo(grupo: GrupoRenderizado, furigana: List<Furigana>): List<Segmento> {
     val inicioGrupo = grupo.inicio
     val finGrupo = grupo.fin
@@ -149,8 +159,11 @@ internal fun segmentosDeGrupo(grupo: GrupoRenderizado, furigana: List<Furigana>)
     val segmentos = mutableListOf<Segmento>()
     var cursor = inicioGrupo
     for (f in solapadas) {
-        val desde = maxOf(f.inicio, inicioGrupo)
+        // clamp a `cursor`, no solo a `inicioGrupo`: un span solapado con el anterior
+        // nunca puede volver a emitir texto que un span previo ya cubrió.
+        val desde = maxOf(f.inicio, cursor)
         val hasta = minOf(f.fin, finGrupo)
+        if (hasta <= desde) continue // span íntegramente cubierto por uno anterior (o fuera de rango)
         if (desde > cursor) segmentos.add(Segmento(subtramo(cursor, desde), null, tokenEn(cursor)))
         segmentos.add(Segmento(subtramo(desde, hasta), f.lectura, tokenEn(desde)))
         cursor = hasta
