@@ -38,6 +38,10 @@ data class EstadoLector(
     val indiceActual: Int = -1,
     val furiganaActiva: Boolean = true,
     val consulta: ConsultaPalabra? = null,
+    // última posición persistida en progresoDao: a diferencia de indiceActual, no vuelve
+    // a -1 al retroceder hasta la portada, así la portada puede distinguir "Continue
+    // reading" (hay progreso guardado) de "Start reading" (nunca se avanzó).
+    val progresoGuardado: Int = -1,
 ) {
     val enPortada: Boolean get() = indiceActual == -1
     val porcentajeLeido: Int get() =
@@ -100,6 +104,7 @@ class LectorViewModel(
                 oraciones = datos.planas,
                 indiceActual = indice,
                 furiganaActiva = datos.furiganaActiva,
+                progresoGuardado = indice,
             )
         }
     }
@@ -112,7 +117,10 @@ class LectorViewModel(
         if (estado.oraciones.isEmpty()) return
         val nuevo = (estado.indiceActual + delta).coerceIn(-1, estado.oraciones.lastIndex)
         if (nuevo == estado.indiceActual) return
-        _estado.value = estado.copy(indiceActual = nuevo)
+        _estado.value = estado.copy(
+            indiceActual = nuevo,
+            progresoGuardado = if (nuevo >= 0) nuevo else estado.progresoGuardado,
+        )
         if (nuevo >= 0) {
             val plana = estado.oraciones[nuevo]
             viewModelScope.launch(ioDispatcher) {

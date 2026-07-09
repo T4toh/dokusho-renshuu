@@ -49,9 +49,12 @@ fun BibliotecaScreen(
             // grid adaptativo: 1 columna en teléfono vertical, 2-3 en tablet/landscape.
             // unificado (Task 12): locales descargadas + remotas sin descargar (con botón
             // Download en la card) — ya no hay una sección "Catálogo" separada.
+            // weight(1f): limita el grid al espacio restante para que la sección Review
+            // (fuera de este LazyColumn) no quede empujada fuera de pantalla cuando el
+            // catálogo crece.
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 300.dp),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {

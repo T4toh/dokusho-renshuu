@@ -16,10 +16,14 @@ class DiccionarioSqlite private constructor(private val db: SQLiteDatabase) : Di
         const val VERSION_ESPERADA = 2
 
         fun abrir(contexto: Context): DiccionarioSqlite {
+            // limpieza post-upgrade: dispositivos que migraron desde v1 se quedan con
+            // diccionario-v1.db huérfano (~79 MB) en filesDir; delete() es no-op si no existe.
+            File(contexto.filesDir, "diccionario-v1.db").delete()
             val archivo = File(contexto.filesDir, NOMBRE_DB)
             if (!archivo.exists() || !versionValida(archivo)) {
                 copiarDesdeAssets(contexto, archivo)
             }
+            File(contexto.filesDir, "diccionario-v1.db").delete()
             return desdeArchivo(archivo.path)
         }
 

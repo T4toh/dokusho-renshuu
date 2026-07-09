@@ -55,7 +55,7 @@ fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
                     Text("Previous")
                 }
                 Button(onClick = vm::avanzar) {
-                    Text(if (estado.enPortada) (if (estado.indiceActual >= 0) "Continue reading" else "Start reading") else "Next")
+                    Text(if (estado.enPortada) (if (estado.progresoGuardado >= 0) "Continue reading" else "Start reading") else "Next")
                 }
             }
         },
