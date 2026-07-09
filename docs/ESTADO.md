@@ -58,14 +58,20 @@
 ## Backlog diferido (Plan 3.5 — no bloqueante)
 
 - db-v2: marcadores `〔… only〕` de restricción de formas siguen filtrando a las glosas (3.645 entradas, 904 como primera glosa) — el span no tiene `data.content` (solo `title="valid only for these forms and/or readings"` / hijos `form-special`), invisible al blacklist actual; requiere rebuild db-v2.1 con descarte por `title`.
-- Status bar con íconos claros sobre fondo claro en light mode (falta windowLightStatusBar en el theme).
-- Portada muestra "0% read" y "Start reading" con progreso <1% (truncado a int; considerar "Continue" si progreso > 0).
+- Status bar con íconos claros sobre fondo claro en light mode (falta windowLightStatusBar en el theme); ídem barra de gestos/navigation bar — debería adaptarse al tema (feedback 2026-07-09).
+- Portada muestra "0% read" con progreso <1% (truncado a int; el botón Continue/Start ya se arregló en 7ab6b7d).
 - Progreso guardado se corre ~1 posición cuando se regenera el catálogo (índices sobre JSON nuevo; one-time, benigno).
 - jitendex: xref/sense-note descartados enteros — "See also" se pierde (aceptado; revisar si se quiere conservar con label).
 - verify_db no detecta un sentido individual borrado en palabra multi-sentido.
-- README de historias: "Contrato de datos" aún documenta version 1 (deuda doc).
 - MigrationTestHelper no usado (exportSchema=false); ProgresoDaoFake overridea registrarAperturaKanji (primitivas dead-code en fake).
 - Review section: kanjisPorDificultad consultado 2x por dificultad.
+- Cards de biblioteca muestran dificultad cruda `facil/media/dificil` en UI inglesa (mapear a Easy/Medium/Hard); lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
+
+## Feedback pendiente (2026-07-09 — candidatos a Plan 3.6/4)
+
+- Scroll con el dedo en el lector (arriba/abajo) además de los botones Previous/Next.
+- Toggle de lectura para katakana: mostrar pronunciación en hiragana sobre tokens katakana — NO requiere otro diccionario (Kuromoji ya da lecturas y `katakanaAHiragana` existe en Tokenizador); toggle tipo furigana.
+- Detalle de kanji adaptable: en tablet sobra ancho (layout 2 columnas: kanji+chips | secciones); en teléfono reducir scroll.
 
 ## Proceso de trabajo usado
 
