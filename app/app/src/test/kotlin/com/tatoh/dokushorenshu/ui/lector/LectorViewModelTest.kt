@@ -159,6 +159,47 @@ class LectorViewModelTest {
         assertTrue(estado.oraciones.isEmpty())
     }
 
+    // --- enfocar: foco directo por índice (Plan 3.6 Task 2, scroll libre) ---
+
+    @Test
+    fun `enfocar actualiza indiceActual y persiste progreso igual que mover`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle() // sale de la portada, ya hay oraciones cargadas
+        val destino = (vm.estado.value.indiceActual + 1).coerceAtMost(vm.estado.value.oraciones.lastIndex)
+        vm.enfocar(destino); advanceUntilIdle()
+        assertEquals(destino, vm.estado.value.indiceActual)
+        val plana = vm.estado.value.oraciones[destino]
+        val progreso = dao.progreso("momotaro")
+        assertEquals(plana.parrafo, progreso?.parrafo)
+        assertEquals(plana.oracionEnParrafo, progreso?.oracion)
+    }
+
+    @Test
+    fun `enfocar con indice fuera de rango se ignora`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        val actual = vm.estado.value.indiceActual
+        vm.enfocar(vm.estado.value.oraciones.size); advanceUntilIdle() // fuera de rango
+        assertEquals(actual, vm.estado.value.indiceActual)
+        vm.enfocar(-1); advanceUntilIdle() // enfocar nunca apunta a la portada
+        assertEquals(actual, vm.estado.value.indiceActual)
+    }
+
+    @Test
+    fun `enfocar no persiste con estado degradado (sin oraciones)`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao, idHistoria = "no-existe")
+        vm.cargar(); advanceUntilIdle()
+        assertTrue(vm.estado.value.oraciones.isEmpty())
+        vm.enfocar(0); advanceUntilIdle()
+        assertEquals(-1, vm.estado.value.indiceActual)
+        assertNull(dao.progreso("no-existe"))
+    }
+
     // --- lecturaDelToken: lógica pura de intersección de spans (Step 4) ---
 
     @Test

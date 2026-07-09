@@ -122,10 +122,29 @@ class LectorViewModel(
             progresoGuardado = if (nuevo >= 0) nuevo else estado.progresoGuardado,
         )
         if (nuevo >= 0) {
-            val plana = estado.oraciones[nuevo]
-            viewModelScope.launch(ioDispatcher) {
-                progresoDao.guardarProgreso(ProgresoHistoria(idHistoria, plana.parrafo, plana.oracionEnParrafo))
-            }
+            persistirProgreso(estado.oraciones[nuevo])
+        }
+    }
+
+    /** Foco directo a un índice de oración (scroll libre estilo letras, Plan 3.6 Task 2):
+     *  lo dispara tanto el asentado del scroll (oración más cercana al centro del
+     *  viewport) como el tap sobre cualquier oración visible. A diferencia de mover(),
+     *  recibe el índice absoluto en vez de un delta, y NUNCA apunta a la portada (-1):
+     *  ese índice no forma parte de la lista de oraciones tappeable/scrolleable, solo
+     *  Previous puede volver a la portada. Se ignora si el índice está fuera de rango
+     *  o si el estado está degradado (oraciones vacías, historia no encontrada). */
+    fun enfocar(indice: Int) {
+        val estado = _estado.value
+        if (estado.oraciones.isEmpty()) return
+        if (indice < 0 || indice > estado.oraciones.lastIndex) return
+        if (indice == estado.indiceActual) return
+        _estado.value = estado.copy(indiceActual = indice, progresoGuardado = indice)
+        persistirProgreso(estado.oraciones[indice])
+    }
+
+    private fun persistirProgreso(plana: OracionPlana) {
+        viewModelScope.launch(ioDispatcher) {
+            progresoDao.guardarProgreso(ProgresoHistoria(idHistoria, plana.parrafo, plana.oracionEnParrafo))
         }
     }
 
