@@ -1,6 +1,7 @@
 package com.tatoh.dokushorenshu.ui.kanji
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -27,7 +28,12 @@ fun DetalleKanjiScreen(vm: DetalleKanjiViewModel) {
     val estado by vm.estado.collectAsState()
     LaunchedEffect(Unit) { vm.cargar() }
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(
+        Modifier
+            .fillMaxSize()
+            .safeDrawingPadding(),  // edge-to-edge de Task 1
+        color = MaterialTheme.colorScheme.background
+    ) {
         val info = estado.info
         if (info == null) {
             // Estado degradado: kanji no encontrado (o todavía cargando, sin mensaje).

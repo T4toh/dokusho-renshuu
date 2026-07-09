@@ -65,7 +65,7 @@
 - verify_db no detecta un sentido individual borrado en palabra multi-sentido.
 - MigrationTestHelper no usado (exportSchema=false); ProgresoDaoFake overridea registrarAperturaKanji (primitivas dead-code en fake).
 - Review section: kanjisPorDificultad consultado 2x por dificultad.
-- Cards de biblioteca muestran dificultad cruda `facil/media/dificil` en UI inglesa (mapear a Easy/Medium/Hard); lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
+- lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
 
 ## Feedback pendiente (candidatos a próximo plan)
 

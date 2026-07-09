@@ -3,6 +3,7 @@ package com.tatoh.dokushorenshu.ui.acerca
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -14,7 +15,12 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun AcercaScreen() {
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(
+        Modifier
+            .fillMaxSize()
+            .safeDrawingPadding(),  // edge-to-edge de Task 1
+        color = MaterialTheme.colorScheme.background
+    ) {
         Column(
             Modifier
                 .fillMaxSize()

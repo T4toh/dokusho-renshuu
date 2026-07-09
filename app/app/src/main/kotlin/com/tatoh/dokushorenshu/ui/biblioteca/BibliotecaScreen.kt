@@ -19,7 +19,7 @@ private fun dificultadDisplay(dificultad: String): String = when (dificultad) {
     "facil" -> "Easy"
     "media" -> "Medium"
     "dificil" -> "Hard"
-    else -> dificultad
+    else -> dificultad.replaceFirstChar { it.uppercase() }  // Mapear tags en inglés minúsculas (easy/medium/hard) a capitalizadas
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
