@@ -268,4 +268,60 @@ class LectorViewModelTest {
         val token = PalabraToken("むかし", null, null, inicio = 0, fin = 3, esContenido = true)
         assertNull(lecturaDelToken(oracion, token))
     }
+
+    // --- segmentosDeToken: split de token en sub-segmentos alineados a furigana exacta
+    // (Plan 3.6 fix: furigana corrida sobre okurigana, p.ej. 刈り con lectura か solo
+    // sobre 刈) ---
+
+    @Test
+    fun `token totalmente cubierto por una furigana da un solo segmento con esa lectura`() {
+        val token = PalabraToken("桃太郎", null, null, inicio = 0, fin = 3, esContenido = true)
+        val furigana = listOf(Furigana(0, 3, "ももたろう"))
+        assertEquals(
+            listOf(Segmento("桃太郎", "ももたろう")),
+            segmentosDeToken(token, furigana),
+        )
+    }
+
+    @Test
+    fun `token con okurigana parcialmente cubierto separa kanji con lectura del kana sin lectura`() {
+        // 刈り: el kanji 刈 (index 5) tiene furigana か; り (index 6) es kana, sin furigana.
+        val token = PalabraToken("刈り", null, null, inicio = 5, fin = 7, esContenido = true)
+        val furigana = listOf(Furigana(5, 6, "か"))
+        assertEquals(
+            listOf(Segmento("刈", "か"), Segmento("り", null)),
+            segmentosDeToken(token, furigana),
+        )
+    }
+
+    @Test
+    fun `token sin furigana solapada da un solo segmento sin lectura`() {
+        val token = PalabraToken("むかし", null, null, inicio = 0, fin = 3, esContenido = true)
+        assertEquals(
+            listOf(Segmento("むかし", null)),
+            segmentosDeToken(token, emptyList()),
+        )
+    }
+
+    @Test
+    fun `token con dos furigana independientes da dos segmentos, cada uno con su lectura`() {
+        val token = PalabraToken("大人", null, null, inicio = 0, fin = 2, esContenido = true)
+        val furigana = listOf(Furigana(0, 1, "おと"), Furigana(1, 2, "な"))
+        assertEquals(
+            listOf(Segmento("大", "おと"), Segmento("人", "な")),
+            segmentosDeToken(token, furigana),
+        )
+    }
+
+    @Test
+    fun `furigana que cruza el limite del token cae a centrado de todo el token (fallback)`() {
+        // furigana [1,4) empieza ANTES del token (inicio=2): no entra limpio en un
+        // sub-segmento, así que se centra todo el token con la lectura completa (v1).
+        val token = PalabraToken("五に", null, null, inicio = 2, fin = 4, esContenido = true)
+        val furigana = listOf(Furigana(1, 4, "じゅうごに"))
+        assertEquals(
+            listOf(Segmento("五に", "じゅうごに")),
+            segmentosDeToken(token, furigana),
+        )
+    }
 }
