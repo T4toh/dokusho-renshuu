@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.filter
 import kotlin.math.abs
 
@@ -112,11 +113,18 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
             // oración no se conoce antes de layoutear, así que centramos "a ojo" corriendo
             // el borde superior del item 1/3 de viewport hacia abajo del techo de la lista.
             val offset = -(listaEstado.layoutInfo.viewportSize.height / 3)
-            if (primeraVez) {
-                listaEstado.scrollToItem(estado.indiceActual, offset)
-                primeraVez = false
-            } else {
-                listaEstado.animateScrollToItem(estado.indiceActual, offset)
+            try {
+                if (primeraVez) {
+                    listaEstado.scrollToItem(estado.indiceActual, offset)
+                    primeraVez = false
+                } else {
+                    listaEstado.animateScrollToItem(estado.indiceActual, offset)
+                }
+            } catch (c: CancellationException) {
+                // Si el gesto del usuario cancela la animación, limpiamos el flag para que
+                // el siguiente asentado legítimo no se consuma sin reenfocar.
+                scrollProgramatico = false
+                throw c
             }
         }
 
