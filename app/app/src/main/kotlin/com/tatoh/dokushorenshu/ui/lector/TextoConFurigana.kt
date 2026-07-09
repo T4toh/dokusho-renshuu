@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import com.tatoh.dokushorenshu.datos.Furigana
 import com.tatoh.dokushorenshu.datos.Oracion
@@ -23,52 +24,76 @@ import com.tatoh.dokushorenshu.dominio.PalabraToken
  *  item en la `LazyColumn` a mitad de scroll, lo que se sentía como que la vista
  *  entera (o la oración) se arrastraba sola. Con tamaño fijo la altura de cada item
  *  es constante y el foco se indica solo con color/alpha en el llamador
- *  ([ListaOracionesLibre]), nunca con un reflow de layout. */
+ *  ([ListaOracionesLibre]), nunca con un reflow de layout.
+ *
+ *  [gruposFurigana] viene PRECOMPUTADO por oración desde [LectorViewModel.cargar]
+ *  (fix de performance, Plan 3.6 feedback de dispositivo): antes `agruparTokens` +
+ *  `segmentosDeGrupo` corrían acá adentro, en CADA recomposición de item durante el
+ *  scroll (alloc + O(n) por frame, para las ~decenas de oraciones visibles). Ahora se
+ *  calculan una sola vez al cargar la historia y viajan en [OracionPlana]; este
+ *  composable solo los recorre. Se usan SOLO si `furiganaActiva`: con la furigana
+ *  apagada el criterio es otro (cada token en su propio grupo, sin agrupar por
+ *  furigana cruzada — no tiene sentido agrupar lo que no se va a mostrar) y es tan
+ *  barato (un `map` sin alocar sub-segmentos) que no hace falta precomputarlo. */
 @Composable
 fun TextoConFurigana(
-    oracion: Oracion,
     tokens: List<PalabraToken>,
+    gruposFurigana: List<GrupoFurigana>,
     furiganaActiva: Boolean,
     onTapPalabra: ((PalabraToken) -> Unit)?,
 ) {
     val estiloBase = MaterialTheme.typography.headlineMedium
-    // Grupos de renderizado (fix "furigana duplicada", Plan 3.6.pulido): cuando una
-    // furigana cruza el límite entre dos tokens (p.ej. 二人 tokenizado 二+人 con una sola
-    // ふたり que cubre ambos), esos tokens se agrupan y la lectura se alinea UNA sola vez
-    // sobre el rango combinado, no una vez por token overlapeado.
-    val grupos = if (furiganaActiva) {
-        agruparTokens(tokens, oracion.furigana)
-    } else {
-        tokens.map { GrupoRenderizado(listOf(it)) }
-    }
     FlowRow {
-        for (grupo in grupos) {
-            val segmentos = if (furiganaActiva) {
-                segmentosDeGrupo(grupo, oracion.furigana)
-            } else {
-                grupo.tokens.map { Segmento(it.superficie, null, it) }
+        if (furiganaActiva) {
+            for (grupo in gruposFurigana) {
+                FilaGrupo(grupo.segmentos, estiloBase, onTapPalabra)
             }
-            // El Row entero (todos los sub-segmentos del grupo) es un único hijo de
-            // FlowRow: el grupo nunca se parte entre líneas al wrapear (mismo criterio
-            // que antes tenía cada token individual). El tap target es POR SEGMENTO, no
-            // por grupo: cada segmento sabe a qué token pertenece (ver [Segmento.token])
-            // así que un cluster de varios tokens conserva un área tappeable por token.
-            Row {
-                for (segmento in segmentos) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = if (segmento.token.esContenido && onTapPalabra != null) {
-                            Modifier.clickable { onTapPalabra(segmento.token) }
-                        } else Modifier,
-                    ) {
-                        Text(
-                            text = segmento.lectura ?: " ",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(text = segmento.texto, style = estiloBase)
-                    }
-                }
+        } else {
+            for (token in tokens) {
+                FilaGrupo(listOf(Segmento(token.superficie, null, token)), estiloBase, onTapPalabra)
+            }
+        }
+    }
+}
+
+/** Un grupo de renderizado ([GrupoRenderizado]) junto con sus [segmentos] YA
+ *  calculados (ver doc de [calcularGruposFurigana]). Público (no `internal`) porque
+ *  viaja en [OracionPlana] y en la firma de [TextoConFurigana], ambos públicos. */
+data class GrupoFurigana(val grupo: GrupoRenderizado, val segmentos: List<Segmento>)
+
+/** Precomputa, para TODOS los grupos de una oración, el resultado de
+ *  `agruparTokens` + `segmentosDeGrupo` — las dos funciones puras que antes corrían
+ *  dentro de la composición de [TextoConFurigana] en cada recompose de item (fix de
+ *  performance, Plan 3.6 feedback). Se llama UNA vez por oración desde
+ *  [LectorViewModel.cargar] (en `ioDispatcher`), nunca en cada composición. */
+internal fun calcularGruposFurigana(tokens: List<PalabraToken>, furigana: List<Furigana>): List<GrupoFurigana> =
+    agruparTokens(tokens, furigana).map { grupo -> GrupoFurigana(grupo, segmentosDeGrupo(grupo, furigana)) }
+
+/** Un grupo entero (todos sus sub-segmentos) como único hijo de `FlowRow`: el grupo
+ *  nunca se parte entre líneas al wrapear (mismo criterio que antes tenía cada token
+ *  individual). El tap target es POR SEGMENTO, no por grupo: cada segmento sabe a
+ *  qué token pertenece (ver [Segmento.token]) así que un cluster de varios tokens
+ *  conserva un área tappeable por token. */
+@Composable
+private fun FilaGrupo(
+    segmentos: List<Segmento>,
+    estiloBase: TextStyle,
+    onTapPalabra: ((PalabraToken) -> Unit)?,
+) {
+    Row {
+        for (segmento in segmentos) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = if (segmento.token.esContenido && onTapPalabra != null) {
+                    Modifier.clickable { onTapPalabra(segmento.token) }
+                } else Modifier,
+            ) {
+                Text(
+                    text = segmento.lectura ?: " ",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(text = segmento.texto, style = estiloBase)
             }
         }
     }
@@ -88,7 +113,7 @@ internal fun lecturaDelToken(oracion: Oracion, token: PalabraToken): String? =
  *  segmento a efectos de tap: para un segmento que cae dentro de un solo token es ese
  *  token; para un segmento de furigana que cruza el límite entre varios tokens del
  *  mismo grupo (ver [agruparTokens]) es el primero (más a la izquierda) de ellos. */
-internal data class Segmento(val texto: String, val lectura: String?, val token: PalabraToken)
+data class Segmento(val texto: String, val lectura: String?, val token: PalabraToken)
 
 /** Una corrida MAXIMAL de tokens consecutivos que se renderiza como una sola unidad
  *  porque alguna furigana cruza el límite entre ellos (fix del bug "furigana
@@ -97,7 +122,7 @@ internal data class Segmento(val texto: String, val lectura: String?, val token:
  *  Un token sin ninguna furigana cruzada en sus bordes queda en un grupo de tamaño 1
  *  (comportamiento sin cambios respecto de antes). El grupo entero es la unidad que
  *  [TextoConFurigana] usa para wrappear en `FlowRow` — nunca se parte entre líneas. */
-internal data class GrupoRenderizado(val tokens: List<PalabraToken>) {
+data class GrupoRenderizado(val tokens: List<PalabraToken>) {
     val inicio: Int get() = tokens.first().inicio
     val fin: Int get() = tokens.last().fin
 }

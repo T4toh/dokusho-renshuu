@@ -403,6 +403,48 @@ class LectorViewModelTest {
         )
     }
 
+    // --- calcularGruposFurigana: precómputo de grupos+segmentos (Plan 3.6 perf,
+    // feedback de dispositivo: agruparTokens/segmentosDeGrupo corrían en cada
+    // recomposición de item durante el scroll). La función combina las dos funciones
+    // puras existentes UNA vez por oración; TextoConFurigana ya no las llama. ---
+
+    @Test
+    fun `calcularGruposFurigana combina agruparTokens y segmentosDeGrupo por grupo`() {
+        val ni = PalabraToken("二", null, null, inicio = 0, fin = 1, esContenido = true)
+        val hito = PalabraToken("人", null, null, inicio = 1, fin = 2, esContenido = true)
+        val furigana = listOf(Furigana(0, 2, "ふたり"))
+        val esperado = agruparTokens(listOf(ni, hito), furigana)
+            .map { grupo -> GrupoFurigana(grupo, segmentosDeGrupo(grupo, furigana)) }
+        assertEquals(esperado, calcularGruposFurigana(listOf(ni, hito), furigana))
+    }
+
+    @Test
+    fun `calcularGruposFurigana con tokens sin furigana da un grupo por token con segmento sin lectura`() {
+        val a = PalabraToken("桃", null, null, inicio = 0, fin = 1, esContenido = true)
+        val b = PalabraToken("太郎", null, null, inicio = 1, fin = 3, esContenido = true)
+        assertEquals(
+            listOf(
+                GrupoFurigana(GrupoRenderizado(listOf(a)), listOf(Segmento("桃", null, a))),
+                GrupoFurigana(GrupoRenderizado(listOf(b)), listOf(Segmento("太郎", null, b))),
+            ),
+            calcularGruposFurigana(listOf(a, b), emptyList()),
+        )
+    }
+
+    @Test
+    fun `cargar precomputa gruposFurigana por oracion, igual que llamar calcularGruposFurigana a mano`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        val plana = vm.estado.value.oraciones.first()
+        assertEquals(
+            calcularGruposFurigana(plana.tokens, plana.oracion.furigana),
+            plana.gruposFurigana,
+        )
+        // no es una lista vacía "por accidente": la oración de prueba tiene grupos reales.
+        assertTrue(plana.gruposFurigana.isNotEmpty())
+    }
+
     @Test
     fun `invariante- ninguna oracion de momotaro duplica ni omite texto al segmentar furigana`() {
         // Invariante de [TextoConFurigana]: para CUALQUIER oración real (tokenizada con

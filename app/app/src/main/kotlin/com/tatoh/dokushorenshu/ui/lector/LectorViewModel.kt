@@ -26,6 +26,10 @@ data class OracionPlana(
     val oracionEnParrafo: Int,
     val oracion: Oracion,
     val tokens: List<PalabraToken>,
+    // Precomputado en cargar() (fix de performance, Plan 3.6 feedback de dispositivo):
+    // antes TextoConFurigana calculaba esto (agruparTokens + segmentosDeGrupo) en cada
+    // recomposición de item durante el scroll. Ver doc de [calcularGruposFurigana].
+    val gruposFurigana: List<GrupoFurigana>,
 )
 
 /** indiceActual == -1 representa la portada (Task C3): título, autor, stats y
@@ -87,7 +91,11 @@ class LectorViewModel(
                 val metadata = historiasRepo.catalogoLocal()?.historias?.firstOrNull { it.id == idHistoria }
                 val planas = historia.parrafos.flatMapIndexed { p, parrafo ->
                     parrafo.oraciones.mapIndexed { o, oracion ->
-                        OracionPlana(p, o, oracion, tokenizador.tokenizar(oracion.texto))
+                        val tokens = tokenizador.tokenizar(oracion.texto)
+                        // agruparTokens/segmentosDeGrupo (vía calcularGruposFurigana) corren
+                        // acá, en ioDispatcher, UNA sola vez por oración — no en cada
+                        // recomposición de item (ver doc en TextoConFurigana.kt).
+                        OracionPlana(p, o, oracion, tokens, calcularGruposFurigana(tokens, oracion.furigana))
                     }
                 }
                 DatosCarga(historia, metadata, planas, prefs.furiganaActiva(), progresoDao.progreso(idHistoria))
