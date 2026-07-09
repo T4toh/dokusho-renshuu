@@ -1,6 +1,8 @@
 package com.tatoh.dokushorenshu.ui.lector
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -9,33 +11,39 @@ import com.tatoh.dokushorenshu.dominio.ConsultaPalabra
 
 @Composable
 fun PalabraSheet(consulta: ConsultaPalabra, onVerKanji: (String) -> Unit) {
-    Column(Modifier.padding(16.dp).fillMaxWidth()) {
+    Column(
+        Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
+            .heightIn(max = 480.dp)
+            .verticalScroll(rememberScrollState()),
+    ) {
         Text(consulta.termino, style = MaterialTheme.typography.headlineMedium)
         val lectura = consulta.definiciones.firstOrNull()?.lectura ?: consulta.lecturaFallback
         lectura?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
 
         if (consulta.sinDefinicion) {
-            Text("Sin definición", style = MaterialTheme.typography.bodyMedium)
+            Text("No definition", style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 8.dp))
         } else {
-            for (significado in consulta.definiciones.first().significados) {
-                Text("• $significado")
+            Column(Modifier.padding(top = 8.dp)) {
+                consulta.definiciones.first().significados.forEachIndexed { indice, significado ->
+                    Text("${indice + 1}. $significado", modifier = Modifier.padding(vertical = 2.dp))
+                }
             }
         }
 
         if (consulta.ejemplos.isNotEmpty()) {
-            Text("Ejemplos", style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 12.dp))
+            Text("Examples", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
             for (ejemplo in consulta.ejemplos) {
-                Text(ejemplo.japones)
-                Text(ejemplo.ingles, style = MaterialTheme.typography.bodySmall)
+                Text(ejemplo.japones, modifier = Modifier.padding(top = 8.dp))
+                Text(ejemplo.ingles, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
         if (consulta.kanjis.isNotEmpty()) {
-            Row(
-                Modifier.padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (kanji in consulta.kanjis) {
                     AssistChip(onClick = { onVerKanji(kanji.kanji) }, label = { Text(kanji.kanji) })
                 }
