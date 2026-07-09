@@ -10,7 +10,7 @@
 | 1    | `diccionario/` — parser → diccionario.db         | ✅ Completo (PR #1 mergeado, release [db-v1](https://github.com/T4toh/dokusho-renshuu/releases/tag/db-v1) publicado) |
 | 2    | `historias/` — pipeline Aozora → JSON + catálogo | ✅ Completo ([PR #2](https://github.com/T4toh/dokusho-renshuu/pull/2) mergeado)                                                                                  |
 | 3    | `app/` — lector Android (Kotlin + Compose)       | ✅ Completo ([PR #3](https://github.com/T4toh/dokusho-renshuu/pull/3)) |
-| 3.5  | pulido + repaso básico (db-v2, catálogo v2, app) | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
+| 3.5  | pulido + repaso básico (db-v2, catálogo v2, app) | ✅ Completo ([PR #4](https://github.com/T4toh/dokusho-renshuu/pull/4)) |
 | 4    | `app/` — mazos .apkg + import de texto           | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                         |
 
 ## Datos operativos
