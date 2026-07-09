@@ -42,6 +42,14 @@ data class EstadoLector(
     // a -1 al retroceder hasta la portada, así la portada puede distinguir "Continue
     // reading" (hay progreso guardado) de "Start reading" (nunca se avanzó).
     val progresoGuardado: Int = -1,
+    // Contador de centrados EXPLÍCITOS pedidos (Plan 3.6 Task 2 fix — rubberbanding):
+    // solo mover() (Previous/Next, incluido el salto Start/Continue desde la portada) y
+    // cargar() lo incrementan. enfocar() (foco por asentado de scroll libre o tap sobre
+    // una oración no-actual) NUNCA lo toca. LectorScreen solo dispara el auto-scroll de
+    // centrado cuando este contador cambia, así el centrado tras soltar el dedo (que ya
+    // queda centrado por el snap del fling) no dispara una SEGUNDA corrección — esa
+    // doble corrección era el "rubberbanding" reportado.
+    val centradoPedido: Int = 0,
 ) {
     val enPortada: Boolean get() = indiceActual == -1
     val porcentajeLeido: Int get() =
@@ -105,6 +113,10 @@ class LectorViewModel(
                 indiceActual = indice,
                 furiganaActiva = datos.furiganaActiva,
                 progresoGuardado = indice,
+                // carga inicial: cuenta como centrado explícito para que, si esta carga
+                // restaura una posición ya avanzada (no portada), la lista se abra
+                // centrada en esa oración.
+                centradoPedido = 1,
             )
         }
     }
@@ -120,6 +132,7 @@ class LectorViewModel(
         _estado.value = estado.copy(
             indiceActual = nuevo,
             progresoGuardado = if (nuevo >= 0) nuevo else estado.progresoGuardado,
+            centradoPedido = estado.centradoPedido + 1,
         )
         if (nuevo >= 0) {
             persistirProgreso(estado.oraciones[nuevo])
@@ -132,7 +145,9 @@ class LectorViewModel(
      *  recibe el índice absoluto en vez de un delta, y NUNCA apunta a la portada (-1):
      *  ese índice no forma parte de la lista de oraciones tappeable/scrolleable, solo
      *  Previous puede volver a la portada. Se ignora si el índice está fuera de rango
-     *  o si el estado está degradado (oraciones vacías, historia no encontrada). */
+     *  o si el estado está degradado (oraciones vacías, historia no encontrada).
+     *  A propósito NO toca [EstadoLector.centradoPedido]: este foco no debe disparar el
+     *  auto-scroll de centrado en LectorScreen (ver doc de ese campo). */
     fun enfocar(indice: Int) {
         val estado = _estado.value
         if (estado.oraciones.isEmpty()) return

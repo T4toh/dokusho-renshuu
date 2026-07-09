@@ -200,6 +200,59 @@ class LectorViewModelTest {
         assertNull(dao.progreso("no-existe"))
     }
 
+    // --- centradoPedido: contador de centrados EXPLÍCITOS (fix rubberbanding, Task 2) ---
+    // Solo mover() (Previous/Next/salto desde portada) y cargar() lo incrementan; enfocar()
+    // (foco por asentado de scroll libre o tap) nunca debe tocarlo — así LectorScreen no
+    // vuelve a re-centrar tras un scroll que el usuario ya asentó donde quería.
+
+    @Test
+    fun `cargar establece centradoPedido inicial en 1`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        assertEquals(1, vm.estado.value.centradoPedido)
+    }
+
+    @Test
+    fun `avanzar y retroceder incrementan centradoPedido`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        val inicial = vm.estado.value.centradoPedido
+
+        vm.avanzar(); advanceUntilIdle() // salto Start reading: portada -> oracion 0
+        assertEquals(inicial + 1, vm.estado.value.centradoPedido)
+
+        vm.avanzar(); advanceUntilIdle() // Next
+        assertEquals(inicial + 2, vm.estado.value.centradoPedido)
+
+        vm.retroceder(); advanceUntilIdle() // Previous
+        assertEquals(inicial + 3, vm.estado.value.centradoPedido)
+    }
+
+    @Test
+    fun `mover en un limite que no cambia indiceActual no incrementa centradoPedido`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        val antes = vm.estado.value.centradoPedido
+        vm.retroceder(); advanceUntilIdle() // ya está en la portada (-1), retroceder es no-op
+        assertEquals(antes, vm.estado.value.centradoPedido)
+    }
+
+    @Test
+    fun `enfocar (settle de scroll o tap) NO incrementa centradoPedido`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle() // sale de la portada
+        val antes = vm.estado.value.centradoPedido
+        val destino = (vm.estado.value.indiceActual + 1).coerceAtMost(vm.estado.value.oraciones.lastIndex)
+        vm.enfocar(destino); advanceUntilIdle()
+        assertEquals(destino, vm.estado.value.indiceActual) // el foco sí se movió...
+        assertEquals(antes, vm.estado.value.centradoPedido) // ...pero sin pedir centrado
+    }
+
     // --- lecturaDelToken: lógica pura de intersección de spans (Step 4) ---
 
     @Test

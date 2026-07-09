@@ -1,5 +1,7 @@
 package com.tatoh.dokushorenshu.ui.lector
 
+import androidx.compose.foundation.gestures.snapping.SnapPosition
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -76,20 +78,31 @@ fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
  *  cualquier palabra de contenido de CUALQUIER oración visible la enfoca y abre el sheet
  *  (mismo `vm.tocarPalabra`, comportamiento del sheet intacto).
  *
- *  Hay dos flujos que mueven el foco y hay que evitar que se peleen entre ellos:
- *  - foco → scroll: cuando cambia `indiceActual` (Previous/Next, tap o carga inicial),
- *    centramos la oración. La primera vez que esta lista se monta usamos `scrollToItem`
- *    (salto instantáneo, sin animación: así restaurar el progreso guardado no arranca
- *    con un scroll largo animado); de ahí en más, `animateScrollToItem`.
- *  - scroll → foco: cuando el usuario suelta el dedo y la lista se asienta
- *    (`isScrollInProgress` pasa a `false`), buscamos en `layoutInfo` la oración cuyo
- *    centro quedó más cerca del centro del viewport y llamamos `vm.enfocar(i)`.
+ *  Hay dos flujos que mueven el foco y hace falta que NUNCA se disparen entre sí (fix
+ *  del "rubberbanding" reportado: la oración saltaba de posición sola justo después de
+ *  soltar el dedo):
+ *  - foco EXPLÍCITO → scroll: keyeado en [EstadoLector.centradoPedido] (no en
+ *    `indiceActual`). Este contador solo lo incrementan `mover()` (Previous/Next,
+ *    incluido el salto Start/Continue desde la portada) y la carga inicial — nunca
+ *    `enfocar()`. Centramos la oración `indiceActual` vigente al momento del cambio. La
+ *    primera vez que esta lista se monta usamos `scrollToItem` (salto instantáneo, sin
+ *    animación: así restaurar el progreso guardado no arranca con un scroll largo
+ *    animado); de ahí en más, `animateScrollToItem`.
+ *  - scroll del usuario → foco: la `LazyColumn` usa `rememberSnapFlingBehavior` con
+ *    `SnapPosition.Center`, así que soltar el dedo YA asienta la oración más cercana
+ *    exactamente centrada (sin necesidad de corrección posterior). Cuando ese asentado
+ *    termina (`isScrollInProgress` pasa a `false`) buscamos en `layoutInfo` la oración
+ *    cuyo centro quedó más cerca del centro del viewport y llamamos `vm.enfocar(i)` —
+ *    que NO toca `centradoPedido`, así este foco jamás dispara una segunda corrección de
+ *    scroll (esa doble corrección era exactamente el bug reportado).
  *
  *  Para que el auto-scroll programático del primer flujo no dispare de vuelta el
  *  segundo (reenfocando en pleno movimiento, o "peleando" con el centrado), usamos el
  *  flag [scrollProgramatico]: se prende antes de pedir el scroll y solo lo apaga el
  *  detector de asentado al consumirlo (nunca el propio scroll al terminar) — así no hay
  *  carrera entre la corrutina que anima el scroll y la que observa `isScrollInProgress`.
+ *  Esto solo hace falta para la navegación explícita: el asentado del snap del usuario
+ *  nunca prende este flag, así que siempre reenfoca.
  */
 @Composable
 private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modifier: Modifier = Modifier) {
@@ -103,8 +116,10 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
         // se lo impediría.
         val paddingCentrado = maxHeight / 2
 
-        // foco -> scroll: al cambiar la oración actual (por cualquier vía), centrarla.
-        LaunchedEffect(estado.indiceActual, estado.oraciones) {
+        // foco EXPLÍCITO -> scroll: keyeado en centradoPedido (NO en indiceActual), así
+        // el foco por asentado de scroll o tap (enfocar(), que no toca centradoPedido)
+        // nunca dispara este efecto — solo Previous/Next/salto de portada/carga inicial.
+        LaunchedEffect(estado.centradoPedido, estado.oraciones) {
             if (estado.oraciones.isEmpty() || estado.indiceActual !in estado.oraciones.indices) {
                 return@LaunchedEffect
             }
@@ -150,6 +165,12 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
         LazyColumn(
             state = listaEstado,
             contentPadding = PaddingValues(vertical = paddingCentrado),
+            // snap al centro (fix rubberbanding): soltar el dedo asienta la oración más
+            // cercana ya centrada, sin depender de una corrección posterior.
+            flingBehavior = rememberSnapFlingBehavior(
+                lazyListState = listaEstado,
+                snapPosition = SnapPosition.Center,
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentWidth(Alignment.CenterHorizontally)
