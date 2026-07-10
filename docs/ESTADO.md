@@ -12,6 +12,7 @@
 | 3    | `app/` — lector Android (Kotlin + Compose)       | ✅ Completo ([PR #3](https://github.com/T4toh/dokusho-renshuu/pull/3)) |
 | 3.5  | pulido + repaso básico (db-v2, catálogo v2, app) | ✅ Completo ([PR #4](https://github.com/T4toh/dokusho-renshuu/pull/4)) |
 | 3.6  | detalles de UI (barras, lector scroll libre, kanji 2col) | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
+| 3.7  | katakana-ruby + fix alineador de furigana        | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
 | 4    | `app/` — mazos .apkg + import de texto           | ⏳ Siguiente. Plan a escribir (writing-plans)                                                                         |
 
 ## Datos operativos
@@ -24,6 +25,7 @@
 - **Contrato furigana**: `[inicio, fin, lectura]` con fin exclusivo sobre el texto de la oración; diálogo `「…」` = 1 oración (portar igual en Kotlin, Plan 3).
 - `historias/src/jlpt.py` es generado (regenerar con `genera_jlpt.py` solo si cambia KANJIDIC2).
 - **App (Plan 3)**: `app/` compila con JDK 17+ (probado JDK 21) + SDK 36 (PC secundaria); assets generados por gradle tasks (`descargarDiccionario` baja el db del release con escritura atómica tmp→rename; `copiarHistorias` empaqueta `catalogo/`). AGP 9.2 usa Kotlin built-in (sin plugin kotlin-android ni kotlinOptions). UI en inglés; tabla Room `kanjis_tocados` (kanji, dificultad nullable easy/medium/hard, timestamp — migración 1→2 no destructiva) — insumo Plan 4 junto con `palabras_tocadas`; tests con maxHeapSize 2g (OOM Kuromoji).
+- **Lector (3.7)**: toggle カナ (pref `katakana`, default ON) muestra hiragana sobre runs de katakana (precomputado en el VM); catálogo con spans de furigana disjuntos (check en verify_catalogo).
 - **Para Plan 4**: portar segmentador de `historias/src/segmentador.py` CON la regla de fusión de spans; formato `.apkg` = zip + SQLite (referencia genanki); IDs estables por kanji (guid Anki).
 
 ## Backlog diferido (review final Plan 1 — no bloqueante)
@@ -66,12 +68,6 @@
 - MigrationTestHelper no usado (exportSchema=false); ProgresoDaoFake overridea registrarAperturaKanji (primitivas dead-code en fake).
 - Review section: kanjisPorDificultad consultado 2x por dificultad.
 - lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
-
-- **historias/pipeline (BUG de datos, hallado 2026-07-09)**: el alineador de furigana emite spans que se solapan entre sí — en momotaro.json real: `[7,8,"いま"]` (今) y `[7,9,"かえ"]` (帰, arranca 1 char antes de lo debido). La app clampa y lo tolera (fix bf50f05), pero hay que arreglar el alineador y regenerar `catalogo/`.
-
-## Feedback pendiente (candidatos a próximo plan)
-
-- **Katakana → hiragana (toggle de lectura): PLANEAR con brainstorming propio antes de implementar.** Decisiones abiertas: dónde vive el toggle, convivencia con el toggle de furigana, formato del ruby, ¿solo tokens katakana o también mixtos?. La conversión ya existe (`katakanaAHiragana` en Tokenizador). NO requiere otro diccionario.
 
 ## Proceso de trabajo usado
 

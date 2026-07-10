@@ -149,6 +149,25 @@ class LectorViewModelTest {
     }
 
     @Test
+    fun `cargar establece katakanaActiva desde prefs (default true)`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        assertTrue(vm.estado.value.katakanaActiva)
+    }
+
+    @Test
+    fun `alternar katakana persiste`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        assertTrue(vm.estado.value.katakanaActiva)
+        vm.alternarKatakana(); advanceUntilIdle()
+        assertFalse(vm.estado.value.katakanaActiva)
+        assertEquals("off", dao.pref("katakana"))
+    }
+
+    @Test
     fun `cargar historia inexistente no crashea y degrada el estado`() = runTest {
         val dao = ProgresoDaoFake()
         val vm = vmMomotaro(dao, idHistoria = "no-existe")
@@ -443,6 +462,79 @@ class LectorViewModelTest {
         )
         // no es una lista vacía "por accidente": la oración de prueba tiene grupos reales.
         assertTrue(plana.gruposFurigana.isNotEmpty())
+    }
+
+    // --- particionarPorKatakana: split de un sub-segmento SIN furigana en runs de
+    // katakana (Plan 3.7, katakana-ruby). Un run empieza con un carácter convertible
+    // (ァ..ヶ) y puede seguir con ー (se preserva tal cual, カード → かーど); un ー sin
+    // katakana inmediatamente antes NO inicia run. Furigana de kanji manda: un
+    // segmento con `lectura != null` queda intacto, nunca se parte. ---
+
+    @Test
+    fun `onomatopeya pura da un solo run con su hiragana`() {
+        val token = PalabraToken("ドンブラコッコ", null, null, inicio = 0, fin = 7, esContenido = true)
+        val segmento = Segmento("ドンブラコッコ", null, token)
+        assertEquals(
+            listOf(Segmento("ドンブラコッコ", null, token, "どんぶらこっこ")),
+            particionarPorKatakana(listOf(segmento)),
+        )
+    }
+
+    @Test
+    fun `token mixto separa el run de katakana del resto sin lectura`() {
+        val token = PalabraToken("アイス食べ", null, null, inicio = 0, fin = 5, esContenido = true)
+        val segmento = Segmento("アイス食べ", null, token)
+        assertEquals(
+            listOf(
+                Segmento("アイス", null, token, "あいす"),
+                Segmento("食べ", null, token, null),
+            ),
+            particionarPorKatakana(listOf(segmento)),
+        )
+    }
+
+    @Test
+    fun `segmento con furigana de kanji intacta no se parte por katakana`() {
+        val token = PalabraToken("カード", null, null, inicio = 0, fin = 3, esContenido = true)
+        val segmento = Segmento("カード", "かあど", token) // furigana explícita (dato hipotético)
+        assertEquals(listOf(segmento), particionarPorKatakana(listOf(segmento)))
+    }
+
+    @Test
+    fun `run de katakana con prolongador ー se preserva tal cual en la lectura`() {
+        val token = PalabraToken("カード", null, null, inicio = 0, fin = 3, esContenido = true)
+        val segmento = Segmento("カード", null, token)
+        assertEquals(
+            listOf(Segmento("カード", null, token, "かーど")),
+            particionarPorKatakana(listOf(segmento)),
+        )
+    }
+
+    @Test
+    fun `ー suelto sin katakana antes no inicia run y queda sin lectura`() {
+        val token = PalabraToken("ーです", null, null, inicio = 0, fin = 3, esContenido = true)
+        val segmento = Segmento("ーです", null, token)
+        assertEquals(
+            listOf(Segmento("ーです", null, token, null)),
+            particionarPorKatakana(listOf(segmento)),
+        )
+    }
+
+    @Test
+    fun `segmento sin ningun katakana queda sin cambios`() {
+        val token = PalabraToken("むかしむかし", null, null, inicio = 0, fin = 6, esContenido = true)
+        val segmento = Segmento("むかしむかし", null, token)
+        assertEquals(listOf(segmento), particionarPorKatakana(listOf(segmento)))
+    }
+
+    @Test
+    fun `calcularGruposFurigana aplica la particion de katakana sin furigana en el grupo`() {
+        val token = PalabraToken("ドンブラコッコ", null, null, inicio = 0, fin = 7, esContenido = true)
+        val grupos = calcularGruposFurigana(listOf(token), emptyList())
+        assertEquals(
+            listOf(Segmento("ドンブラコッコ", null, token, "どんぶらこっこ")),
+            grupos.single().segmentos,
+        )
     }
 
     @Test

@@ -35,6 +35,15 @@ class TestLimpiarLinea(unittest.TestCase):
         self.assertEqual(texto, '山と川')
         self.assertEqual(furigana, [[0, 1, 'やま'], [2, 3, 'かわ']])
 
+    def test_rubies_adyacentes_no_solapan(self):
+        # caso real momotaro: dos kanjis sueltos consecutivos, cada uno
+        # con su propio ruby y sin ｜ entre ellos — el segundo ruby no
+        # debe "robarle" el carácter base al primero.
+        texto, furigana = aozora.limpiar_linea(
+            '「おばあさん、今《いま》帰《かえ》ったよ。」')
+        self.assertEqual(texto, '「おばあさん、今帰ったよ。」')
+        self.assertEqual(furigana, [[7, 8, 'いま'], [8, 9, 'かえ']])
+
     def test_anotacion_se_elimina(self):
         texto, furigana = aozora.limpiar_linea(
             '［＃５字下げ］一［＃「一」は中見出し］')

@@ -1,17 +1,28 @@
 package com.tatoh.dokushorenshu.ui.lector
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.tatoh.dokushorenshu.dominio.ConsultaPalabra
 
 @Composable
 fun PalabraSheet(consulta: ConsultaPalabra, onVerKanji: (String) -> Unit) {
+    val clipboardManager = LocalClipboardManager.current
     // LazyColumn (no Column+verticalScroll): ModalBottomSheet ya trae su propio nested-scroll
     // connection y solo lo delega correctamente a un scrollable "real" (LazyColumn/LazyList).
     // Un Column con verticalScroll no participa de ese nested scroll, así que el drag movía
@@ -25,7 +36,41 @@ fun PalabraSheet(consulta: ConsultaPalabra, onVerKanji: (String) -> Unit) {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 40.dp),
     ) {
         item {
-            Text(consulta.termino, style = MaterialTheme.typography.headlineMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(consulta.termino, style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.width(4.dp))
+                // Copiar el término solo (sin lectura ni definiciones): útil cuando la palabra
+                // no está en el diccionario o es katakana, para buscarla en otro lado.
+                val colorIcono = MaterialTheme.colorScheme.onSurfaceVariant
+                IconButton(
+                    onClick = { clipboardManager.setText(AnnotatedString(consulta.termino)) },
+                    modifier = Modifier.semantics { contentDescription = "Copy" }
+                ) {
+                    // Ícono de copiar dibujado a mano (dos rectángulos superpuestos): ContentCopy
+                    // no está en material-icons-core y no vale la pena icons-extended por un glifo.
+                    Canvas(modifier = Modifier.size(18.dp)) {
+                        val trazo = 1.5.dp.toPx()
+                        val esquina = CornerRadius(2.dp.toPx())
+                        val lado = size.width * 0.62f
+                        // rectángulo trasero (arriba-izquierda)
+                        drawRoundRect(
+                            color = colorIcono,
+                            topLeft = Offset(0f, 0f),
+                            size = Size(lado, lado),
+                            cornerRadius = esquina,
+                            style = Stroke(width = trazo)
+                        )
+                        // rectángulo delantero (abajo-derecha)
+                        drawRoundRect(
+                            color = colorIcono,
+                            topLeft = Offset(size.width - lado, size.height - lado),
+                            size = Size(lado, lado),
+                            cornerRadius = esquina,
+                            style = Stroke(width = trazo)
+                        )
+                    }
+                }
+            }
             val lectura = consulta.definiciones.firstOrNull()?.lectura ?: consulta.lecturaFallback
             lectura?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
         }

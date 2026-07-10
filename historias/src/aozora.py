@@ -35,7 +35,8 @@ def limpiar_linea(linea: str) -> tuple:
                 inicio = inicio_marcado
             else:
                 inicio = len(texto)
-                while inicio > 0 and japones.es_base_ruby(texto[inicio - 1]):
+                limite = furigana[-1][1] if furigana else 0
+                while inicio > limite and japones.es_base_ruby(texto[inicio - 1]):
                     inicio -= 1
             if lectura and inicio < len(texto):
                 furigana.append([inicio, len(texto), lectura])

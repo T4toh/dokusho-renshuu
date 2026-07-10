@@ -49,6 +49,7 @@ def _verificar_historia(ruta: str, id_: str) -> list:
                     f'{donde}: marcado Aozora residual: {texto[:30]}')
             if oracion.get('traduccion') is not None:
                 errores.append(f'{donde}: traduccion debe ser null en v1')
+            anterior_fin = None
             for furi in oracion.get('furigana', []):
                 if not isinstance(furi, list) or len(furi) != 3:
                     errores.append(f'{donde}: furigana inválida {furi}')
@@ -60,6 +61,12 @@ def _verificar_historia(ruta: str, id_: str) -> list:
                     continue
                 if not (0 <= inicio < fin <= len(texto)) or not lectura:
                     errores.append(f'{donde}: furigana inválida {furi}')
+                    continue
+                if anterior_fin is not None and inicio < anterior_fin:
+                    errores.append(
+                        f'{donde}: furigana solapada o desordenada {furi} '
+                        f'(fin anterior {anterior_fin})')
+                anterior_fin = fin
     return errores
 
 

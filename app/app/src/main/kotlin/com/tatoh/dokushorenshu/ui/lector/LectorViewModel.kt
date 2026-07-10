@@ -41,6 +41,11 @@ data class EstadoLector(
     val oraciones: List<OracionPlana> = emptyList(),
     val indiceActual: Int = -1,
     val furiganaActiva: Boolean = true,
+    // Katakana-ruby (Plan 3.7): toggle independiente de furiganaActiva —
+    // cualquier combinación de ambos es válida. Mismo patrón: precomputado en
+    // Segmento.lecturaKana (Task 3), este flag solo decide si TextoConFurigana lo
+    // dibuja.
+    val katakanaActiva: Boolean = true,
     val consulta: ConsultaPalabra? = null,
     // última posición persistida en progresoDao: a diferencia de indiceActual, no vuelve
     // a -1 al retroceder hasta la portada, así la portada puede distinguir "Continue
@@ -66,6 +71,7 @@ private data class DatosCarga(
     val metadata: EntradaCatalogo?,
     val planas: List<OracionPlana>,
     val furiganaActiva: Boolean,
+    val katakanaActiva: Boolean,
     val progreso: ProgresoHistoria?,
 )
 
@@ -98,7 +104,11 @@ class LectorViewModel(
                         OracionPlana(p, o, oracion, tokens, calcularGruposFurigana(tokens, oracion.furigana))
                     }
                 }
-                DatosCarga(historia, metadata, planas, prefs.furiganaActiva(), progresoDao.progreso(idHistoria))
+                DatosCarga(
+                    historia, metadata, planas,
+                    prefs.furiganaActiva(), prefs.katakanaActiva(),
+                    progresoDao.progreso(idHistoria),
+                )
             }
             // La historia puede haber sido borrada o corrompida entre que se listó en la
             // biblioteca y que se abrió acá: nunca crashear: degradar a un estado vacío visible.
@@ -120,6 +130,7 @@ class LectorViewModel(
                 oraciones = datos.planas,
                 indiceActual = indice,
                 furiganaActiva = datos.furiganaActiva,
+                katakanaActiva = datos.katakanaActiva,
                 progresoGuardado = indice,
                 // carga inicial: cuenta como centrado explícito para que, si esta carga
                 // restaura una posición ya avanzada (no portada), la lista se abra
@@ -175,6 +186,12 @@ class LectorViewModel(
         val nueva = !_estado.value.furiganaActiva
         _estado.value = _estado.value.copy(furiganaActiva = nueva)
         viewModelScope.launch(ioDispatcher) { prefs.setFuriganaActiva(nueva) }
+    }
+
+    fun alternarKatakana() {
+        val nueva = !_estado.value.katakanaActiva
+        _estado.value = _estado.value.copy(katakanaActiva = nueva)
+        viewModelScope.launch(ioDispatcher) { prefs.setKatakanaActiva(nueva) }
     }
 
     fun tocarPalabra(token: PalabraToken) {
