@@ -6,12 +6,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.tatoh.dokushorenshu.dominio.ConsultaPalabra
 
 @Composable
 fun PalabraSheet(consulta: ConsultaPalabra, onVerKanji: (String) -> Unit) {
+    // material-icons-core no está en el classpath (no es dependencia del proyecto), así que
+    // usamos un TextButton en vez de agregar una dependencia nueva solo para un ícono.
+    val clipboardManager = LocalClipboardManager.current
     // LazyColumn (no Column+verticalScroll): ModalBottomSheet ya trae su propio nested-scroll
     // connection y solo lo delega correctamente a un scrollable "real" (LazyColumn/LazyList).
     // Un Column con verticalScroll no participa de ese nested scroll, así que el drag movía
@@ -25,7 +31,15 @@ fun PalabraSheet(consulta: ConsultaPalabra, onVerKanji: (String) -> Unit) {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 40.dp),
     ) {
         item {
-            Text(consulta.termino, style = MaterialTheme.typography.headlineMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(consulta.termino, style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.width(4.dp))
+                // Copiar el término solo (sin lectura ni definiciones): útil cuando la palabra
+                // no está en el diccionario o es katakana, para buscarla en otro lado.
+                TextButton(onClick = { clipboardManager.setText(AnnotatedString(consulta.termino)) }) {
+                    Text("Copy")
+                }
+            }
             val lectura = consulta.definiciones.firstOrNull()?.lectura ?: consulta.lecturaFallback
             lectura?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
         }
