@@ -148,7 +148,7 @@ object EscritorApkg {
         db.execSQL(
             "INSERT INTO notes(id, guid, mid, mod, usn, tags, flds, sfld, csum, flags, data)" +
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            arrayOf<Any>(idNota, guid, mid, modSegundos, -1L, " ", flds, sfld, csumDe(sfld), 0L, ""),
+            arrayOf<Any>(idNota, guid, mid, modSegundos, -1L, "  ", flds, sfld, csumDe(sfld), 0L, ""),
         )
         db.execSQL(
             "INSERT INTO cards(id, nid, did, ord, mod, usn, type, queue, due, ivl, factor, reps, lapses, left, odue, odid, flags, data)" +
@@ -330,6 +330,8 @@ object EscritorApkg {
     }
 
     private fun decksJson(modSegundos: Long) = buildJsonObject {
+        // Deck Default obligatorio: invariante de Anki, siempre presente en genanki
+        put("1", deckJson(1L, "Default", modSegundos))
         put(ModeloNotas.DECK_ID_WORDS.toString(), deckJson(ModeloNotas.DECK_ID_WORDS, ModeloNotas.NOMBRE_DECK_WORDS, modSegundos))
         put(ModeloNotas.DECK_ID_KANJI.toString(), deckJson(ModeloNotas.DECK_ID_KANJI, ModeloNotas.NOMBRE_DECK_KANJI, modSegundos))
     }

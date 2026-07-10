@@ -1,12 +1,16 @@
 package com.tatoh.dokushorenshu.dominio.anki
 
 import android.database.sqlite.SQLiteDatabase
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.util.zip.ZipFile
+import kotlinx.serialization.json.Json
 
 @RunWith(RobolectricTestRunner::class)
 class EscritorApkgTest {
@@ -96,6 +100,22 @@ class EscritorApkgTest {
                 assertEquals(9, campos.size) // CAMPOS_WORDS
                 assertEquals("物語", campos[0])
                 assertEquals("物語", c.getString(1))
+            }
+        }
+    }
+
+    @Test
+    fun `col decks contiene Default DECK_ID_WORDS y DECK_ID_KANJI`() {
+        val destino = File.createTempFile("mazo", ".apkg")
+        EscritorApkg.escribir(destino, listOf(notaWords("物語")), listOf(notaKanji("犬")))
+        val sqlite = unzipCollection(destino)
+        SQLiteDatabase.openDatabase(sqlite.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            db.rawQuery("SELECT decks FROM col", null).use { c ->
+                c.moveToFirst()
+                val decksJson = Json.parseToJsonElement(c.getString(0)).jsonObject
+                assertTrue("Falta deck Default (1)", decksJson.containsKey("1"))
+                assertTrue("Falta DECK_ID_WORDS", decksJson.containsKey(ModeloNotas.DECK_ID_WORDS.toString()))
+                assertTrue("Falta DECK_ID_KANJI", decksJson.containsKey(ModeloNotas.DECK_ID_KANJI.toString()))
             }
         }
     }
