@@ -62,4 +62,23 @@ class ProgresoDaoTest {
         assertEquals(2L, tocado?.timestamp)
         assertEquals(1, dao.kanjisPorDificultad("hard").size)  // una sola fila, no duplicada
     }
+
+    @Test
+    fun `todasPalabras devuelve las filas de todas las historias sin filtrar`() = runTest {
+        val dao = db().dao()
+        dao.registrarPalabra(PalabraTocada("momotaro", "犬", timestamp = 1L))
+        dao.registrarPalabra(PalabraTocada("urashima_taro", "亀", timestamp = 2L))
+        assertEquals(2, dao.todasPalabras().size)
+    }
+
+    @Test
+    fun `kanjisTaggeados excluye los vistos sin dificultad`() = runTest {
+        val dao = db().dao()
+        dao.registrarAperturaKanji("見", 1L)  // visto, nunca taggeado
+        dao.registrarAperturaKanji("洗", 2L)
+        dao.setDificultadKanji("洗", "hard")
+        val taggeados = dao.kanjisTaggeados()
+        assertEquals(1, taggeados.size)
+        assertEquals("洗", taggeados[0].kanji)
+    }
 }
