@@ -1,5 +1,7 @@
 package com.tatoh.dokushorenshu.ui.export
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,7 +25,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,8 +79,11 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
             if (listo != null) {
                 Spacer(Modifier.height(24.dp))
                 Text(listo.resumen, style = MaterialTheme.typography.bodyMedium)
-                // Task 5 cablea el intent real (FileProvider + ACTION_SEND).
-                Button(onClick = { }, modifier = Modifier.padding(top = 8.dp)) { Text("Share") }
+                val context = LocalContext.current
+                Button(
+                    onClick = { compartirMazo(context, listo.archivo) },
+                    modifier = Modifier.padding(top = 8.dp),
+                ) { Text("Share") }
             }
         }
     }
@@ -101,4 +109,21 @@ private fun BotonExport(
             Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+/** Share intent hacia AnkiDroid (u otro receptor del chooser: Drive, Gmail,
+ *  Bluetooth...) vía FileProvider — sin permisos de storage (spec Plan 4a).
+ *  "application/apkg" es uno de los mimeTypes que el manifest real de
+ *  AnkiDroid declara para su intent-filter de ACTION_SEND (junto con
+ *  application/octet-stream, application/x-apkg, application/vnd.anki — ver
+ *  "Investigación del mimeType" en el plan), así el share sheet puede
+ *  ofrecerlo como destino directo. */
+private fun compartirMazo(context: Context, archivo: File) {
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", archivo)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "application/apkg"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share Anki deck"))
 }
