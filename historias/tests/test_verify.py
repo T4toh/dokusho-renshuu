@@ -102,6 +102,16 @@ class TestVerify(unittest.TestCase):
             lambda c: c['historias'][0].update(titulo_en=None))
         self.assertEqual(verify_catalogo.verificar(self.tmp), [])
 
+    def test_detecta_furigana_solapada_o_desordenada(self):
+        def mutar(h):
+            # しば刈りに。 (6 caracteres) — ambos spans son individualmente
+            # válidos (0<=inicio<fin<=6) pero se solapan entre sí.
+            h['parrafos'][0]['oraciones'][1]['furigana'] = (
+                [[0, 3, 'a'], [2, 5, 'b']])
+        self._corromper_historia(mutar)
+        errores = verify_catalogo.verificar(self.tmp)
+        self.assertTrue(any('solapad' in e for e in errores))
+
     def test_detecta_kanjis_unicos_de_tipo_invalido(self):
         self._corromper_catalogo(
             lambda c: c['historias'][0].update(kanjis_unicos='124'))
