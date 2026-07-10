@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,8 +17,6 @@ import com.tatoh.dokushorenshu.dominio.ConsultaPalabra
 
 @Composable
 fun PalabraSheet(consulta: ConsultaPalabra, onVerKanji: (String) -> Unit) {
-    // material-icons-core no está en el classpath (no es dependencia del proyecto), así que
-    // usamos un TextButton en vez de agregar una dependencia nueva solo para un ícono.
     val clipboardManager = LocalClipboardManager.current
     // LazyColumn (no Column+verticalScroll): ModalBottomSheet ya trae su propio nested-scroll
     // connection y solo lo delega correctamente a un scrollable "real" (LazyColumn/LazyList).
@@ -36,8 +36,8 @@ fun PalabraSheet(consulta: ConsultaPalabra, onVerKanji: (String) -> Unit) {
                 Spacer(Modifier.width(4.dp))
                 // Copiar el término solo (sin lectura ni definiciones): útil cuando la palabra
                 // no está en el diccionario o es katakana, para buscarla en otro lado.
-                TextButton(onClick = { clipboardManager.setText(AnnotatedString(consulta.termino)) }) {
-                    Text("Copy")
+                IconButton(onClick = { clipboardManager.setText(AnnotatedString(consulta.termino)) }) {
+                    Icon(Icons.Outlined.Share, contentDescription = "Copy", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             val lectura = consulta.definiciones.firstOrNull()?.lectura ?: consulta.lecturaFallback
