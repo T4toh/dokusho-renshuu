@@ -8,6 +8,8 @@ import com.tatoh.dokushorenshu.datos.progreso.PrefsRepo
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDb
 import com.tatoh.dokushorenshu.dominio.BuscadorPalabras
 import com.tatoh.dokushorenshu.dominio.Tokenizador
+import com.tatoh.dokushorenshu.dominio.anki.ArmadorMazos
+import java.io.File
 
 /** DI manual. Todo lazy: el primer acceso a `diccionario` copia el db de assets
  *  (79 MB) y el de `tokenizador` carga el diccionario IPADIC (~1s). Ojo: las
@@ -21,6 +23,10 @@ class Contenedor(private val app: Application) {
     val historias by lazy { HistoriasRepo.desde(app) }
     val tokenizador by lazy { Tokenizador() }
     val buscador by lazy { BuscadorPalabras(diccionario) }
+    val armadorMazos by lazy { ArmadorMazos(progresoDb.dao(), diccionario, historias) }
+    // cache, no filesDir: el .apkg es descartable, se regenera en cada export
+    // (mismo criterio que FileProvider — spec Plan 4a "sin permisos de storage").
+    val dirExportMazos by lazy { File(app.cacheDir, "export").apply { mkdirs() } }
 }
 
 class App : Application() {
