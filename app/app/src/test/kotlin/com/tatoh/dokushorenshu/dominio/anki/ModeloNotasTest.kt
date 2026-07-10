@@ -31,6 +31,13 @@ class ModeloNotasTest {
         assertTrue(guid.all { it in alfabeto })
     }
 
+    @Test
+    fun `guidDe coincide con el valor de referencia de genanki`() {
+        // Valor calculado con genanki real (guid_for) — tripwire contra regresiones
+        // silenciosas del algoritmo base91/SHA-256.
+        assertEquals("PXyc82SG{C", ModeloNotas.guidDe("words:物語"))
+    }
+
     // --- NotaWords/NotaKanji: orden de campos y cap de 5 oraciones ---
 
     @Test
