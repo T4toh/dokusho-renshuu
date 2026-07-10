@@ -117,7 +117,7 @@ class ArmadorMazos(
             .toList()
         if (deHistorias.size >= CAP_ORACIONES) return deHistorias
         val relleno = tatoeba(CAP_ORACIONES - deHistorias.size)
-            .map { "${it.japones}<br>${it.ingles}" }
+            .map { "${escapeHtml(it.japones)}<br>${escapeHtml(it.ingles)}" }
         return deHistorias + relleno
     }
 }

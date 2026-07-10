@@ -38,6 +38,8 @@ class ExportViewModel(
     // EscritorApkgTest, Tasks 1-2). En producción, EscritorApkg::escribir.
     private val escribir: (File, List<NotaWords>, List<NotaKanji>) -> Unit = EscritorApkg::escribir,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    // inyectable: android.util.Log no existe en los tests de JVM plano
+    private val log: (String, Throwable) -> Unit = { msg, t -> android.util.Log.e("ExportViewModel", msg, t) },
 ) : ViewModel() {
     private val _contadores = MutableStateFlow(ContadoresExport(0, 0))
     val contadores: StateFlow<ContadoresExport> = _contadores
@@ -47,10 +49,17 @@ class ExportViewModel(
 
     fun cargar() {
         viewModelScope.launch {
-            _contadores.value = withContext(ioDispatcher) {
-                val words = progresoDao.todasPalabras().map { it.termino }.distinct().size
-                val kanjis = progresoDao.kanjisTaggeados().size
-                ContadoresExport(words, kanjis)
+            try {
+                _contadores.value = withContext(ioDispatcher) {
+                    val words = progresoDao.todasPalabras().map { it.termino }.distinct().size
+                    val kanjis = progresoDao.kanjisTaggeados().size
+                    ContadoresExport(words, kanjis)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // counts quedan en 0 (botones deshabilitados con hint) — nunca crash
+                log("cargar() falló leyendo counts", e)
             }
         }
     }
@@ -83,7 +92,8 @@ class ExportViewModel(
                 throw e  // nunca tragar la cancelación del propio viewModelScope
             } catch (e: Exception) {
                 destino.delete()  // nunca dejar un .apkg a medias en cache (spec "Manejo de errores")
-                _estado.value = EstadoExport.Error("Export failed: ${e.message}")
+                log("exportar($tipo) falló", e)
+                _estado.value = EstadoExport.Error("Export failed: ${e.message ?: e.javaClass.simpleName}")
             }
         }
     }

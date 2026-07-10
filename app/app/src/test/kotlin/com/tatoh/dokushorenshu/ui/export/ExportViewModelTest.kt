@@ -45,7 +45,7 @@ class ExportViewModelTest {
         dirExport: File = dirTemp(),
     ): ExportViewModel {
         val armador = ArmadorMazos(dao, diccionario, historiasRepo())
-        return ExportViewModel(dao, armador, dirExport, escribir, dispatcher)
+        return ExportViewModel(dao, armador, dirExport, escribir, dispatcher, log = { _, _ -> })
     }
 
     @Test

@@ -142,6 +142,20 @@ class ArmadorMazosTest {
     }
 
     @Test
+    fun `relleno Tatoeba escapa HTML igual que las oraciones de historias`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.registrarPalabra(PalabraTocada("momotaro", "犬犬犬", timestamp = 1L))  // sin match en historias
+        val diccionario = DiccionarioFake().apply {
+            ejemplosPalabra["犬犬犬"] = listOf(
+                OracionEjemplo("a<b>c", "x & y <script>"),
+            )
+        }
+        val notas = armador(dao, diccionario).armarWords()
+        val oraciones = notas.single { it.palabra == "犬犬犬" }.oraciones
+        assertEquals(listOf("a&lt;b&gt;c<br>x &amp; y &lt;script&gt;"), oraciones)
+    }
+
+    @Test
     fun `cap de 5 oraciones aunque las historias tengan muchas mas coincidencias`() = runTest {
         // "桃太郎" aparece 34 veces en momotaro.json — nunca se llama a Tatoeba.
         val dao = ProgresoDaoFake()
