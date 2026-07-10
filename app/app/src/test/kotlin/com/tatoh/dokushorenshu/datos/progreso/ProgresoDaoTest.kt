@@ -43,6 +43,14 @@ class ProgresoDaoTest {
     }
 
     @Test
+    fun `prefs roundtrip y default de katakana`() = runTest {
+        val repo = PrefsRepo(db().dao())
+        assertTrue(repo.katakanaActiva())  // default: activada
+        repo.setKatakanaActiva(false)
+        assertFalse(repo.katakanaActiva())
+    }
+
+    @Test
     fun `reabrir un kanji taggeado preserva la dificultad y actualiza el timestamp`() = runTest {
         val dao = db().dao()
         dao.registrarAperturaKanji("洗", 1L)

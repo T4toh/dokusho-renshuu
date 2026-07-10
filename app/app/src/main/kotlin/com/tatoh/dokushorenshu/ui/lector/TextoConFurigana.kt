@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.sp
 import com.tatoh.dokushorenshu.datos.Furigana
 import com.tatoh.dokushorenshu.datos.Oracion
 import com.tatoh.dokushorenshu.dominio.PalabraToken
+import com.tatoh.dokushorenshu.dominio.katakanaAHiragana
 
 /** Render por token: columna [furigana chica / superficie]. La furigana viene
  *  de la pre-alineada del JSON (spans solapados con el token), NUNCA de Kuromoji.
@@ -65,9 +66,59 @@ data class GrupoFurigana(val grupo: GrupoRenderizado, val segmentos: List<Segmen
  *  `agruparTokens` + `segmentosDeGrupo` — las dos funciones puras que antes corrían
  *  dentro de la composición de [TextoConFurigana] en cada recompose de item (fix de
  *  performance, Plan 3.6 feedback). Se llama UNA vez por oración desde
- *  [LectorViewModel.cargar] (en `ioDispatcher`), nunca en cada composición. */
+ *  [LectorViewModel.cargar] (en `ioDispatcher`), nunca en cada composición.
+ *
+ *  Plan 3.7 (katakana-ruby): cada grupo pasa además por [particionarPorKatakana],
+ *  que parte los sub-segmentos SIN furigana en runs de katakana con su hiragana
+ *  alineada ([Segmento.lecturaKana]). Corre siempre acá, independiente de cualquier
+ *  toggle de UI (mismo criterio que la furigana: precómputo único, el toggle de
+ *  `TextoConFurigana` solo decide si se DIBUJA, nunca si se calcula). */
 internal fun calcularGruposFurigana(tokens: List<PalabraToken>, furigana: List<Furigana>): List<GrupoFurigana> =
-    agruparTokens(tokens, furigana).map { grupo -> GrupoFurigana(grupo, segmentosDeGrupo(grupo, furigana)) }
+    agruparTokens(tokens, furigana).map { grupo ->
+        GrupoFurigana(grupo, particionarPorKatakana(segmentosDeGrupo(grupo, furigana)))
+    }
+
+// Rango Unicode de katakana convertible a hiragana (mismo rango que [katakanaAHiragana]).
+private val RANGO_KATAKANA = 'ァ'..'ヶ'
+private const val PROLONGADOR = 'ー'
+
+/** Parte cada [Segmento] SIN furigana (`lectura == null`) en sub-tramos de katakana
+ *  (con [Segmento.lecturaKana] calculada) y de no-katakana (sin ruby) — mecanismo de
+ *  katakana-ruby del Plan 3.7. Un segmento con `lectura != null` queda SIEMPRE
+ *  intacto: la furigana de kanji manda, nunca se re-particiona por katakana.
+ *
+ *  Un run de katakana EMPIEZA con un carácter convertible (ァ..ヶ) y puede seguir con
+ *  el prolongador ー en el medio o al final, preservado tal cual (カード → かーど). Un
+ *  ー sin katakana inmediatamente antes NO inicia run por sí solo — queda en el tramo
+ *  de no-katakana, sin ruby (ver test `ー suelto sin katakana antes no inicia run`).
+ *
+ *  Conversión determinística carácter a carácter vía [katakanaAHiragana] — no
+ *  requiere diccionario ni lecturas de Kuromoji, así que nunca falla ni crashea. */
+internal fun particionarPorKatakana(segmentos: List<Segmento>): List<Segmento> =
+    segmentos.flatMap { segmento ->
+        if (segmento.lectura != null) listOf(segmento) else particionarTexto(segmento.texto, segmento.token)
+    }
+
+private fun particionarTexto(texto: String, token: PalabraToken): List<Segmento> {
+    if (texto.isEmpty()) return emptyList()
+    val resultado = mutableListOf<Segmento>()
+    var i = 0
+    while (i < texto.length) {
+        if (texto[i] in RANGO_KATAKANA) {
+            var j = i + 1
+            while (j < texto.length && (texto[j] in RANGO_KATAKANA || texto[j] == PROLONGADOR)) j++
+            val run = texto.substring(i, j)
+            resultado.add(Segmento(run, null, token, katakanaAHiragana(run)))
+            i = j
+        } else {
+            var j = i + 1
+            while (j < texto.length && texto[j] !in RANGO_KATAKANA) j++
+            resultado.add(Segmento(texto.substring(i, j), null, token))
+            i = j
+        }
+    }
+    return resultado
+}
 
 /** Un grupo entero (todos sus sub-segmentos) como único hijo de `FlowRow`: el grupo
  *  nunca se parte entre líneas al wrapear (mismo criterio que antes tenía cada token
@@ -112,8 +163,13 @@ internal fun lecturaDelToken(oracion: Oracion, token: PalabraToken): String? =
  *  furigana propia, p.ej. la okurigana de un verbo). [token] es el token DUEÑO del
  *  segmento a efectos de tap: para un segmento que cae dentro de un solo token es ese
  *  token; para un segmento de furigana que cruza el límite entre varios tokens del
- *  mismo grupo (ver [agruparTokens]) es el primero (más a la izquierda) de ellos. */
-data class Segmento(val texto: String, val lectura: String?, val token: PalabraToken)
+ *  mismo grupo (ver [agruparTokens]) es el primero (más a la izquierda) de ellos.
+ *
+ *  [lecturaKana] (Plan 3.7, katakana-ruby): hiragana de un run de katakana dentro de
+ *  este segmento, calculada por [particionarPorKatakana]. NUNCA coexiste con
+ *  [lectura] — la furigana de kanji manda; la partición de katakana solo actúa sobre
+ *  segmentos que YA quedaron sin furigana (`lectura == null`) tras [segmentosDeGrupo]. */
+data class Segmento(val texto: String, val lectura: String?, val token: PalabraToken, val lecturaKana: String? = null)
 
 /** Una corrida MAXIMAL de tokens consecutivos que se renderiza como una sola unidad
  *  porque alguna furigana cruza el límite entre ellos (fix del bug "furigana
