@@ -114,4 +114,20 @@ class ExportViewModelTest {
         val listo = viewModel.estado.value as EstadoExport.Listo
         assertTrue(listo.resumen.contains("1 skipped"))
     }
+
+    @Test
+    fun `exportar durante Generando se ignora`() = runTest {
+        var contadorEscrituras = 0
+        val viewModel = vm(
+            escribir = { _, _, _ -> contadorEscrituras++ },
+        )
+
+        // Llamar exportar dos veces sin dejar que termine la primera
+        viewModel.exportar(TipoExport.WORDS)
+        viewModel.exportar(TipoExport.WORDS)  // segundo tap mientras está en Generando
+        advanceUntilIdle()
+
+        // El escritor debe haber corrido solo una vez
+        assertEquals(1, contadorEscrituras)
+    }
 }

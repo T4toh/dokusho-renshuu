@@ -57,6 +57,8 @@ class ExportViewModel(
 
     fun exportar(tipo: TipoExport) {
         viewModelScope.launch {
+            // guard contra doble tap — dos escrituras concurrentes corromperían el .apkg
+            if (_estado.value is EstadoExport.Generando) return@launch
             _estado.value = EstadoExport.Generando
             val destino = File(dirExport, nombreArchivo(tipo))
             try {
@@ -77,6 +79,7 @@ class ExportViewModel(
                 }
                 _estado.value = EstadoExport.Listo(destino, "Exported $resumen")
             } catch (e: CancellationException) {
+                destino.delete()  // nunca dejar un .apkg a medias en cache (spec "Manejo de errores")
                 throw e  // nunca tragar la cancelación del propio viewModelScope
             } catch (e: Exception) {
                 destino.delete()  // nunca dejar un .apkg a medias en cache (spec "Manejo de errores")
