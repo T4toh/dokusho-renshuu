@@ -44,6 +44,9 @@ fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
                         TextButton(onClick = vm::alternarFurigana) {
                             Text(if (estado.furiganaActiva) "Furigana ON" else "Furigana OFF")
                         }
+                        TextButton(onClick = vm::alternarKatakana) {
+                            Text(if (estado.katakanaActiva) "カナ ON" else "カナ OFF")
+                        }
                     }
                 },
             )
@@ -245,6 +248,7 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
                     esActual = indice == estado.indiceActual,
                     plana = plana,
                     furiganaActiva = estado.furiganaActiva,
+                    katakanaActiva = estado.katakanaActiva,
                     onTapPalabra = { token ->
                         vm.enfocar(indice)
                         vm.tocarPalabra(token)
@@ -292,6 +296,7 @@ private fun ItemOracion(
     esActual: Boolean,
     plana: OracionPlana,
     furiganaActiva: Boolean,
+    katakanaActiva: Boolean,
     onTapPalabra: (PalabraToken) -> Unit,
 ) {
     // Foco SOLO por alpha (animado), nunca por tamaño: todas las oraciones tienen la
@@ -308,6 +313,7 @@ private fun ItemOracion(
             tokens = plana.tokens,
             gruposFurigana = plana.gruposFurigana,
             furiganaActiva = furiganaActiva,
+            katakanaActiva = katakanaActiva,
             onTapPalabra = onTapPalabra,
         )
     }

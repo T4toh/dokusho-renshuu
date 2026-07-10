@@ -41,17 +41,26 @@ fun TextoConFurigana(
     tokens: List<PalabraToken>,
     gruposFurigana: List<GrupoFurigana>,
     furiganaActiva: Boolean,
+    // Katakana-ruby (Plan 3.7): decide SOLO el dibujo de Segmento.lecturaKana, ya
+    // precomputada (Task 3) tanto en gruposFurigana como acá abajo — nunca dispara
+    // trabajo nuevo. Independiente de furiganaActiva: cualquier combinación es válida.
+    katakanaActiva: Boolean,
     onTapPalabra: ((PalabraToken) -> Unit)?,
 ) {
     val estiloBase = MaterialTheme.typography.headlineMedium
     FlowRow {
         if (furiganaActiva) {
             for (grupo in gruposFurigana) {
-                FilaGrupo(grupo.segmentos, estiloBase, onTapPalabra)
+                FilaGrupo(grupo.segmentos, estiloBase, katakanaActiva, onTapPalabra)
             }
         } else {
+            // Con la furigana apagada cada token es su propio "grupo" (sin cruzar
+            // límites, ver doc de arriba). La partición de katakana sobre un único
+            // segmento sin furigana es tan barata (scan lineal, sin diccionario) como
+            // ya lo era construir el Segmento acá mismo: no hace falta precomputarla.
             for (token in tokens) {
-                FilaGrupo(listOf(Segmento(token.superficie, null, token)), estiloBase, onTapPalabra)
+                val segmentos = particionarPorKatakana(listOf(Segmento(token.superficie, null, token)))
+                FilaGrupo(segmentos, estiloBase, katakanaActiva, onTapPalabra)
             }
         }
     }
@@ -129,6 +138,7 @@ private fun particionarTexto(texto: String, token: PalabraToken): List<Segmento>
 private fun FilaGrupo(
     segmentos: List<Segmento>,
     estiloBase: TextStyle,
+    katakanaActiva: Boolean,
     onTapPalabra: ((PalabraToken) -> Unit)?,
 ) {
     Row {
@@ -139,8 +149,12 @@ private fun FilaGrupo(
                     Modifier.clickable { onTapPalabra(segmento.token) }
                 } else Modifier,
             ) {
+                // Furigana de kanji manda; si no hay, se dibuja lecturaKana SOLO
+                // si el toggle de katakana está activo (Plan 3.7) — el dato ya
+                // viene precomputado, esto nunca calcula nada.
+                val ruby = segmento.lectura ?: (segmento.lecturaKana.takeIf { katakanaActiva })
                 Text(
-                    text = segmento.lectura ?: " ",
+                    text = ruby ?: " ",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

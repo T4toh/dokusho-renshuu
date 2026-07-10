@@ -149,6 +149,25 @@ class LectorViewModelTest {
     }
 
     @Test
+    fun `cargar establece katakanaActiva desde prefs (default true)`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        assertTrue(vm.estado.value.katakanaActiva)
+    }
+
+    @Test
+    fun `alternar katakana persiste`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        assertTrue(vm.estado.value.katakanaActiva)
+        vm.alternarKatakana(); advanceUntilIdle()
+        assertFalse(vm.estado.value.katakanaActiva)
+        assertEquals("off", dao.pref("katakana"))
+    }
+
+    @Test
     fun `cargar historia inexistente no crashea y degrada el estado`() = runTest {
         val dao = ProgresoDaoFake()
         val vm = vmMomotaro(dao, idHistoria = "no-existe")
