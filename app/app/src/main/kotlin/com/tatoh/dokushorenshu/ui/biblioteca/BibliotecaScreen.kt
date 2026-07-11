@@ -30,6 +30,7 @@ fun BibliotecaScreen(
     onAcerca: () -> Unit,
     onVerKanji: (String) -> Unit,
     onExport: () -> Unit,
+    onImportar: () -> Unit,
 ) {
     val locales by vm.locales.collectAsState()
     val catalogo by vm.catalogo.collectAsState()
@@ -42,6 +43,7 @@ fun BibliotecaScreen(
         TopAppBar(
             title = { Text("Dokusho Renshū") },
             actions = {
+                TextButton(onClick = onImportar) { Text("Import") }
                 TextButton(onClick = onExport) { Text("Export") }
                 TextButton(onClick = onAcerca) { Text("About") }
             },

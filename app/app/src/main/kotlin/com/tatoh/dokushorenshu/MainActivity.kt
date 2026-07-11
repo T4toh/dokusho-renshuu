@@ -15,6 +15,8 @@ import com.tatoh.dokushorenshu.ui.biblioteca.BibliotecaScreen
 import com.tatoh.dokushorenshu.ui.biblioteca.BibliotecaViewModel
 import com.tatoh.dokushorenshu.ui.export.ExportScreen
 import com.tatoh.dokushorenshu.ui.export.ExportViewModel
+import com.tatoh.dokushorenshu.ui.importar.ImportScreen
+import com.tatoh.dokushorenshu.ui.importar.ImportViewModel
 import com.tatoh.dokushorenshu.ui.kanji.DetalleKanjiScreen
 import com.tatoh.dokushorenshu.ui.kanji.DetalleKanjiViewModel
 import com.tatoh.dokushorenshu.ui.lector.LectorScreen
@@ -48,6 +50,7 @@ class MainActivity : ComponentActivity() {
                             onAcerca = { nav.navigate("acerca") },
                             onVerKanji = { k -> nav.navigate("kanji/$k") },
                             onExport = { nav.navigate("export") },
+                            onImportar = { nav.navigate("importar") },
                         )
                     }
                     composable("lector/{id}") { entrada ->
@@ -80,6 +83,16 @@ class MainActivity : ComponentActivity() {
                             }
                         })
                         ExportScreen(vm = vm, onCerrar = { nav.popBackStack() })
+                    }
+                    composable("importar") {
+                        val vm: ImportViewModel = viewModel(factory = viewModelFactory {
+                            initializer { ImportViewModel(contenedor.importador) }
+                        })
+                        ImportScreen(
+                            vm = vm,
+                            onImportado = { nav.popBackStack() },
+                            onCerrar = { nav.popBackStack() },
+                        )
                     }
                     composable("acerca") { AcercaScreen() }
                 }
