@@ -16,7 +16,7 @@
 | 4a   | `app/` — mazos Anki (.apkg) con oraciones rotativas | ✅ Completo ([PR #7](https://github.com/T4toh/dokusho-renshuu/pull/7)) |
 | 4a.1 | `app/` — mazos por historia (subdecks de pre-lectura) | ✅ Completo ([PR #8](https://github.com/T4toh/dokusho-renshuu/pull/8)) |
 | 4b   | `app/` — import de texto propio                  | ✅ Completo ([PR #9](https://github.com/T4toh/dokusho-renshuu/pull/9))                                               |
-| 4c   | catalogo/ — tanda 2 de historias (6 obras)       | ✅ Completo (PR pendiente — actualizar con #N al abrir)                                                              |
+| 4c   | catalogo/ — tanda 2 de historias (6 obras)       | ✅ Completo ([PR #10](https://github.com/T4toh/dokusho-renshuu/pull/10))                                             |
 
 ## Datos operativos
 
