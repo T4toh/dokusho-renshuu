@@ -48,6 +48,78 @@
    "version": 2,
    "kanjis_unicos": 154,
    "oraciones": 144
+  },
+  {
+   "id": "hanasaka_jijii",
+   "titulo": "花咲かじじい",
+   "titulo_lectura": "はなさかじじい",
+   "titulo_en": "The Old Man Who Made Flowers Bloom",
+   "autor": "楠山正雄",
+   "dificultad": "facil",
+   "tamaño": 19652,
+   "version": 2,
+   "kanjis_unicos": 81,
+   "oraciones": 78
+  },
+  {
+   "id": "shitakiri_suzume",
+   "titulo": "舌切りすずめ",
+   "titulo_lectura": "したきりすずめ",
+   "titulo_en": "The Tongue-Cut Sparrow",
+   "autor": "楠山正雄",
+   "dificultad": "facil",
+   "tamaño": 42336,
+   "version": 2,
+   "kanjis_unicos": 139,
+   "oraciones": 117
+  },
+  {
+   "id": "kintaro",
+   "titulo": "金太郎",
+   "titulo_lectura": "きんたろう",
+   "titulo_en": "Kintarō",
+   "autor": "楠山正雄",
+   "dificultad": "facil",
+   "tamaño": 50103,
+   "version": 2,
+   "kanjis_unicos": 198,
+   "oraciones": 123
+  },
+  {
+   "id": "gongitsune",
+   "titulo": "ごん狐",
+   "titulo_lectura": "ごんぎつね",
+   "titulo_en": "Gon, the Little Fox",
+   "autor": "新美南吉",
+   "dificultad": "facil",
+   "tamaño": 32632,
+   "version": 2,
+   "kanjis_unicos": 198,
+   "oraciones": 151
+  },
+  {
+   "id": "tebukuro_wo_kaini",
+   "titulo": "手袋を買いに",
+   "titulo_lectura": "てぶくろをかいに",
+   "titulo_en": "Buying Mittens",
+   "autor": "新美南吉",
+   "dificultad": "facil",
+   "tamaño": 22858,
+   "version": 2,
+   "kanjis_unicos": 216,
+   "oraciones": 88
+  },
+  {
+   "id": "kumo_no_ito",
+   "titulo": "蜘蛛の糸",
+   "titulo_lectura": "くものいと",
+   "titulo_en": "The Spider's Thread",
+   "autor": "芥川龍之介",
+   "dificultad": "media",
+   "tamaño": 17318,
+   "version": 2,
+   "kanjis_unicos": 240,
+   "oraciones": 53
   }
  ]
 }
