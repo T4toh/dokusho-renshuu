@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -124,16 +125,14 @@ private fun BotonExport(
             enabled = habilitado && !generandoEste && !generandoOtro,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            // El spinner va superpuesto (Box) y solo en el botón tapeado: el texto
-            // queda siempre centrado y los tres botones se ven idénticos entre sí.
-            Box(Modifier.fillMaxWidth()) {
+            // Mientras genera, el spinner REEMPLAZA al texto del botón tapeado; el
+            // texto queda invisible (alpha 0) pero compuesto, así sigue definiendo
+            // el ancho y el botón no cambia de tamaño.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(titulo, Modifier.alpha(if (generandoEste) 0f else 1f))
                 if (generandoEste) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp).align(Alignment.CenterStart),
-                        strokeWidth = 2.dp,
-                    )
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 }
-                Text(titulo, Modifier.align(Alignment.Center))
             }
         }
         if (!habilitado) {
