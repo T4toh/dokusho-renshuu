@@ -52,4 +52,9 @@ class ProgresoDaoFake : ProgresoDao {
 
     override suspend fun kanjisPorDificultad(dificultad: String): List<KanjiTocado> =
         kanjisTocados.values.filter { it.dificultad == dificultad }.sortedBy { it.timestamp }
+
+    override suspend fun todasPalabras(): List<PalabraTocada> = palabras.toList()
+
+    override suspend fun kanjisTaggeados(): List<KanjiTocado> =
+        kanjisTocados.values.filter { it.dificultad != null }
 }

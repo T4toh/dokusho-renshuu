@@ -14,5 +14,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Share de los .apkg generados en cacheDir/export sin permisos de
+             storage (spec Plan 4a). exported=false: solo se accede vía la URI
+             content:// que entrega getUriForFile(), nunca por su propio
+             authority público. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

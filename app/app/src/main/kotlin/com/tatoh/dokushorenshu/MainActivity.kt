@@ -13,6 +13,8 @@ import androidx.navigation.compose.rememberNavController
 import com.tatoh.dokushorenshu.ui.acerca.AcercaScreen
 import com.tatoh.dokushorenshu.ui.biblioteca.BibliotecaScreen
 import com.tatoh.dokushorenshu.ui.biblioteca.BibliotecaViewModel
+import com.tatoh.dokushorenshu.ui.export.ExportScreen
+import com.tatoh.dokushorenshu.ui.export.ExportViewModel
 import com.tatoh.dokushorenshu.ui.kanji.DetalleKanjiScreen
 import com.tatoh.dokushorenshu.ui.kanji.DetalleKanjiViewModel
 import com.tatoh.dokushorenshu.ui.lector.LectorScreen
@@ -45,6 +47,7 @@ class MainActivity : ComponentActivity() {
                             onAbrirHistoria = { id -> nav.navigate("lector/$id") },
                             onAcerca = { nav.navigate("acerca") },
                             onVerKanji = { k -> nav.navigate("kanji/$k") },
+                            onExport = { nav.navigate("export") },
                         )
                     }
                     composable("lector/{id}") { entrada ->
@@ -69,6 +72,14 @@ class MainActivity : ComponentActivity() {
                         })
                         // DetalleKanjiScreen dispara vm.cargar() con LaunchedEffect (mismo patrón).
                         DetalleKanjiScreen(vm)
+                    }
+                    composable("export") {
+                        val vm: ExportViewModel = viewModel(factory = viewModelFactory {
+                            initializer {
+                                ExportViewModel(contenedor.progresoDb.dao(), contenedor.armadorMazos, contenedor.dirExportMazos)
+                            }
+                        })
+                        ExportScreen(vm = vm, onCerrar = { nav.popBackStack() })
                     }
                     composable("acerca") { AcercaScreen() }
                 }

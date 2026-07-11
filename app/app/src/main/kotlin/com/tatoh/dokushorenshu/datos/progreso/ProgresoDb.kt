@@ -92,6 +92,17 @@ interface ProgresoDao {
 
     @Query("SELECT * FROM kanjis_tocados WHERE dificultad = :dificultad ORDER BY timestamp ASC")
     suspend fun kanjisPorDificultad(dificultad: String): List<KanjiTocado>
+
+    /** Todas las filas, de todas las historias — el dedupe por término (una
+     *  palabra puede tocarse en más de una historia) lo hace el caller
+     *  (`ArmadorMazos`, Plan 4a). */
+    @Query("SELECT * FROM palabras_tocadas")
+    suspend fun todasPalabras(): List<PalabraTocada>
+
+    /** Solo kanjis taggeados (easy/medium/hard) — insumo del mazo de kanji
+     *  (Plan 4a): los vistos-sin-tag son ruido de consulta, spec explícito. */
+    @Query("SELECT * FROM kanjis_tocados WHERE dificultad IS NOT NULL")
+    suspend fun kanjisTaggeados(): List<KanjiTocado>
 }
 
 /** No destructiva: agrega la tabla nueva, conserva progreso/palabras_tocadas/prefs. */

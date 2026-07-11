@@ -29,6 +29,7 @@ fun BibliotecaScreen(
     onAbrirHistoria: (String) -> Unit,
     onAcerca: () -> Unit,
     onVerKanji: (String) -> Unit,
+    onExport: () -> Unit,
 ) {
     val locales by vm.locales.collectAsState()
     val catalogo by vm.catalogo.collectAsState()
@@ -40,7 +41,10 @@ fun BibliotecaScreen(
     Scaffold(topBar = {
         TopAppBar(
             title = { Text("Dokusho Renshū") },
-            actions = { TextButton(onClick = onAcerca) { Text("About") } },
+            actions = {
+                TextButton(onClick = onExport) { Text("Export") }
+                TextButton(onClick = onAcerca) { Text("About") }
+            },
         )
     }) { relleno ->
         Column(Modifier.padding(relleno)) {
