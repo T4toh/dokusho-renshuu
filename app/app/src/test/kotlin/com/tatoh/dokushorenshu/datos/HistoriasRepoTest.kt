@@ -125,6 +125,21 @@ class HistoriasRepoTest {
     }
 
     @Test
+    fun `prioridad real es descargada mayor asset mayor importada (cargarHistoria coherente con historiasLocales)`() {
+        val dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it }
+        val repo = repo(dirImportadas = dirImportadas)
+        // Escribe directo en dirImportadas, sin pasar por guardarImportada (que evitaría
+        // la colisión) — simula un archivo importado antes de que existiera esa guarda,
+        // o escrito por otra vía; el punto es probar la resolución de prioridad en sí.
+        val impostora = momotaroJson.replace("桃太郎", "偽物")
+        File(dirImportadas, "momotaro.json").writeText(impostora)
+        assertEquals("桃太郎", repo.cargarHistoria("momotaro")!!.titulo)  // asset gana, no importada
+        val locales = repo.historiasLocales()
+        assertEquals(1, locales.size)
+        assertEquals("桃太郎", locales.single().titulo)
+    }
+
+    @Test
     fun `idsLocales une los tres origenes`() {
         val repo = repo()
         repo.guardarImportada(ParserHistoria.parsear(momotaroJson).copy(id = "extra"))

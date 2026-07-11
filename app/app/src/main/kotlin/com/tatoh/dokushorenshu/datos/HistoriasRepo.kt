@@ -28,8 +28,8 @@ class ClienteHttpReal : ClienteHttp {
 }
 
 /** Historias empaquetadas (assets) + descargadas (filesDir) + importadas (filesDir)
- *  + catálogo remoto. Prioridad al resolver un id: descargada > importada > asset
- *  (permite actualizar); una importada NUNCA pisa un id ya existente. */
+ *  + catálogo remoto. Prioridad al resolver un id: descargada > asset > importada
+ *  (permite actualizar vía descarga); una importada NUNCA pisa un id ya existente. */
 class HistoriasRepo(
     private val leerAsset: (String) -> String?,
     private val listarAssetsHistorias: () -> List<String>,
@@ -89,15 +89,20 @@ class HistoriasRepo(
         leerAsset("catalogo.json")?.let { runCatching { ParserHistoria.parsearCatalogo(it) }.getOrNull() }
 
     fun cargarHistoria(id: String): Historia? {
-        for (dir in listOf(dirDescargas, dirImportadas)) {
-            val archivo = File(dir, "$id.json")
-            if (archivo.exists()) {
-                runCatching { ParserHistoria.parsear(archivo.readText()) }
-                    .onSuccess { return it }
-            }
+        val descargada = File(dirDescargas, "$id.json")
+        if (descargada.exists()) {
+            runCatching { ParserHistoria.parsear(descargada.readText()) }
+                .onSuccess { return it }
         }
-        return leerAsset("historias/$id.json")
-            ?.let { runCatching { ParserHistoria.parsear(it) }.getOrNull() }
+        leerAsset("historias/$id.json")
+            ?.let { crudo -> runCatching { ParserHistoria.parsear(crudo) }.getOrNull() }
+            ?.let { return it }
+        val importada = File(dirImportadas, "$id.json")
+        if (importada.exists()) {
+            runCatching { ParserHistoria.parsear(importada.readText()) }
+                .onSuccess { return it }
+        }
+        return null
     }
 
     fun idsLocales(): Set<String> = historiasLocales().map { it.id }.toSet()
