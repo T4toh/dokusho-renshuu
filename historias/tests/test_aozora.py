@@ -64,6 +64,31 @@ class TestLimpiarLinea(unittest.TestCase):
         self.assertEqual(texto, '')
         self.assertEqual(furigana, [])
 
+    def test_gaiji_conocido_se_resuelve(self):
+        # string verificado con iconv contra fuentes/kumo_no_ito.txt: es el
+        # gaiji real de 犍陀多 (Kandata), no uno inventado.
+        texto, furigana = aozora.limpiar_linea(
+            '※［＃「特のへん＋廴＋聿」、第3水準1-87-71］陀多')
+        self.assertEqual(texto, '犍陀多')
+        self.assertNotIn('※', texto)
+        self.assertEqual(furigana, [])
+
+    def test_gaiji_desconocido_deja_marca_residual(self):
+        # anotación inventada, no está en _GAIJI_CONOCIDOS: el ※ debe
+        # sobrevivir para que verify_catalogo.py lo detecte.
+        texto, furigana = aozora.limpiar_linea(
+            '※［＃「へん＋つくり」、第4水準9-99-99］伊呂波')
+        self.assertEqual(texto, '※伊呂波')
+        self.assertIn('※', texto)
+        self.assertEqual(furigana, [])
+
+    def test_anotacion_sin_marca_se_elimina_sin_dejar_residuo(self):
+        # regresión: una anotación no-gaiji (sin ※) se sigue eliminando
+        # por completo, como antes de agregar la tabla de gaiji.
+        texto, furigana = aozora.limpiar_linea('［＃５字下げ］一')
+        self.assertEqual(texto, '一')
+        self.assertEqual(furigana, [])
+
 
 class TestParsear(unittest.TestCase):
     @classmethod

@@ -57,7 +57,9 @@ Todo con el tooling existente de `historias/` (Python stdlib, corre en cualquier
 
 ## Fuera de alcance
 
-- Cambios al pipeline, clasificador de dificultad o app.
+- Cambios al pipeline, clasificador de dificultad o app (excepción adjudicada
+  durante la ejecución: tabla de gaiji conocidos en `aozora.py` para resolver
+  犍 en kumo_no_ito — con tests; los suplentes quedaron sin usar).
 - Traducciones (`traduccion` sigue null).
 - Rebuild del diccionario (db-v2.1 es otro ítem de backlog).
 - Release/instalación en dispositivos más allá del smoke.
