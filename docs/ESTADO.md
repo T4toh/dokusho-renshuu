@@ -13,7 +13,8 @@
 | 3.5  | pulido + repaso básico (db-v2, catálogo v2, app) | ✅ Completo ([PR #4](https://github.com/T4toh/dokusho-renshuu/pull/4)) |
 | 3.6  | detalles de UI (barras, lector scroll libre, kanji 2col) | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
 | 3.7  | katakana-ruby + fix alineador de furigana        | ✅ Completo ([PR #6](https://github.com/T4toh/dokusho-renshuu/pull/6)) |
-| 4a   | `app/` — mazos Anki (.apkg) con oraciones rotativas | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
+| 4a   | `app/` — mazos Anki (.apkg) con oraciones rotativas | ✅ Completo ([PR #7](https://github.com/T4toh/dokusho-renshuu/pull/7)) |
+| 4a.1 | `app/` — mazos por historia (subdecks de pre-lectura) | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
 | 4b   | `app/` — import de texto propio                  | ⏳ Siguiente. Brainstorming pendiente                                                                                 |
 
 ## Datos operativos
@@ -27,7 +28,7 @@
 - `historias/src/jlpt.py` es generado (regenerar con `genera_jlpt.py` solo si cambia KANJIDIC2).
 - **App (Plan 3)**: `app/` compila con JDK 17+ (probado JDK 21) + SDK 36 (PC secundaria); assets generados por gradle tasks (`descargarDiccionario` baja el db del release con escritura atómica tmp→rename; `copiarHistorias` empaqueta `catalogo/`). AGP 9.2 usa Kotlin built-in (sin plugin kotlin-android ni kotlinOptions). UI en inglés; tabla Room `kanjis_tocados` (kanji, dificultad nullable easy/medium/hard, timestamp — migración 1→2 no destructiva) — insumo Plan 4 junto con `palabras_tocadas`; tests con maxHeapSize 2g (OOM Kuromoji).
 - **Lector (3.7)**: toggle カナ (pref `katakana`, default ON) muestra hiragana sobre runs de katakana (precomputado en el VM); catálogo con spans de furigana disjuntos (check en verify_catalogo).
-- **Anki (4a)**: writer .apkg propio en `dominio/anki/` (schema Anki 2.1 legacy verificado contra genanki; GUID = base91 de SHA-256, golden test). Mazos "Dokusho — Words" (todas las palabras tocadas) y "Dokusho — Kanji" (solo taggeados). Oraciones de historias con ruby HTML + relleno Tatoeba (cap 5), rotación por review via JS en el template. Re-export actualiza sin duplicar (validado en AnkiDroid). OJO: el separador de campos U+001F va como escape Kotlin, nunca literal (`grep -cP '\x1f'` debe dar 0 en fuentes).
+- **Anki (4a)**: writer .apkg propio en `dominio/anki/` (schema Anki 2.1 legacy verificado contra genanki; GUID = base91 de SHA-256, golden test). Mazos "Dokusho — Words" (todas las palabras tocadas) y "Dokusho — Kanji" (solo taggeados). Oraciones de historias con ruby HTML + relleno Tatoeba (cap 5), rotación por review via JS en el template. Re-export actualiza sin duplicar (validado en AnkiDroid). OJO: el separador de campos U+001F va como escape Kotlin, nunca literal (`grep -cP '\x1f'` debe dar 0 en fuentes). 4a.1 suma "Dokusho — Stories" (un .apkg, subdeck `::` por historia, todos los kanjis en orden de primera aparición, oraciones solo de esa historia sin Tatoeba, GUID `story:<id>:<kanji>` disjunto del mazo Kanji; EscritorApkg generalizado a N mazos).
 - **Para Plan 4b**: portar segmentador de `historias/src/segmentador.py` CON la regla de fusión de spans; furigana de texto importado = Kuromoji puro (sin alineador Aozora).
 
 ## Backlog diferido (review final Plan 1 — no bloqueante)

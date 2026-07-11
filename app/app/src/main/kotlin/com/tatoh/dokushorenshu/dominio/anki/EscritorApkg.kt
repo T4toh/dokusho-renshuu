@@ -11,6 +11,15 @@ import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+/** Un mazo dentro del .apkg: deck propio + sus notas. Words y Kanji usan modelos
+ *  distintos, por eso dos listas — un mazo normalmente llena una sola. */
+data class MazoNotas(
+    val deckId: Long,
+    val nombre: String,
+    val notasWords: List<NotaWords> = emptyList(),
+    val notasKanji: List<NotaKanji> = emptyList(),
+)
+
 /** Genera un `.apkg` (zip de `collection.anki2` SQLite + `media`) a partir de listas
  *  de notas ya armadas por `ArmadorMazos` (fuera de esta tarea). Puro respecto a
  *  datos: no conoce Room ni el Diccionario, solo [NotaWords]/[NotaKanji] y
@@ -96,34 +105,49 @@ object EscritorApkg {
         "CREATE INDEX ix_notes_csum on notes (csum)",
     )
 
-    fun escribir(destino: File, notasWords: List<NotaWords>, notasKanji: List<NotaKanji>) {
+    /** Entrada de 4a (mazos fijos Words/Kanji): delega en la general. Los decks
+     *  Words y Kanji van SIEMPRE en col.decks (aunque una lista venga vacía) —
+     *  comportamiento observable idéntico a 4a, verificado por los tests previos. */
+    fun escribir(destino: File, notasWords: List<NotaWords>, notasKanji: List<NotaKanji>) =
+        escribir(
+            destino,
+            listOf(
+                MazoNotas(ModeloNotas.DECK_ID_WORDS, ModeloNotas.NOMBRE_DECK_WORDS, notasWords = notasWords),
+                MazoNotas(ModeloNotas.DECK_ID_KANJI, ModeloNotas.NOMBRE_DECK_KANJI, notasKanji = notasKanji),
+            ),
+        )
+
+    fun escribir(destino: File, mazos: List<MazoNotas>) {
+        require(mazos.isNotEmpty()) { "escribir: lista de mazos vacía" }
         val sqliteTemp = File.createTempFile("apkg_", ".sqlite", destino.parentFile)
         try {
             SQLiteDatabase.openOrCreateDatabase(sqliteTemp, null).use { db ->
                 for (sentencia in DDL) db.execSQL(sentencia)
 
                 val ahoraSegundos = System.currentTimeMillis() / 1000
-                insertarCol(db, ahoraSegundos)
+                insertarCol(db, ahoraSegundos, mazos)
 
                 var idGen = ahoraSegundos * 1000 // estilo genanki: contador base epoch-ms
                 var due = 1L
-                for (nota in notasWords) {
-                    escribirNota(
-                        db, idGen, idGen + 1, ModeloNotas.guidDe(nota.claveGuid),
-                        ModeloNotas.MODEL_ID_WORDS, ahoraSegundos, ModeloNotas.DECK_ID_WORDS,
-                        nota.campos(), due,
-                    )
-                    idGen += 2
-                    due += 1
-                }
-                for (nota in notasKanji) {
-                    escribirNota(
-                        db, idGen, idGen + 1, ModeloNotas.guidDe(nota.claveGuid),
-                        ModeloNotas.MODEL_ID_KANJI, ahoraSegundos, ModeloNotas.DECK_ID_KANJI,
-                        nota.campos(), due,
-                    )
-                    idGen += 2
-                    due += 1
+                for (mazo in mazos) {
+                    for (nota in mazo.notasWords) {
+                        escribirNota(
+                            db, idGen, idGen + 1, ModeloNotas.guidDe(nota.claveGuid),
+                            ModeloNotas.MODEL_ID_WORDS, ahoraSegundos, mazo.deckId,
+                            nota.campos(), due,
+                        )
+                        idGen += 2
+                        due += 1
+                    }
+                    for (nota in mazo.notasKanji) {
+                        escribirNota(
+                            db, idGen, idGen + 1, ModeloNotas.guidDe(nota.claveGuid),
+                            ModeloNotas.MODEL_ID_KANJI, ahoraSegundos, mazo.deckId,
+                            nota.campos(), due,
+                        )
+                        idGen += 2
+                        due += 1
+                    }
                 }
             }
             zipear(sqliteTemp, destino)
@@ -167,15 +191,15 @@ object EscritorApkg {
         return hex.take(8).toLong(16)
     }
 
-    private fun insertarCol(db: SQLiteDatabase, ahoraSegundos: Long) {
+    private fun insertarCol(db: SQLiteDatabase, ahoraSegundos: Long, mazos: List<MazoNotas>) {
         db.execSQL(
             "INSERT INTO col(id, crt, mod, scm, ver, dty, usn, ls, conf, models, decks, dconf, tags)" +
                 " VALUES (NULL, ?, ?, ?, 11, 0, 0, 0, ?, ?, ?, ?, '{}')",
             arrayOf<Any>(
                 ahoraSegundos, ahoraSegundos, ahoraSegundos * 1000,
-                confJson(ahoraSegundos).toString(),
+                confJson(mazos).toString(),
                 modelsJson(ahoraSegundos).toString(),
-                decksJson(ahoraSegundos).toString(),
+                decksJson(ahoraSegundos, mazos).toString(),
                 dconfJson().toString(),
             ),
         )
@@ -185,11 +209,11 @@ object EscritorApkg {
     // proyecto). Estructura y claves EXACTAS de genanki (apkg_col.py APKG_COL,
     // model.py Model.to_json, deck.py Deck.to_json), adaptadas a nuestros IDs. ---
 
-    private fun confJson(modSegundos: Long) = buildJsonObject {
-        put("activeDecks", buildJsonArray { add(ModeloNotas.DECK_ID_WORDS); add(ModeloNotas.DECK_ID_KANJI) })
+    private fun confJson(mazos: List<MazoNotas>) = buildJsonObject {
+        put("activeDecks", buildJsonArray { mazos.forEach { add(it.deckId) } })
         put("addToCur", true)
         put("collapseTime", 1200)
-        put("curDeck", ModeloNotas.DECK_ID_WORDS)
+        put("curDeck", mazos.first().deckId)
         put("curModel", ModeloNotas.MODEL_ID_WORDS.toString())
         put("dueCounts", true)
         put("estTimes", true)
@@ -329,11 +353,10 @@ object EscritorApkg {
         put("usn", -1)
     }
 
-    private fun decksJson(modSegundos: Long) = buildJsonObject {
+    private fun decksJson(modSegundos: Long, mazos: List<MazoNotas>) = buildJsonObject {
         // Deck Default obligatorio: invariante de Anki, siempre presente en genanki
         put("1", deckJson(1L, "Default", modSegundos))
-        put(ModeloNotas.DECK_ID_WORDS.toString(), deckJson(ModeloNotas.DECK_ID_WORDS, ModeloNotas.NOMBRE_DECK_WORDS, modSegundos))
-        put(ModeloNotas.DECK_ID_KANJI.toString(), deckJson(ModeloNotas.DECK_ID_KANJI, ModeloNotas.NOMBRE_DECK_KANJI, modSegundos))
+        for (mazo in mazos) put(mazo.deckId.toString(), deckJson(mazo.deckId, mazo.nombre, modSegundos))
     }
 
     private fun zipear(sqliteFile: File, destino: File) {

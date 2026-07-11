@@ -44,6 +44,11 @@ data class NotaKanji(
     val significados: String,
     val dificultad: String,
     val oraciones: List<String> = emptyList(),
+    // GUID alternativo para mazos por historia (Plan 4a.1): "story:<id>:<kanji>".
+    // Si compartiera el guid "kanji:<kanji>" con el mazo Dokusho — Kanji, el import
+    // de Anki (match global por guid) pisaría esa nota en vez de crear la carta en
+    // el subdeck de la historia.
+    val claveGuidPropia: String? = null,
 ) {
     init {
         require(oraciones.size <= 5) { "NotaKanji: máximo 5 oraciones, llegaron ${oraciones.size}" }
@@ -54,7 +59,7 @@ data class NotaKanji(
             List(5) { i -> oraciones.getOrElse(i) { "" } }
 
     /** Clave estable para el GUID: solo el kanji (mismo criterio que [NotaWords.claveGuid]). */
-    val claveGuid: String get() = "kanji:$kanji"
+    val claveGuid: String get() = claveGuidPropia ?: "kanji:$kanji"
 }
 
 /** Constantes de modelo/mazo, GUID determinístico y templates HTML+CSS+JS del Plan 4a
@@ -73,6 +78,7 @@ object ModeloNotas {
 
     const val NOMBRE_DECK_WORDS: String = "Dokusho — Words"
     const val NOMBRE_DECK_KANJI: String = "Dokusho — Kanji"
+    const val NOMBRE_DECK_STORIES: String = "Dokusho — Stories"
     const val NOMBRE_MODELO_WORDS: String = "Dokusho Words"
     const val NOMBRE_MODELO_KANJI: String = "Dokusho Kanji"
 
@@ -107,6 +113,22 @@ object ModeloNotas {
             resto /= 91UL
         }
         return digitos.reverse().toString()
+    }
+
+    fun nombreDeckHistoria(titulo: String): String = "$NOMBRE_DECK_STORIES::$titulo"
+
+    /** Deck ID determinístico por historia: primeros 8 bytes de SHA-256 de
+     *  "deck:<idHistoria>" mapeados al rango de 13 dígitos que usa Anki. Constante
+     *  entre ejecuciones (mismo requisito que los IDs fijos: si cambiara, cada
+     *  export crearía un deck nuevo en vez de actualizar). Los IDs fijos de 4a
+     *  terminan en 1xx (1720000000101/102); la colisión con este hash es
+     *  teóricamente posible pero despreciable (2 IDs sobre un rango de 9e12). */
+    fun deckIdDeHistoria(idHistoria: String): Long {
+        val hash = MessageDigest.getInstance("SHA-256")
+            .digest("deck:$idHistoria".toByteArray(Charsets.UTF_8))
+        var n = 0L
+        for (i in 0 until 8) n = (n shl 8) or (hash[i].toLong() and 0xff)
+        return (n and Long.MAX_VALUE) % 9_000_000_000_000L + 1_000_000_000_000L
     }
 
     // --- CSS estilo Kaishi: palabra/kanji grande, dark-friendly. Anki desktop marca

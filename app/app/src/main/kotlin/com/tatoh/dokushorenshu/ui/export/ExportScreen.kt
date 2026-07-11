@@ -2,9 +2,12 @@ package com.tatoh.dokushorenshu.ui.export
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,7 +27,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -54,26 +59,42 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
     ) { relleno ->
         Column(Modifier.padding(relleno).padding(24.dp).fillMaxSize()) {
             Text(
-                "${contadores.words} words · ${contadores.kanjisTaggeados} tagged kanji",
+                "${contadores.words} words · ${contadores.kanjisTaggeados} tagged kanji · ${contadores.historias} stories",
                 style = MaterialTheme.typography.bodyMedium,
             )
 
             Spacer(Modifier.height(24.dp))
-            BotonExport(
-                titulo = "Export Words deck",
-                habilitado = contadores.words > 0,
-                hint = "Read and tap words first",
-                generando = estado is EstadoExport.Generando,
-                onClick = { vm.exportar(TipoExport.WORDS) },
-            )
-            Spacer(Modifier.height(12.dp))
-            BotonExport(
-                titulo = "Export Kanji deck",
-                habilitado = contadores.kanjisTaggeados > 0,
-                hint = "Tag kanji as easy/medium/hard first",
-                generando = estado is EstadoExport.Generando,
-                onClick = { vm.exportar(TipoExport.KANJI) },
-            )
+            // width(IntrinsicSize.Max): los tres botones toman el ancho del más
+            // largo en vez de ajustarse cada uno a su texto
+            val tipoGenerando = (estado as? EstadoExport.Generando)?.tipo
+            Column(Modifier.width(IntrinsicSize.Max)) {
+                BotonExport(
+                    titulo = "Export Words deck",
+                    habilitado = contadores.words > 0,
+                    hint = "Read and tap words first",
+                    generandoEste = tipoGenerando == TipoExport.WORDS,
+                    generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.WORDS,
+                    onClick = { vm.exportar(TipoExport.WORDS) },
+                )
+                Spacer(Modifier.height(12.dp))
+                BotonExport(
+                    titulo = "Export Kanji deck",
+                    habilitado = contadores.kanjisTaggeados > 0,
+                    hint = "Tag kanji as easy/medium/hard first",
+                    generandoEste = tipoGenerando == TipoExport.KANJI,
+                    generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.KANJI,
+                    onClick = { vm.exportar(TipoExport.KANJI) },
+                )
+                Spacer(Modifier.height(12.dp))
+                BotonExport(
+                    titulo = "Export Stories deck",
+                    habilitado = contadores.historias > 0,
+                    hint = "No local stories",
+                    generandoEste = tipoGenerando == TipoExport.STORIES,
+                    generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.STORIES,
+                    onClick = { vm.exportar(TipoExport.STORIES) },
+                )
+            }
 
             val listo = estado as? EstadoExport.Listo
             if (listo != null) {
@@ -94,16 +115,25 @@ private fun BotonExport(
     titulo: String,
     habilitado: Boolean,
     hint: String,
-    generando: Boolean,
+    generandoEste: Boolean,
+    generandoOtro: Boolean,
     onClick: () -> Unit,
 ) {
     Column {
-        Button(onClick = onClick, enabled = habilitado && !generando) {
-            if (generando) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(8.dp))
+        Button(
+            onClick = onClick,
+            enabled = habilitado && !generandoEste && !generandoOtro,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            // Mientras genera, el spinner REEMPLAZA al texto del botón tapeado; el
+            // texto queda invisible (alpha 0) pero compuesto, así sigue definiendo
+            // el ancho y el botón no cambia de tamaño.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(titulo, Modifier.alpha(if (generandoEste) 0f else 1f))
+                if (generandoEste) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                }
             }
-            Text(titulo)
         }
         if (!habilitado) {
             Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -178,4 +178,56 @@ class ArmadorMazosTest {
         assertTrue(resultado.notasKanji.isEmpty())
         assertEquals(1, resultado.kanjisOmitidos)
     }
+
+    // --- armarHistorias (Plan 4a.1) ---
+
+    @Test
+    fun `armarHistorias arma un mazo por historia con kanjis en orden de primera aparicion`() = runTest {
+        val dao = ProgresoDaoFake()
+        val diccionario = DiccionarioFake().apply { todosLosKanjisConocidos = true }
+        val resultado = armador(dao, diccionario).armarHistorias()
+        val mazo = resultado.mazos.single()
+        assertEquals("momotaro", mazo.idHistoria)
+        assertEquals("桃太郎", mazo.titulo)
+        assertEquals(217, mazo.notas.size)  // kanjis únicos reales del fixture (= kanjis_unicos del catálogo)
+        assertEquals(listOf("山", "刈", "川", "洗", "濯"), mazo.notas.take(5).map { it.kanji })
+        assertEquals(0, resultado.kanjisOmitidos)
+    }
+
+    @Test
+    fun `armarHistorias usa guid por historia y oraciones solo de esa historia sin Tatoeba`() = runTest {
+        val dao = ProgresoDaoFake()
+        val diccionario = DiccionarioFake().apply {
+            todosLosKanjisConocidos = true
+            // Tatoeba NUNCA debe consultarse para mazos de historias:
+            ejemplosKanji["刈"] = listOf(OracionEjemplo("この芝を刈る。", "Mow this lawn."))
+        }
+        val mazo = armador(dao, diccionario).armarHistorias().mazos.single()
+        val nota = mazo.notas.single { it.kanji == "刈" }
+        assertEquals("story:momotaro:刈", nota.claveGuid)
+        assertEquals(1, nota.oraciones.size)              // 刈 está en 1 sola oración del fixture
+        assertTrue(nota.oraciones.single().contains("<ruby>"))
+        assertFalse(nota.oraciones.single().contains("<br>"))  // sin relleno Tatoeba (formato jp<br>en)
+    }
+
+    @Test
+    fun `armarHistorias hereda el tag del usuario y deja vacia la dificultad sin tag`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("洗", "hard", 1L))
+        val diccionario = DiccionarioFake().apply { todosLosKanjisConocidos = true }
+        val notas = armador(dao, diccionario).armarHistorias().mazos.single().notas
+        assertEquals("hard", notas.single { it.kanji == "洗" }.dificultad)
+        assertEquals("", notas.single { it.kanji == "山" }.dificultad)
+    }
+
+    @Test
+    fun `armarHistorias omite y cuenta kanjis fuera del diccionario`() = runTest {
+        val dao = ProgresoDaoFake()
+        val diccionario = DiccionarioFake()  // sin todosLosKanjisConocidos: solo conoce lo cargado a mano
+        diccionario.kanjis["山"] = KanjiInfo("山", listOf("mountain"), listOf("サン"), listOf("やま"), null, null)
+        val resultado = armador(dao, diccionario).armarHistorias()
+        val mazo = resultado.mazos.single()
+        assertEquals(listOf("山"), mazo.notas.map { it.kanji })
+        assertEquals(216, resultado.kanjisOmitidos)  // 217 únicos - 1 conocido
+    }
 }
