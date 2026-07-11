@@ -54,10 +54,7 @@ fun ImportScreen(
 
     val abrirArchivo = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult  // cancelado por el usuario
-        val bytes = runCatching {
-            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-        }.getOrNull()
-        if (bytes != null) vm.cargarArchivo(bytes)
+        vm.cargarArchivo { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
     }
 
     LaunchedEffect(estado) {

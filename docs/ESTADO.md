@@ -76,6 +76,11 @@
 ## Backlog diferido (Plan 4b — no bloqueante)
 
 - Agregar más historias base al catálogo (pipeline Plan 2).
+- Deck names Anki: dos imports con mismo título → mismo nombre de deck `Dokusho — Stories::<título>` con ids distintos (Anki resuelve por nombre → cartas mezcladas); título con `::` anida de más. Desambiguar nombre o filtrar `::`.
+- Tarjeta de biblioteca: autor vacío muestra `" · Medium"` (separador colgante) — armar string solo con partes no vacías.
+- `puedeImportar` en ImportViewModel es dead code (la Screen recomputa el predicado) — borrar o usar.
+- `resumenHistorias()` doc sugiere ahorro de I/O que no existe (parsea historias completas igual).
+- DetectorJapones: katakana halfwidth (U+FF61–FF9F) no cuenta como japonés (texto legacy dispara el aviso; benigno).
 
 ## Proceso de trabajo usado
 

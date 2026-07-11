@@ -88,18 +88,34 @@ class ImportViewModel(
         }
     }
 
-    /** Decodifica UTF-8 estricto: bytes inválidos → Error, nunca mojibake
-     *  silencioso (String(bytes) reemplazaría con U+FFFD sin avisar). */
-    fun cargarArchivo(bytes: ByteArray) {
-        try {
-            val decoder = StandardCharsets.UTF_8.newDecoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-            val texto = decoder.decode(java.nio.ByteBuffer.wrap(bytes)).toString()
-            _form.value = _form.value.copy(texto = texto)
-            _estado.value = EstadoImport.Idle
-        } catch (e: Exception) {
-            _estado.value = EstadoImport.Error("File is not valid UTF-8 text")
+    /** Lee el archivo elegido por el usuario en `ioDispatcher` (la lectura SAF puede
+     *  bloquear) y decodifica UTF-8 estricto: bytes inválidos → Error, nunca mojibake
+     *  silencioso (String(bytes) reemplazaría con U+FFFD sin avisar). `leerBytes` puede
+     *  devolver null o lanzar (stream cerrado, permiso revocado, etc.) → Error visible
+     *  en vez de fallar en silencio. */
+    fun cargarArchivo(leerBytes: () -> ByteArray?) {
+        viewModelScope.launch {
+            val bytes = try {
+                withContext(ioDispatcher) { leerBytes() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
+            if (bytes == null) {
+                _estado.value = EstadoImport.Error("Could not read file")
+                return@launch
+            }
+            try {
+                val decoder = StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                val texto = decoder.decode(java.nio.ByteBuffer.wrap(bytes)).toString()
+                _form.value = _form.value.copy(texto = texto)
+                _estado.value = EstadoImport.Idle
+            } catch (e: Exception) {
+                _estado.value = EstadoImport.Error("File is not valid UTF-8 text")
+            }
         }
     }
 }

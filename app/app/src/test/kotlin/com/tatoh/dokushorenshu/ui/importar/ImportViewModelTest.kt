@@ -64,7 +64,9 @@ class ImportViewModelTest {
     fun `archivo no UTF-8 da error sin tocar el texto`() = runTest(dispatcher) {
         val vm = vm()
         vm.setTexto("previo")
-        vm.cargarArchivo(byteArrayOf(0xFF.toByte(), 0xFE.toByte(), 0x00, 0x40))  // no es UTF-8
+        val bytes = byteArrayOf(0xFF.toByte(), 0xFE.toByte(), 0x00, 0x40)  // no es UTF-8
+        vm.cargarArchivo { bytes }
+        advanceUntilIdle()
         assertTrue(vm.estado.value is EstadoImport.Error)
         assertEquals("previo", vm.form.value.texto)
     }
@@ -72,8 +74,29 @@ class ImportViewModelTest {
     @Test
     fun `archivo UTF-8 valido reemplaza el texto`() = runTest(dispatcher) {
         val vm = vm()
-        vm.cargarArchivo("犬が走った。".toByteArray())
+        vm.cargarArchivo { "犬が走った。".toByteArray() }
+        advanceUntilIdle()
         assertEquals("犬が走った。", vm.form.value.texto)
+    }
+
+    @Test
+    fun `leerBytes que falla da error visible sin tocar el texto`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.setTexto("previo")
+        vm.cargarArchivo { throw java.io.IOException("stream cerrado") }
+        advanceUntilIdle()
+        assertEquals(EstadoImport.Error("Could not read file"), vm.estado.value)
+        assertEquals("previo", vm.form.value.texto)
+    }
+
+    @Test
+    fun `leerBytes que devuelve null da error visible sin tocar el texto`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.setTexto("previo")
+        vm.cargarArchivo { null }
+        advanceUntilIdle()
+        assertEquals(EstadoImport.Error("Could not read file"), vm.estado.value)
+        assertEquals("previo", vm.form.value.texto)
     }
 
     @Test
