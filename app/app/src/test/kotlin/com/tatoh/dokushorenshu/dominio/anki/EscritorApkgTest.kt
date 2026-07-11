@@ -119,4 +119,67 @@ class EscritorApkgTest {
             }
         }
     }
+
+    @Test
+    fun `escribir con mazos de historias crea un subdeck por historia y asigna las cards`() {
+        val notaMomotaro = NotaKanji("山", "サン", "やま", "mountain", "", claveGuidPropia = "story:momotaro:山")
+        val notaUrashima = NotaKanji("浦", "ホ", "うら", "bay", "", claveGuidPropia = "story:urashima_taro:浦")
+        val mazos = listOf(
+            MazoNotas(
+                deckId = ModeloNotas.deckIdDeHistoria("momotaro"),
+                nombre = ModeloNotas.nombreDeckHistoria("桃太郎"),
+                notasKanji = listOf(notaMomotaro),
+            ),
+            MazoNotas(
+                deckId = ModeloNotas.deckIdDeHistoria("urashima_taro"),
+                nombre = ModeloNotas.nombreDeckHistoria("浦島太郎"),
+                notasKanji = listOf(notaUrashima),
+            ),
+        )
+        val destino = File.createTempFile("stories", ".apkg")
+        EscritorApkg.escribir(destino, mazos)
+
+        val sqlite = unzipCollection(destino)
+        SQLiteDatabase.openDatabase(sqlite.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            // decks: Default + los 2 subdecks, SIN Words/Kanji
+            db.rawQuery("SELECT decks FROM col", null).use { c ->
+                c.moveToFirst()
+                val decksJson = Json.parseToJsonElement(c.getString(0)).jsonObject
+                assertEquals(
+                    setOf(
+                        "1",
+                        ModeloNotas.deckIdDeHistoria("momotaro").toString(),
+                        ModeloNotas.deckIdDeHistoria("urashima_taro").toString(),
+                    ),
+                    decksJson.keys,
+                )
+                assertEquals(
+                    "Dokusho — Stories::桃太郎",
+                    decksJson[ModeloNotas.deckIdDeHistoria("momotaro").toString()]!!.jsonObject["name"]!!.jsonPrimitive.content,
+                )
+            }
+            // cada card en el did de su mazo, due incremental global (1, 2)
+            db.rawQuery("SELECT did, due FROM cards ORDER BY due", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(ModeloNotas.deckIdDeHistoria("momotaro"), c.getLong(0))
+                assertEquals(1L, c.getLong(1))
+                assertTrue(c.moveToNext())
+                assertEquals(ModeloNotas.deckIdDeHistoria("urashima_taro"), c.getLong(0))
+                assertEquals(2L, c.getLong(1))
+            }
+            // guid de la nota = guidDe de la clave propia
+            db.rawQuery("SELECT guid FROM notes ORDER BY id LIMIT 1", null).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(ModeloNotas.guidDe("story:momotaro:山"), c.getString(0))
+            }
+        }
+    }
+
+    @Test
+    fun `escribir con lista vacia de mazos falla rapido`() {
+        val destino = File.createTempFile("vacio", ".apkg")
+        assertThrows(IllegalArgumentException::class.java) {
+            EscritorApkg.escribir(destino, emptyList())
+        }
+    }
 }
