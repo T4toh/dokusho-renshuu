@@ -31,6 +31,10 @@ data class MazoHistoria(val idHistoria: String, val titulo: String, val notas: L
 
 data class ResultadoHistorias(val mazos: List<MazoHistoria>, val kanjisOmitidos: Int)
 
+/** Id/título de una historia local — lo que necesita la pantalla de Export
+ *  para listar checkboxes sin cargar la historia completa (parrafos/oraciones). */
+data class HistoriaResumen(val id: String, val titulo: String)
+
 /** Junta los datos ya persistidos (Room + diccionario offline + historias
  *  locales) en las notas que consume `EscritorApkg`. Sin conocimiento de Anki:
  *  solo arma modelos de dominio — `ModeloNotas.kt` decide templates/formato de
@@ -40,9 +44,13 @@ class ArmadorMazos(
     private val diccionario: Diccionario,
     private val historiasRepo: HistoriasRepo,
 ) {
-    /** Para los counts de la pantalla de Export — evita que el VM dependa de
-     *  HistoriasRepo solo para contar. */
-    fun contarHistoriasLocales(): Int = historiasRepo.historiasLocales().size
+    /** Id/título de cada historia local, en el mismo orden que `historiasLocales()`
+     *  — la pantalla de Export lo usa para listar checkboxes de selección
+     *  (Plan 4b Task 9) y para el count (`.size`), reemplazando al viejo
+     *  `contarHistoriasLocales()` (ahora el VM ya necesita esta lista de todos
+     *  modos, así que contar aparte sería I/O duplicado). */
+    fun resumenHistorias(): List<HistoriaResumen> =
+        historiasRepo.historiasLocales().map { HistoriaResumen(it.id, it.titulo) }
 
     /** Arma ambos mazos leyendo las historias locales una sola vez (evita I/O
      *  duplicado: `historiasLocales()` re-lee todos los JSON de assets/filesDir
@@ -82,14 +90,18 @@ class ArmadorMazos(
 
     /** Mazos de pre-lectura, uno por historia local. El tag del usuario (si existe)
      *  viaja en Dificultad; kanji sin entrada en el diccionario se omite y se
-     *  cuenta (mismo criterio "exported N, skipped M" que armarKanji). */
+     *  cuenta (mismo criterio "exported N, skipped M" que armarKanji).
+     *  `seleccion`: ids a incluir (checkboxes de la pantalla de Export); `null`
+     *  arma todas las historias — compat con los llamadores/tests existentes. */
     suspend fun armarHistorias(
         historias: List<Historia> = historiasRepo.historiasLocales(),
+        seleccion: Set<String>? = null,
     ): ResultadoHistorias {
+        val elegidas = if (seleccion == null) historias else historias.filter { it.id in seleccion }
         val tagPorKanji = progresoDao.kanjisTaggeados()
             .associate { it.kanji to requireNotNull(it.dificultad) }
         var omitidos = 0
-        val mazos = historias.map { historia ->
+        val mazos = elegidas.map { historia ->
             val notas = kanjisEnOrdenDeAparicion(historia).mapNotNull { kanji ->
                 val info = diccionario.buscarKanji(kanji)
                 if (info == null) {

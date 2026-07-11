@@ -29,6 +29,32 @@ class ArmadorMazosTest {
         diccionario: DiccionarioFake = DiccionarioFake(),
     ) = ArmadorMazos(dao, diccionario, historiasRepo())
 
+    /** Repo con DOS historias locales (momotaro + una sintética derivada por
+     *  reemplazo de texto) — necesario para probar el filtro de `seleccion`,
+     *  que con una sola historia no distingue nada. */
+    private fun historiasRepoDos(): HistoriasRepo {
+        val otraJson = momotaroJson
+            .replaceFirst("\"id\": \"momotaro\"", "\"id\": \"otra\"")
+            .replaceFirst("\"titulo\": \"桃太郎\"", "\"titulo\": \"Otra historia\"")
+        return HistoriasRepo(
+            leerAsset = { nombre ->
+                when (nombre) {
+                    "historias/momotaro.json" -> momotaroJson
+                    "historias/otra.json" -> otraJson
+                    else -> null
+                }
+            },
+            listarAssetsHistorias = { listOf("momotaro.json", "otra.json") },
+            dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+            dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
+        )
+    }
+
+    private fun armadorDos(
+        dao: ProgresoDaoFake = ProgresoDaoFake(),
+        diccionario: DiccionarioFake = DiccionarioFake(),
+    ) = ArmadorMazos(dao, diccionario, historiasRepoDos())
+
     // --- armarWords: enriquecido con Diccionario ---
 
     @Test
@@ -230,5 +256,26 @@ class ArmadorMazosTest {
         val mazo = resultado.mazos.single()
         assertEquals(listOf("山"), mazo.notas.map { it.kanji })
         assertEquals(216, resultado.kanjisOmitidos)  // 217 únicos - 1 conocido
+    }
+
+    // --- armarHistorias con seleccion + resumenHistorias (Plan 4b Task 9) ---
+
+    @Test
+    fun `armarHistorias con seleccion filtra los mazos`() = runTest {
+        val diccionario = DiccionarioFake().apply { todosLosKanjisConocidos = true }
+        val armadorConDos = armadorDos(diccionario = diccionario)
+        val todas = armadorConDos.armarHistorias()
+        assertEquals(2, todas.mazos.size)
+        val unId = todas.mazos.first().idHistoria
+        val filtrado = armadorConDos.armarHistorias(seleccion = setOf(unId))
+        assertEquals(listOf(unId), filtrado.mazos.map { it.idHistoria })
+    }
+
+    @Test
+    fun `resumenHistorias devuelve id y titulo de las locales`() {
+        val resumen = armadorDos().resumenHistorias()
+        assertEquals(2, resumen.size)
+        assertTrue(resumen.all { it.id.isNotBlank() && it.titulo.isNotBlank() })
+        assertEquals(setOf("momotaro", "otra"), resumen.map { it.id }.toSet())
     }
 }
