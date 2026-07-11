@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,6 +74,18 @@ fun ImportScreen(
 
     val puedeImportar = form.titulo.isNotBlank() && form.texto.isNotBlank() && estado !is EstadoImport.Importando
 
+    // Con el teclado abierto el contenido excede el viewport: scrollear al fondo
+    // deja a la vista el campo de texto junto con los botones de acción. Se sigue
+    // maxValue con snapshotFlow porque la animación del IME lo cambia durante
+    // varios frames y un scroll único quedaría pisado por el bring-into-view del
+    // TextField enfocado.
+    val scrollForm = rememberScrollState()
+    LaunchedEffect(imeVisible) {
+        if (imeVisible) {
+            snapshotFlow { scrollForm.maxValue }.collect { scrollForm.scrollTo(it) }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -88,7 +101,7 @@ fun ImportScreen(
                 .padding(24.dp)
                 .fillMaxSize()
                 .imePadding()
-                .let { if (imeVisible) it.verticalScroll(rememberScrollState()) else it },
+                .let { if (imeVisible) it.verticalScroll(scrollForm) else it },
         ) {
             OutlinedTextField(
                 value = form.titulo,
@@ -121,8 +134,10 @@ fun ImportScreen(
                 onValueChange = vm::setTexto,
                 label = { Text("Japanese text — paste here") },
                 modifier = if (imeVisible) {
+                    // 120dp: con el teclado abierto el viewport útil ronda 280dp —
+                    // así entran el campo Y los dos botones sin scrollear.
                     Modifier
-                        .height(160.dp)
+                        .height(120.dp)
                         .fillMaxWidth()
                 } else {
                     Modifier
