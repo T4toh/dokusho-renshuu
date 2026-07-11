@@ -10,10 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -82,7 +81,7 @@ fun ImportScreen(
                 .padding(relleno)
                 .padding(24.dp)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .imePadding(),
         ) {
             OutlinedTextField(
                 value = form.titulo,
@@ -114,8 +113,9 @@ fun ImportScreen(
                 value = form.texto,
                 onValueChange = vm::setTexto,
                 label = { Text("Japanese text — paste here") },
-                minLines = 10,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
             OutlinedButton(
