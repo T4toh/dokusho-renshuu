@@ -5,11 +5,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -73,6 +78,7 @@ fun BibliotecaScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(locales, key = { it.historia.id }) { item ->
+                    var mostrarConfirmacion by remember(item.historia.id) { mutableStateOf(false) }
                     Card(Modifier.fillMaxWidth().clickable { onAbrirHistoria(item.historia.id) }) {
                         Column(Modifier.padding(16.dp)) {
                             item.metadata?.tituloLectura?.let {
@@ -81,7 +87,26 @@ fun BibliotecaScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Text(item.historia.titulo, style = MaterialTheme.typography.titleLarge)
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(item.historia.titulo, style = MaterialTheme.typography.titleLarge)
+                                    if (item.importada) {
+                                        AssistChip(onClick = {}, enabled = false, label = { Text("Imported") })
+                                    }
+                                }
+                                if (item.importada) {
+                                    IconButton(onClick = { mostrarConfirmacion = true }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete imported story")
+                                    }
+                                }
+                            }
                             item.metadata?.tituloEn?.let {
                                 Text(it, style = MaterialTheme.typography.bodyMedium)
                             }
@@ -103,6 +128,21 @@ fun BibliotecaScreen(
                                 )
                             }
                         }
+                    }
+                    if (mostrarConfirmacion) {
+                        AlertDialog(
+                            onDismissRequest = { mostrarConfirmacion = false },
+                            text = { Text("Delete this imported story? Reading progress will be kept.") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    mostrarConfirmacion = false
+                                    vm.borrarImportada(item.historia.id)
+                                }) { Text("Delete") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { mostrarConfirmacion = false }) { Text("Cancel") }
+                            },
+                        )
                     }
                 }
                 if (catalogo is EstadoCatalogo.Ok) {
