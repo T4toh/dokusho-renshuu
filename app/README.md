@@ -32,6 +32,27 @@ Requiere JDK 17+ (probado con JDK 21) y Android SDK 36. Los assets NO se commite
 - Nuevas historias: regenerar `catalogo/` (ver `historias/README.md`) — el build
   las re-empaqueta solo.
 
+## Importar texto propio
+
+Library → Import permite agregar tus propias historias, además de las de
+`catalogo/`:
+
+- Dos vías de entrada: pegar el texto directamente o "Open .txt" (se espera
+  UTF-8; un `.txt` en Shift-JIS —típico de Windows— hay que convertirlo antes
+  a UTF-8, límite conocido v1).
+- Metadata: título obligatorio, dificultad manual (easy/medium/hard), autor
+  opcional. Si el texto no parece japonés se muestra un aviso; "Cancel" no
+  guarda nada.
+- La furigana se genera automáticamente con Kuromoji (sin el alineador de
+  Aozora del catálogo) y puede errar lecturas de nombres propios — límite
+  conocido.
+- Las historias importadas aparecen en Library con badge "Imported" y se
+  guardan en `filesDir/importadas/`, separadas de `catalogo/`. Se pueden
+  borrar con el ícono de la tarjeta (con confirmación); el progreso de
+  lectura se conserva aunque se borre la historia.
+- Entran también al mazo Anki "Dokusho — Stories", elegibles junto con las
+  del catálogo por checkbox al exportar.
+
 ## Ícono
 
 `app/arte/logo.jpg` es arte de Saitama (ONE / Yusuke Murata, One Punch Man) —

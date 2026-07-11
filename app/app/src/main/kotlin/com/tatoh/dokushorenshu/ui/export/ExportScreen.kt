@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +42,8 @@ import java.io.File
 fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
     val contadores by vm.contadores.collectAsState()
     val estado by vm.estado.collectAsState()
+    val historiasStories by vm.historiasStories.collectAsState()
+    val seleccionadas by vm.seleccionadas.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { vm.cargar() }
@@ -88,12 +92,27 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 BotonExport(
                     titulo = "Export Stories deck",
-                    habilitado = contadores.historias > 0,
-                    hint = "No local stories",
+                    habilitado = contadores.historias > 0 && seleccionadas.isNotEmpty(),
+                    hint = if (contadores.historias > 0) "Select at least one story" else "No local stories",
                     generandoEste = tipoGenerando == TipoExport.STORIES,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.STORIES,
                     onClick = { vm.exportar(TipoExport.STORIES) },
                 )
+            }
+
+            if (historiasStories.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Column {
+                    for (historia in historiasStories) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = historia.id in seleccionadas,
+                                onCheckedChange = { vm.toggleHistoria(historia.id) },
+                            )
+                            Text(historia.titulo, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
             }
 
             val listo = estado as? EstadoExport.Listo

@@ -15,7 +15,7 @@
 | 3.7  | katakana-ruby + fix alineador de furigana        | ✅ Completo ([PR #6](https://github.com/T4toh/dokusho-renshuu/pull/6)) |
 | 4a   | `app/` — mazos Anki (.apkg) con oraciones rotativas | ✅ Completo ([PR #7](https://github.com/T4toh/dokusho-renshuu/pull/7)) |
 | 4a.1 | `app/` — mazos por historia (subdecks de pre-lectura) | ✅ Completo ([PR #8](https://github.com/T4toh/dokusho-renshuu/pull/8)) |
-| 4b   | `app/` — import de texto propio                  | ⏳ Siguiente. Brainstorming pendiente                                                                                 |
+| 4b   | `app/` — import de texto propio                  | ✅ Completo ([PR #9](https://github.com/T4toh/dokusho-renshuu/pull/9))                                               |
 
 ## Datos operativos
 
@@ -30,6 +30,7 @@
 - **Lector (3.7)**: toggle カナ (pref `katakana`, default ON) muestra hiragana sobre runs de katakana (precomputado en el VM); catálogo con spans de furigana disjuntos (check en verify_catalogo).
 - **Anki (4a)**: writer .apkg propio en `dominio/anki/` (schema Anki 2.1 legacy verificado contra genanki; GUID = base91 de SHA-256, golden test). Mazos "Dokusho — Words" (todas las palabras tocadas) y "Dokusho — Kanji" (solo taggeados). Oraciones de historias con ruby HTML + relleno Tatoeba (cap 5), rotación por review via JS en el template. Re-export actualiza sin duplicar (validado en AnkiDroid). OJO: el separador de campos U+001F va como escape Kotlin, nunca literal (`grep -cP '\x1f'` debe dar 0 en fuentes). 4a.1 suma "Dokusho — Stories" (un .apkg, subdeck `::` por historia, todos los kanjis en orden de primera aparición, oraciones solo de esa historia sin Tatoeba, GUID `story:<id>:<kanji>` disjunto del mazo Kanji; EscritorApkg generalizado a N mazos).
 - **Para Plan 4b**: portar segmentador de `historias/src/segmentador.py` CON la regla de fusión de spans; furigana de texto importado = Kuromoji puro (sin alineador Aozora).
+- **Import (4b)**: segmentador Kotlin en `dominio/SegmentadorTexto.kt` (port fiel del Python, incluida la regla de fusión de spans); furigana persistida generada con Kuromoji (con trim de okurigana; puede errar lecturas de nombres propios, límite conocido); historias importadas en `filesDir/importadas/` (nunca pisan ids de catálogo — reimportar el mismo título asigna id `-2`, `-3`, etc.); export "Dokusho — Stories" ahora con selección por checkbox (catálogo + importadas). Límite extra conocido: el texto importado se indexa por chars UTF-16 — kanji fuera del BMP (rarísimos) podrían desalinear la furigana, mismo límite conocido del catálogo (riesgo #4 del plan).
 
 ## Backlog diferido (review final Plan 1 — no bloqueante)
 
@@ -71,6 +72,15 @@
 - MigrationTestHelper no usado (exportSchema=false); ProgresoDaoFake overridea registrarAperturaKanji (primitivas dead-code en fake).
 - Review section: kanjisPorDificultad consultado 2x por dificultad.
 - lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
+
+## Backlog diferido (Plan 4b — no bloqueante)
+
+- Agregar más historias base al catálogo (pipeline Plan 2).
+- Deck names Anki: dos imports con mismo título → mismo nombre de deck `Dokusho — Stories::<título>` con ids distintos (Anki resuelve por nombre → cartas mezcladas); título con `::` anida de más. Desambiguar nombre o filtrar `::`.
+- Tarjeta de biblioteca: autor vacío muestra `" · Medium"` (separador colgante) — armar string solo con partes no vacías.
+- `puedeImportar` en ImportViewModel es dead code (la Screen recomputa el predicado) — borrar o usar.
+- `resumenHistorias()` doc sugiere ahorro de I/O que no existe (parsea historias completas igual).
+- DetectorJapones: katakana halfwidth (U+FF61–FF9F) no cuenta como japonés (texto legacy dispara el aviso; benigno).
 
 ## Proceso de trabajo usado
 

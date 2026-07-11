@@ -20,10 +20,12 @@ class HistoriasRepoTest {
     private fun repo(
         http: ClienteHttp = HttpFake(),
         dir: File = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+        dirImportadas: File = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
     ) = HistoriasRepo(
         leerAsset = { nombre -> if (nombre == "historias/momotaro.json") momotaroJson else null },
         listarAssetsHistorias = { listOf("momotaro.json") },
         dirDescargas = dir,
+        dirImportadas = dirImportadas,
         http = http,
     )
 
@@ -80,6 +82,7 @@ class HistoriasRepoTest {
             },
             listarAssetsHistorias = { listOf("momotaro.json") },
             dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+            dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
         )
         val catalogo = repoConCatalogoLocal.catalogoLocal()
         assertNotNull(catalogo)
@@ -89,5 +92,57 @@ class HistoriasRepoTest {
     @Test
     fun `catalogoLocal sin asset devuelve null`() {
         assertNull(repo().catalogoLocal())
+    }
+
+    @Test
+    fun `historia importada aparece en locales y se carga por id`() {
+        val repo = repo()
+        val historia = ParserHistoria.parsear(momotaroJson).copy(id = "mi_texto")
+        repo.guardarImportada(historia)
+        assertEquals(2, repo.historiasLocales().size)
+        assertEquals(historia.titulo, repo.cargarHistoria("mi_texto")!!.titulo)
+        assertTrue(repo.esImportada("mi_texto"))
+        assertFalse(repo.esImportada("momotaro"))
+    }
+
+    @Test
+    fun `importada no pisa una historia existente con el mismo id`() {
+        val repo = repo()
+        val impostora = ParserHistoria.parsear(momotaroJson).copy(titulo = "偽物")
+        repo.guardarImportada(impostora)  // id "momotaro" ya existe en assets
+        assertEquals("桃太郎", repo.cargarHistoria("momotaro")!!.titulo)  // asset gana
+        assertEquals(1, repo.historiasLocales().size)
+    }
+
+    @Test
+    fun `borrar importada la saca de locales`() {
+        val repo = repo()
+        repo.guardarImportada(ParserHistoria.parsear(momotaroJson).copy(id = "borrable"))
+        assertTrue(repo.borrarImportada("borrable"))
+        assertNull(repo.cargarHistoria("borrable"))
+        assertEquals(1, repo.historiasLocales().size)
+        assertFalse(repo.borrarImportada("borrable"))  // segunda vez: ya no existe
+    }
+
+    @Test
+    fun `prioridad real es descargada mayor asset mayor importada (cargarHistoria coherente con historiasLocales)`() {
+        val dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it }
+        val repo = repo(dirImportadas = dirImportadas)
+        // Escribe directo en dirImportadas, sin pasar por guardarImportada (que evitaría
+        // la colisión) — simula un archivo importado antes de que existiera esa guarda,
+        // o escrito por otra vía; el punto es probar la resolución de prioridad en sí.
+        val impostora = momotaroJson.replace("桃太郎", "偽物")
+        File(dirImportadas, "momotaro.json").writeText(impostora)
+        assertEquals("桃太郎", repo.cargarHistoria("momotaro")!!.titulo)  // asset gana, no importada
+        val locales = repo.historiasLocales()
+        assertEquals(1, locales.size)
+        assertEquals("桃太郎", locales.single().titulo)
+    }
+
+    @Test
+    fun `idsLocales une los tres origenes`() {
+        val repo = repo()
+        repo.guardarImportada(ParserHistoria.parsear(momotaroJson).copy(id = "extra"))
+        assertEquals(setOf("momotaro", "extra"), repo.idsLocales())
     }
 }

@@ -7,6 +7,12 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.addJsonArray
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.put
 
 /** fin es EXCLUSIVO, índices sobre texto (contrato de catalogo/, Plan 2).
  *  Índices = code points BMP; el catálogo no usa caracteres suplementarios. */
@@ -106,4 +112,35 @@ object ParserHistoria {
         this[clave] ?: throw IllegalArgumentException("falta clave '$clave'")
 
     private fun JsonObject.texto(clave: String): String = req(clave).jsonPrimitive.content
+}
+
+/** Inverso de [ParserHistoria.parsear]: emite el schema v2 exacto (mismo
+ *  contrato que el emisor Python del Plan 2 — claves en español, furigana como
+ *  ternas, `traduccion` siempre null, japonés sin escapar). Round-trip
+ *  garantizado por test: parsear(serializar(h)) == h. */
+object SerializadorHistoria {
+    fun serializar(historia: Historia): String = buildJsonObject {
+        put("id", historia.id)
+        put("titulo", historia.titulo)
+        put("autor", historia.autor)
+        put("fuente", historia.fuente)
+        put("licencia", historia.licencia)
+        put("dificultad", historia.dificultad)
+        put("version", historia.version)
+        putJsonArray("parrafos") {
+            for (parrafo in historia.parrafos) addJsonObject {
+                putJsonArray("oraciones") {
+                    for (oracion in parrafo.oraciones) addJsonObject {
+                        put("texto", oracion.texto)
+                        putJsonArray("furigana") {
+                            for (f in oracion.furigana) addJsonArray {
+                                add(f.inicio); add(f.fin); add(f.lectura)
+                            }
+                        }
+                        put("traduccion", JsonNull)
+                    }
+                }
+            }
+        }
+    }.toString()
 }

@@ -37,9 +37,38 @@ class ExportViewModelTest {
         leerAsset = { n -> if (n == "historias/momotaro.json") momotaroJson else null },
         listarAssetsHistorias = { listOf("momotaro.json") },
         dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+        dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
     )
 
     private fun dirTemp(): File = File.createTempFile("export", "").let { it.delete(); it.mkdirs(); it }
+
+    /** Repo con DOS historias locales — el fixture de un solo momotaro no
+     *  alcanza para probar que la selección filtra (con una sola historia
+     *  filtrar o no da el mismo resultado). */
+    private fun historiasRepoDos() = HistoriasRepo(
+        leerAsset = { n ->
+            when (n) {
+                "historias/momotaro.json" -> momotaroJson
+                "historias/otra.json" -> momotaroJson
+                    .replaceFirst("\"id\": \"momotaro\"", "\"id\": \"otra\"")
+                    .replaceFirst("\"titulo\": \"桃太郎\"", "\"titulo\": \"Otra historia\"")
+                else -> null
+            }
+        },
+        listarAssetsHistorias = { listOf("momotaro.json", "otra.json") },
+        dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+        dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
+    )
+
+    private fun vmDos(
+        dao: ProgresoDaoFake = ProgresoDaoFake(),
+        diccionario: DiccionarioFake = DiccionarioFake(),
+        escribirMazos: (File, List<MazoNotas>) -> Unit = { _, _ -> },
+        dirExport: File = dirTemp(),
+    ): ExportViewModel {
+        val armador = ArmadorMazos(dao, diccionario, historiasRepoDos())
+        return ExportViewModel(dao, armador, dirExport, { _, _, _ -> }, escribirMazos, dispatcher, log = { _, _ -> })
+    }
 
     private fun vm(
         dao: ProgresoDaoFake = ProgresoDaoFake(),
@@ -163,6 +192,10 @@ class ExportViewModelTest {
             diccionario = diccionario,
             escribirMazos = { _, mazos -> mazosEscritos = mazos },
         )
+        // seleccionadas se puebla en cargar() (default: todas) — sin esto la
+        // selección queda vacía y STORIES da Error (spec Task 9).
+        viewModel.cargar()
+        advanceUntilIdle()
         viewModel.exportar(TipoExport.STORIES)
         advanceUntilIdle()
         val listo = viewModel.estado.value as EstadoExport.Listo
@@ -180,9 +213,84 @@ class ExportViewModelTest {
         val diccionario = DiccionarioFake()  // solo conoce lo cargado a mano
         diccionario.kanjis["山"] = KanjiInfo("山", listOf("mountain"), listOf("サン"), listOf("やま"), null, null)
         val viewModel = vm(diccionario = diccionario, escribirMazos = { _, _ -> })
+        viewModel.cargar()
+        advanceUntilIdle()
         viewModel.exportar(TipoExport.STORIES)
         advanceUntilIdle()
         val listo = viewModel.estado.value as EstadoExport.Listo
         assertEquals("Exported 1 stories (1 kanji, 216 skipped)", listo.resumen)
+    }
+
+    // --- selección de historias para STORIES (Plan 4b Task 9) ---
+
+    @Test
+    fun `cargar puebla historiasStories y selecciona todas por defecto`() = runTest {
+        val viewModel = vmDos()
+        viewModel.cargar()
+        advanceUntilIdle()
+
+        val ids = viewModel.historiasStories.value.map { it.id }
+        assertEquals(setOf("momotaro", "otra"), ids.toSet())
+        assertEquals(ids.toSet(), viewModel.seleccionadas.value)
+    }
+
+    @Test
+    fun `toggleHistoria saca y vuelve a poner un id de la seleccion`() = runTest {
+        val viewModel = vmDos()
+        viewModel.cargar()
+        advanceUntilIdle()
+        val id = viewModel.historiasStories.value.first().id
+
+        viewModel.toggleHistoria(id)
+        assertFalse(id in viewModel.seleccionadas.value)
+
+        viewModel.toggleHistoria(id)
+        assertTrue(id in viewModel.seleccionadas.value)
+    }
+
+    @Test
+    fun `stories exporta solo las historias seleccionadas`() = runTest {
+        var mazosEscritos: List<MazoNotas>? = null
+        val diccionario = DiccionarioFake().apply { todosLosKanjisConocidos = true }
+        val viewModel = vmDos(
+            diccionario = diccionario,
+            escribirMazos = { _, mazos -> mazosEscritos = mazos },
+        )
+        viewModel.cargar()
+        advanceUntilIdle()
+
+        val ids = viewModel.historiasStories.value.map { it.id }
+        assertEquals(2, ids.size)
+        assertEquals(ids.toSet(), viewModel.seleccionadas.value)  // default: todas
+
+        viewModel.toggleHistoria(ids.first())  // des-seleccionar una
+
+        viewModel.exportar(TipoExport.STORIES)
+        advanceUntilIdle()
+
+        // invariante: mazos escritos == seleccionadas (comparo por deckId, que
+        // codifica el idHistoria — MazoNotas no expone el id crudo)
+        val mazos = mazosEscritos!!
+        assertEquals(1, mazos.size)
+        assertEquals(
+            ids.drop(1).map { ModeloNotas.deckIdDeHistoria(it) }.toSet(),
+            mazos.map { it.deckId }.toSet(),
+        )
+    }
+
+    @Test
+    fun `exportar STORIES con seleccion vacia da Error y no llega a Generando`() = runTest {
+        var seEscribio = false
+        val viewModel = vmDos(escribirMazos = { _, _ -> seEscribio = true })
+        viewModel.cargar()
+        advanceUntilIdle()
+        viewModel.historiasStories.value.forEach { viewModel.toggleHistoria(it.id) }  // vacía la selección
+        assertTrue(viewModel.seleccionadas.value.isEmpty())
+
+        viewModel.exportar(TipoExport.STORIES)
+        advanceUntilIdle()
+
+        assertFalse(seEscribio)
+        assertTrue(viewModel.estado.value is EstadoExport.Error)
     }
 }

@@ -3,6 +3,7 @@ package com.tatoh.dokushorenshu.ui.biblioteca
 import com.tatoh.dokushorenshu.datos.DiccionarioFake
 import com.tatoh.dokushorenshu.datos.HistoriasRepo
 import com.tatoh.dokushorenshu.datos.KanjiInfo
+import com.tatoh.dokushorenshu.datos.ParserHistoria
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDaoFake
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -42,6 +43,7 @@ class BibliotecaViewModelTest {
         },
         listarAssetsHistorias = { listOf("momotaro.json") },
         dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+        dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
         http = { url ->
             if (conRed && url == HistoriasRepo.URL_CATALOGO) catalogoJson
             else throw IOException("sin red")
@@ -109,6 +111,24 @@ class BibliotecaViewModelTest {
         assertEquals("word", easy.kanji.significados.first())
         assertTrue(tarjetas.first { it.dificultad == "medium" } is TarjetaReview.Vacia)
         assertTrue(tarjetas.first { it.dificultad == "hard" } is TarjetaReview.Vacia)
+    }
+
+    @Test
+    fun `historia importada se marca y se puede borrar`() = runTest {
+        // usamos el mismo repo para el vm y para guardar la importada (vm(conRed) crea uno nuevo
+        // cada vez, así que acá construimos el vm a mano sobre un único repo).
+        val repo = repo(conRed = false)
+        val vm = BibliotecaViewModel(repo, ProgresoDaoFake(), DiccionarioFake(), ioDispatcher = dispatcher)
+        repo.guardarImportada(ParserHistoria.parsear(momotaroJson).copy(id = "propia", titulo = "自作"))
+        vm.cargar()
+        advanceUntilIdle()
+        val item = vm.locales.value.first { it.historia.id == "propia" }
+        assertTrue(item.importada)
+        assertFalse(vm.locales.value.first { it.historia.id == "momotaro" }.importada)
+
+        vm.borrarImportada("propia")
+        advanceUntilIdle()
+        assertTrue(vm.locales.value.none { it.historia.id == "propia" })
     }
 
     @Test

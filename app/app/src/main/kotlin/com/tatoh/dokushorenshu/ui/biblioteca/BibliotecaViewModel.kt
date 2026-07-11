@@ -15,7 +15,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class ItemBiblioteca(val historia: Historia, val progresoPct: Int, val metadata: EntradaCatalogo?)
+data class ItemBiblioteca(
+    val historia: Historia,
+    val progresoPct: Int,
+    val metadata: EntradaCatalogo?,
+    val importada: Boolean = false,
+)
 
 sealed interface EstadoCatalogo {
     data object Cargando : EstadoCatalogo
@@ -61,7 +66,7 @@ class BibliotecaViewModel(
                     val pct = if (progreso == null || historia.parrafos.isEmpty()) 0
                     else (progreso.parrafo * 100) / historia.parrafos.size
                     val metadata = catalogoLocal?.historias?.firstOrNull { it.id == historia.id }
-                    ItemBiblioteca(historia, pct, metadata)
+                    ItemBiblioteca(historia, pct, metadata, importada = historiasRepo.esImportada(historia.id))
                 }
             }
             _review.value = withContext(ioDispatcher) { cargarReview() }
@@ -103,6 +108,14 @@ class BibliotecaViewModel(
             historiasRepo.descargarHistoria(id)
                 .onSuccess { cargar() }
                 .onFailure { _catalogo.value = EstadoCatalogo.Error("Download failed: $id") }
+        }
+    }
+
+    /** Borra una historia importada por el usuario (Task 8) y refresca la lista de locales. */
+    fun borrarImportada(id: String) {
+        viewModelScope.launch {
+            withContext(ioDispatcher) { historiasRepo.borrarImportada(id) }
+            cargar()
         }
     }
 }

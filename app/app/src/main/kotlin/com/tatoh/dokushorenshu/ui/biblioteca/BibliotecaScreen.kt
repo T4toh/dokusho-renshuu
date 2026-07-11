@@ -1,5 +1,6 @@
 package com.tatoh.dokushorenshu.ui.biblioteca
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -10,9 +11,57 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+
+// Ícono de papelera dibujado a mano (cuerpo + tapa + agarradera): Delete no está en
+// material-icons-core y no vale la pena esa dependencia por un solo glifo (ver Plan 3.7,
+// commit 65cd0af, donde el glifo de copiar de PalabraSheet.kt sentó este mismo patrón).
+@Composable
+private fun IconoPapelera(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val trazo = 1.5.dp.toPx()
+        // cuerpo del tacho
+        val anchoCuerpo = size.width * 0.62f
+        val altoCuerpo = size.height * 0.55f
+        val xCuerpo = (size.width - anchoCuerpo) / 2f
+        val yCuerpo = size.height * 0.4f
+        drawRect(
+            color = color,
+            topLeft = Offset(xCuerpo, yCuerpo),
+            size = Size(anchoCuerpo, altoCuerpo),
+            style = Stroke(width = trazo),
+        )
+        // tapa: línea horizontal más ancha que el cuerpo
+        val anchoTapa = size.width * 0.8f
+        val yTapa = size.height * 0.28f
+        drawLine(
+            color = color,
+            start = Offset((size.width - anchoTapa) / 2f, yTapa),
+            end = Offset((size.width + anchoTapa) / 2f, yTapa),
+            strokeWidth = trazo,
+        )
+        // agarradera: línea corta centrada arriba de la tapa
+        val anchoAgarradera = size.width * 0.3f
+        val yAgarradera = size.height * 0.15f
+        drawLine(
+            color = color,
+            start = Offset((size.width - anchoAgarradera) / 2f, yAgarradera),
+            end = Offset((size.width + anchoAgarradera) / 2f, yAgarradera),
+            strokeWidth = trazo,
+        )
+    }
+}
 
 // Mapea la dificultad cruda a display en inglés
 private fun dificultadDisplay(dificultad: String): String = when (dificultad) {
@@ -30,6 +79,7 @@ fun BibliotecaScreen(
     onAcerca: () -> Unit,
     onVerKanji: (String) -> Unit,
     onExport: () -> Unit,
+    onImportar: () -> Unit,
 ) {
     val locales by vm.locales.collectAsState()
     val catalogo by vm.catalogo.collectAsState()
@@ -42,6 +92,7 @@ fun BibliotecaScreen(
         TopAppBar(
             title = { Text("Dokusho Renshū") },
             actions = {
+                TextButton(onClick = onImportar) { Text("Import") }
                 TextButton(onClick = onExport) { Text("Export") }
                 TextButton(onClick = onAcerca) { Text("About") }
             },
@@ -71,6 +122,7 @@ fun BibliotecaScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(locales, key = { it.historia.id }) { item ->
+                    var mostrarConfirmacion by remember(item.historia.id) { mutableStateOf(false) }
                     Card(Modifier.fillMaxWidth().clickable { onAbrirHistoria(item.historia.id) }) {
                         Column(Modifier.padding(16.dp)) {
                             item.metadata?.tituloLectura?.let {
@@ -79,7 +131,32 @@ fun BibliotecaScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Text(item.historia.titulo, style = MaterialTheme.typography.titleLarge)
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(item.historia.titulo, style = MaterialTheme.typography.titleLarge)
+                                    if (item.importada) {
+                                        AssistChip(onClick = {}, enabled = false, label = { Text("Imported") })
+                                    }
+                                }
+                                if (item.importada) {
+                                    IconButton(
+                                        onClick = { mostrarConfirmacion = true },
+                                        modifier = Modifier.semantics { contentDescription = "Delete imported story" },
+                                    ) {
+                                        IconoPapelera(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                }
+                            }
                             item.metadata?.tituloEn?.let {
                                 Text(it, style = MaterialTheme.typography.bodyMedium)
                             }
@@ -101,6 +178,21 @@ fun BibliotecaScreen(
                                 )
                             }
                         }
+                    }
+                    if (mostrarConfirmacion) {
+                        AlertDialog(
+                            onDismissRequest = { mostrarConfirmacion = false },
+                            text = { Text("Delete this imported story? Reading progress will be kept.") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    mostrarConfirmacion = false
+                                    vm.borrarImportada(item.historia.id)
+                                }) { Text("Delete") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { mostrarConfirmacion = false }) { Text("Cancel") }
+                            },
+                        )
                     }
                 }
                 if (catalogo is EstadoCatalogo.Ok) {

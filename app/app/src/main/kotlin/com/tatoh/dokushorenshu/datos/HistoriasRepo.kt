@@ -27,12 +27,14 @@ class ClienteHttpReal : ClienteHttp {
     }
 }
 
-/** Historias empaquetadas (assets) + descargadas (filesDir) + catálogo remoto.
- *  Una descargada con el mismo id pisa a la de assets (permite actualizar). */
+/** Historias empaquetadas (assets) + descargadas (filesDir) + importadas (filesDir)
+ *  + catálogo remoto. Prioridad al resolver un id: descargada > asset > importada
+ *  (permite actualizar vía descarga); una importada NUNCA pisa un id ya existente. */
 class HistoriasRepo(
     private val leerAsset: (String) -> String?,
     private val listarAssetsHistorias: () -> List<String>,
     private val dirDescargas: File,
+    private val dirImportadas: File,
     private val http: ClienteHttp = ClienteHttpReal(),
     // Inyectable solo para tests: permite compartir el TestDispatcher del ViewModel y
     // que `advanceUntilIdle()` sea determinístico (con Dispatchers.IO real, la resolución
@@ -58,6 +60,7 @@ class HistoriasRepo(
                 contexto.assets.list("historias")?.toList() ?: emptyList()
             },
             dirDescargas = File(contexto.filesDir, "historias").apply { mkdirs() },
+            dirImportadas = File(contexto.filesDir, "importadas").apply { mkdirs() },
         )
     }
 
@@ -73,6 +76,10 @@ class HistoriasRepo(
             runCatching { ParserHistoria.parsear(archivo.readText()) }
                 .onSuccess { porId[it.id] = it }  // descargada pisa asset
         }
+        dirImportadas.listFiles { archivo -> archivo.extension == "json" }?.forEach { archivo ->
+            runCatching { ParserHistoria.parsear(archivo.readText()) }
+                .onSuccess { porId.putIfAbsent(it.id, it) }  // importada NUNCA pisa
+        }
         return porId.values.toList()
     }
 
@@ -87,9 +94,45 @@ class HistoriasRepo(
             runCatching { ParserHistoria.parsear(descargada.readText()) }
                 .onSuccess { return it }
         }
-        return leerAsset("historias/$id.json")
-            ?.let { runCatching { ParserHistoria.parsear(it) }.getOrNull() }
+        leerAsset("historias/$id.json")
+            ?.let { crudo -> runCatching { ParserHistoria.parsear(crudo) }.getOrNull() }
+            ?.let { return it }
+        val importada = File(dirImportadas, "$id.json")
+        if (importada.exists()) {
+            runCatching { ParserHistoria.parsear(importada.readText()) }
+                .onSuccess { return it }
+        }
+        return null
     }
+
+    fun idsLocales(): Set<String> = historiasLocales().map { it.id }.toSet()
+
+    fun esImportada(id: String): Boolean = File(dirImportadas, "$id.json").exists()
+
+    /** Serializa y valida con round-trip ANTES de escribir (mismo criterio que
+     *  descargarHistoria: nunca guardar JSON a medias); escritura atómica.
+     *  Si el id ya existe como asset o descargada, no-op: una importada NUNCA
+     *  pisa (mismo criterio que historiasLocales/cargarHistoria). */
+    fun guardarImportada(historia: Historia) {
+        val yaExiste = File(dirDescargas, "${historia.id}.json").exists() ||
+            leerAsset("historias/${historia.id}.json") != null
+        if (yaExiste) return
+        val crudo = SerializadorHistoria.serializar(historia)
+        ParserHistoria.parsear(crudo)
+        dirImportadas.mkdirs()
+        val tmp = File(dirImportadas, "${historia.id}.json.tmp")
+        try {
+            tmp.writeText(crudo)
+            check(tmp.renameTo(File(dirImportadas, "${historia.id}.json"))) {
+                "no se pudo renombrar $tmp"
+            }
+        } catch (e: Exception) {
+            tmp.delete()
+            throw e
+        }
+    }
+
+    fun borrarImportada(id: String): Boolean = File(dirImportadas, "$id.json").delete()
 
     suspend fun catalogoRemoto(): Result<Catalogo> = withContext(ioDispatcher) {
         runCatching { ParserHistoria.parsearCatalogo(http.get(URL_CATALOGO)) }
