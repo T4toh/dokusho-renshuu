@@ -9,8 +9,10 @@ import com.tatoh.dokushorenshu.datos.OracionEjemplo
 import com.tatoh.dokushorenshu.datos.progreso.KanjiTocado
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
 
-/** Cap de oraciones por nota (spec Plan 4a): historias locales primero,
- *  Tatoeba rellena el resto hasta llegar acá. */
+/** Cap de oraciones por nota. En armarWords/armarKanji: historias primero,
+ *  Tatoeba rellena el resto (spec 4a). En los mazos por historia
+ *  (armarHistorias): cap duro sin relleno — solo oraciones de esa historia
+ *  (spec 4a.1). */
 private const val CAP_ORACIONES = 5
 
 /** Resultado combinado de armar los dos mazos. `kanjisOmitidos` cuenta kanjis

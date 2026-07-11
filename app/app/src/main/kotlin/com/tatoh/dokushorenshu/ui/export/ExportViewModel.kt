@@ -77,13 +77,14 @@ class ExportViewModel(
             try {
                 val resumen = withContext(ioDispatcher) {
                     dirExport.mkdirs()
-                    val resultado = armadorMazos.armar()
                     when (tipo) {
                         TipoExport.WORDS -> {
+                            val resultado = armadorMazos.armar()
                             escribir(destino, resultado.notasWords, emptyList())
                             "${resultado.notasWords.size} words"
                         }
                         TipoExport.KANJI -> {
+                            val resultado = armadorMazos.armar()
                             escribir(destino, emptyList(), resultado.notasKanji)
                             val base = "${resultado.notasKanji.size} kanji"
                             if (resultado.kanjisOmitidos > 0) "$base (${resultado.kanjisOmitidos} skipped)" else base
