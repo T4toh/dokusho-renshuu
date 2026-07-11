@@ -13,7 +13,7 @@ class GeneradorFurigana(private val tokenizador: Tokenizador) {
         tokenizador.tokenizar(oracion).mapNotNull(::ternaDelToken)
 
     private fun ternaDelToken(token: PalabraToken): Furigana? {
-        val lectura = token.lecturaHiragana ?: return null
+        val lectura = token.lecturaHiragana?.takeIf { it.isNotBlank() } ?: return null
         if (token.superficie.none(::esKanji)) return null
         val superficieHira = katakanaAHiragana(token.superficie)
         var pre = 0
@@ -30,6 +30,11 @@ class GeneradorFurigana(private val tokenizador: Tokenizador) {
         return if (nucleo.any(::esKanji) && lecturaNucleo.isNotEmpty()) {
             Furigana(token.inicio + pre, token.fin - post, lecturaNucleo)
         } else {
+            // Red de seguridad defensiva: con Kuromoji IPADIC se cree inalcanzable
+            // (los trims de pre/post nunca cruzan un kanji y lectura siempre tiene
+            // longitud >= superficie), pero se mantiene por el contrato de
+            // "degradación segura" del plan. `lectura` ya está garantizada
+            // no vacía por el guard de arriba, así que esta terna es válida.
             Furigana(token.inicio, token.fin, lectura)
         }
     }
