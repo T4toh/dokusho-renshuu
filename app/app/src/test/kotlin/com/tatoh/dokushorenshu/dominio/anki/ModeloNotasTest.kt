@@ -110,4 +110,32 @@ class ModeloNotasTest {
         )
         assertEquals(4, ids.size)
     }
+
+    // --- Plan 4a.1: GUID por historia+kanji y deck IDs de subdecks ---
+
+    @Test
+    fun `claveGuid de NotaKanji usa claveGuidPropia si esta presente`() {
+        val base = NotaKanji("洗", "セン", "あら.う", "wash", "hard")
+        assertEquals("kanji:洗", base.claveGuid)
+        val deHistoria = base.copy(claveGuidPropia = "story:momotaro:洗")
+        assertEquals("story:momotaro:洗", deHistoria.claveGuid)
+        // GUIDs resultantes disjuntos: misma nota, mazos distintos, notas Anki distintas
+        assertNotEquals(ModeloNotas.guidDe(base.claveGuid), ModeloNotas.guidDe(deHistoria.claveGuid))
+    }
+
+    @Test
+    fun `deckIdDeHistoria es estable, de 13 digitos y disjunto de los IDs fijos`() {
+        val id = ModeloNotas.deckIdDeHistoria("momotaro")
+        assertEquals(id, ModeloNotas.deckIdDeHistoria("momotaro"))  // determinístico
+        assertTrue("13 dígitos: $id", id in 1_000_000_000_000L..9_999_999_999_999L)
+        assertNotEquals(ModeloNotas.DECK_ID_WORDS, id)
+        assertNotEquals(ModeloNotas.DECK_ID_KANJI, id)
+        // historias distintas → decks distintos
+        assertNotEquals(id, ModeloNotas.deckIdDeHistoria("urashima_taro"))
+    }
+
+    @Test
+    fun `nombreDeckHistoria arma el subdeck con la sintaxis de dos puntos de Anki`() {
+        assertEquals("Dokusho — Stories::桃太郎", ModeloNotas.nombreDeckHistoria("桃太郎"))
+    }
 }
