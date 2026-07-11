@@ -120,6 +120,18 @@ class ExportViewModelTest {
     }
 
     @Test
+    fun `Generando lleva el tipo que se esta exportando`() = runTest {
+        var estadoDuranteEscritura: EstadoExport? = null
+        lateinit var viewModel: ExportViewModel
+        viewModel = vm(escribir = { _, _, _ -> estadoDuranteEscritura = viewModel.estado.value })
+
+        viewModel.exportar(TipoExport.KANJI)
+        advanceUntilIdle()
+
+        assertEquals(EstadoExport.Generando(TipoExport.KANJI), estadoDuranteEscritura)
+    }
+
+    @Test
     fun `exportar durante Generando se ignora`() = runTest {
         var contadorEscrituras = 0
         val viewModel = vm(

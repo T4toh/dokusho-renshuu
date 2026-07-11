@@ -26,7 +26,9 @@ data class ContadoresExport(val words: Int, val kanjisTaggeados: Int, val histor
 
 sealed interface EstadoExport {
     data object Idle : EstadoExport
-    data object Generando : EstadoExport
+    /** Lleva el tipo para que la UI muestre el spinner solo en el botón tapeado
+     *  (los otros solo se deshabilitan). */
+    data class Generando(val tipo: TipoExport) : EstadoExport
     data class Listo(val archivo: File, val resumen: String) : EstadoExport
     data class Error(val mensaje: String) : EstadoExport
 }
@@ -72,7 +74,7 @@ class ExportViewModel(
         viewModelScope.launch {
             // guard contra doble tap — dos escrituras concurrentes corromperían el .apkg
             if (_estado.value is EstadoExport.Generando) return@launch
-            _estado.value = EstadoExport.Generando
+            _estado.value = EstadoExport.Generando(tipo)
             val destino = File(dirExport, nombreArchivo(tipo))
             try {
                 val resumen = withContext(ioDispatcher) {

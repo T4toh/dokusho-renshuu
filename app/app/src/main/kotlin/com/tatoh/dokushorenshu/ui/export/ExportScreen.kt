@@ -2,6 +2,7 @@ package com.tatoh.dokushorenshu.ui.export
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -63,12 +65,14 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
             Spacer(Modifier.height(24.dp))
             // width(IntrinsicSize.Max): los tres botones toman el ancho del más
             // largo en vez de ajustarse cada uno a su texto
+            val tipoGenerando = (estado as? EstadoExport.Generando)?.tipo
             Column(Modifier.width(IntrinsicSize.Max)) {
                 BotonExport(
                     titulo = "Export Words deck",
                     habilitado = contadores.words > 0,
                     hint = "Read and tap words first",
-                    generando = estado is EstadoExport.Generando,
+                    generandoEste = tipoGenerando == TipoExport.WORDS,
+                    generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.WORDS,
                     onClick = { vm.exportar(TipoExport.WORDS) },
                 )
                 Spacer(Modifier.height(12.dp))
@@ -76,7 +80,8 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     titulo = "Export Kanji deck",
                     habilitado = contadores.kanjisTaggeados > 0,
                     hint = "Tag kanji as easy/medium/hard first",
-                    generando = estado is EstadoExport.Generando,
+                    generandoEste = tipoGenerando == TipoExport.KANJI,
+                    generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.KANJI,
                     onClick = { vm.exportar(TipoExport.KANJI) },
                 )
                 Spacer(Modifier.height(12.dp))
@@ -84,7 +89,8 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     titulo = "Export Stories deck",
                     habilitado = contadores.historias > 0,
                     hint = "No local stories",
-                    generando = estado is EstadoExport.Generando,
+                    generandoEste = tipoGenerando == TipoExport.STORIES,
+                    generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.STORIES,
                     onClick = { vm.exportar(TipoExport.STORIES) },
                 )
             }
@@ -108,16 +114,27 @@ private fun BotonExport(
     titulo: String,
     habilitado: Boolean,
     hint: String,
-    generando: Boolean,
+    generandoEste: Boolean,
+    generandoOtro: Boolean,
     onClick: () -> Unit,
 ) {
     Column {
-        Button(onClick = onClick, enabled = habilitado && !generando, modifier = Modifier.fillMaxWidth()) {
-            if (generando) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(8.dp))
+        Button(
+            onClick = onClick,
+            enabled = habilitado && !generandoEste && !generandoOtro,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            // El spinner va superpuesto (Box) y solo en el botón tapeado: el texto
+            // queda siempre centrado y los tres botones se ven idénticos entre sí.
+            Box(Modifier.fillMaxWidth()) {
+                if (generandoEste) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp).align(Alignment.CenterStart),
+                        strokeWidth = 2.dp,
+                    )
+                }
+                Text(titulo, Modifier.align(Alignment.Center))
             }
-            Text(titulo)
         }
         if (!habilitado) {
             Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
