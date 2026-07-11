@@ -1,12 +1,11 @@
 package com.tatoh.dokushorenshu.ui.biblioteca
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,7 +16,52 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+
+// Ícono de papelera dibujado a mano (cuerpo + tapa + agarradera): Delete no está en
+// material-icons-core y no vale la pena esa dependencia por un solo glifo (ver Plan 3.7,
+// commit 65cd0af, donde el glifo de copiar de PalabraSheet.kt sentó este mismo patrón).
+@Composable
+private fun IconoPapelera(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val trazo = 1.5.dp.toPx()
+        // cuerpo del tacho
+        val anchoCuerpo = size.width * 0.62f
+        val altoCuerpo = size.height * 0.55f
+        val xCuerpo = (size.width - anchoCuerpo) / 2f
+        val yCuerpo = size.height * 0.4f
+        drawRect(
+            color = color,
+            topLeft = Offset(xCuerpo, yCuerpo),
+            size = Size(anchoCuerpo, altoCuerpo),
+            style = Stroke(width = trazo),
+        )
+        // tapa: línea horizontal más ancha que el cuerpo
+        val anchoTapa = size.width * 0.8f
+        val yTapa = size.height * 0.28f
+        drawLine(
+            color = color,
+            start = Offset((size.width - anchoTapa) / 2f, yTapa),
+            end = Offset((size.width + anchoTapa) / 2f, yTapa),
+            strokeWidth = trazo,
+        )
+        // agarradera: línea corta centrada arriba de la tapa
+        val anchoAgarradera = size.width * 0.3f
+        val yAgarradera = size.height * 0.15f
+        drawLine(
+            color = color,
+            start = Offset((size.width - anchoAgarradera) / 2f, yAgarradera),
+            end = Offset((size.width + anchoAgarradera) / 2f, yAgarradera),
+            strokeWidth = trazo,
+        )
+    }
+}
 
 // Mapea la dificultad cruda a display en inglés
 private fun dificultadDisplay(dificultad: String): String = when (dificultad) {
@@ -102,8 +146,14 @@ fun BibliotecaScreen(
                                     }
                                 }
                                 if (item.importada) {
-                                    IconButton(onClick = { mostrarConfirmacion = true }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete imported story")
+                                    IconButton(
+                                        onClick = { mostrarConfirmacion = true },
+                                        modifier = Modifier.semantics { contentDescription = "Delete imported story" },
+                                    ) {
+                                        IconoPapelera(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp),
+                                        )
                                     }
                                 }
                             }
