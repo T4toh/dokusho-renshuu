@@ -15,7 +15,7 @@
 | 3.7  | katakana-ruby + fix alineador de furigana        | ✅ Completo ([PR #6](https://github.com/T4toh/dokusho-renshuu/pull/6)) |
 | 4a   | `app/` — mazos Anki (.apkg) con oraciones rotativas | ✅ Completo ([PR #7](https://github.com/T4toh/dokusho-renshuu/pull/7)) |
 | 4a.1 | `app/` — mazos por historia (subdecks de pre-lectura) | ✅ Completo ([PR #8](https://github.com/T4toh/dokusho-renshuu/pull/8)) |
-| 4b   | `app/` — import de texto propio                  | ✅ Completo (PR pendiente — actualizar con #N al abrir)                                                              |
+| 4b   | `app/` — import de texto propio                  | ✅ Completo ([PR #9](https://github.com/T4toh/dokusho-renshuu/pull/9))                                               |
 
 ## Datos operativos
 
