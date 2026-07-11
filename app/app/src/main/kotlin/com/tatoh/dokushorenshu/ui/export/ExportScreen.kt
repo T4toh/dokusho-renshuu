@@ -54,7 +54,7 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
     ) { relleno ->
         Column(Modifier.padding(relleno).padding(24.dp).fillMaxSize()) {
             Text(
-                "${contadores.words} words · ${contadores.kanjisTaggeados} tagged kanji",
+                "${contadores.words} words · ${contadores.kanjisTaggeados} tagged kanji · ${contadores.historias} stories",
                 style = MaterialTheme.typography.bodyMedium,
             )
 
@@ -73,6 +73,14 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                 hint = "Tag kanji as easy/medium/hard first",
                 generando = estado is EstadoExport.Generando,
                 onClick = { vm.exportar(TipoExport.KANJI) },
+            )
+            Spacer(Modifier.height(12.dp))
+            BotonExport(
+                titulo = "Export Stories deck",
+                habilitado = contadores.historias > 0,
+                hint = "No local stories",
+                generando = estado is EstadoExport.Generando,
+                onClick = { vm.exportar(TipoExport.STORIES) },
             )
 
             val listo = estado as? EstadoExport.Listo

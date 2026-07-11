@@ -38,6 +38,10 @@ class ArmadorMazos(
     private val diccionario: Diccionario,
     private val historiasRepo: HistoriasRepo,
 ) {
+    /** Para los counts de la pantalla de Export — evita que el VM dependa de
+     *  HistoriasRepo solo para contar. */
+    fun contarHistoriasLocales(): Int = historiasRepo.historiasLocales().size
+
     /** Arma ambos mazos leyendo las historias locales una sola vez (evita I/O
      *  duplicado: `historiasLocales()` re-lee todos los JSON de assets/filesDir
      *  en cada llamada). */

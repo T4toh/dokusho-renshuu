@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
 import com.tatoh.dokushorenshu.dominio.anki.ArmadorMazos
 import com.tatoh.dokushorenshu.dominio.anki.EscritorApkg
+import com.tatoh.dokushorenshu.dominio.anki.MazoNotas
+import com.tatoh.dokushorenshu.dominio.anki.ModeloNotas
 import com.tatoh.dokushorenshu.dominio.anki.NotaKanji
 import com.tatoh.dokushorenshu.dominio.anki.NotaWords
 import kotlinx.coroutines.CancellationException
@@ -18,9 +20,9 @@ import java.io.File
 
 /** Un botón por mazo en la pantalla — nunca un archivo combinado (spec Plan 4a:
  *  "dos mazos"). */
-enum class TipoExport { WORDS, KANJI }
+enum class TipoExport { WORDS, KANJI, STORIES }
 
-data class ContadoresExport(val words: Int, val kanjisTaggeados: Int)
+data class ContadoresExport(val words: Int, val kanjisTaggeados: Int, val historias: Int = 0)
 
 sealed interface EstadoExport {
     data object Idle : EstadoExport
@@ -37,6 +39,7 @@ class ExportViewModel(
     // evita que el test real escriba/zippee un .apkg (eso lo cubre
     // EscritorApkgTest, Tasks 1-2). En producción, EscritorApkg::escribir.
     private val escribir: (File, List<NotaWords>, List<NotaKanji>) -> Unit = EscritorApkg::escribir,
+    private val escribirMazos: (File, List<MazoNotas>) -> Unit = EscritorApkg::escribir,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     // inyectable: android.util.Log no existe en los tests de JVM plano
     private val log: (String, Throwable) -> Unit = { msg, t -> android.util.Log.e("ExportViewModel", msg, t) },
@@ -53,7 +56,8 @@ class ExportViewModel(
                 _contadores.value = withContext(ioDispatcher) {
                     val words = progresoDao.todasPalabras().map { it.termino }.distinct().size
                     val kanjis = progresoDao.kanjisTaggeados().size
-                    ContadoresExport(words, kanjis)
+                    val historias = armadorMazos.contarHistoriasLocales()
+                    ContadoresExport(words, kanjis, historias)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -84,6 +88,24 @@ class ExportViewModel(
                             val base = "${resultado.notasKanji.size} kanji"
                             if (resultado.kanjisOmitidos > 0) "$base (${resultado.kanjisOmitidos} skipped)" else base
                         }
+                        TipoExport.STORIES -> {
+                            val resultadoHistorias = armadorMazos.armarHistorias()
+                            val mazos = resultadoHistorias.mazos.map { mazo ->
+                                MazoNotas(
+                                    deckId = ModeloNotas.deckIdDeHistoria(mazo.idHistoria),
+                                    nombre = ModeloNotas.nombreDeckHistoria(mazo.titulo),
+                                    notasKanji = mazo.notas,
+                                )
+                            }
+                            escribirMazos(destino, mazos)
+                            val totalKanji = resultadoHistorias.mazos.sumOf { it.notas.size }
+                            val base = "${resultadoHistorias.mazos.size} stories ($totalKanji kanji"
+                            if (resultadoHistorias.kanjisOmitidos > 0) {
+                                "$base, ${resultadoHistorias.kanjisOmitidos} skipped)"
+                            } else {
+                                "$base)"
+                            }
+                        }
                     }
                 }
                 _estado.value = EstadoExport.Listo(destino, "Exported $resumen")
@@ -101,5 +123,6 @@ class ExportViewModel(
     private fun nombreArchivo(tipo: TipoExport): String = when (tipo) {
         TipoExport.WORDS -> "dokusho-words.apkg"
         TipoExport.KANJI -> "dokusho-kanji.apkg"
+        TipoExport.STORIES -> "dokusho-stories.apkg"
     }
 }
