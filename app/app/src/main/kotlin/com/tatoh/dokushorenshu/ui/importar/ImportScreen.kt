@@ -122,7 +122,7 @@ fun ImportScreen(
                 label = { Text("Japanese text — paste here") },
                 modifier = if (imeVisible) {
                     Modifier
-                        .height(280.dp)
+                        .height(160.dp)
                         .fillMaxWidth()
                 } else {
                     Modifier
