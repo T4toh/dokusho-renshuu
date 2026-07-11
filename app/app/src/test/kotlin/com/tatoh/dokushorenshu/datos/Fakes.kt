@@ -8,10 +8,20 @@ class DiccionarioFake : Diccionario {
     val ejemplosPalabra = mutableMapOf<String, List<OracionEjemplo>>()
     val ejemplosKanji = mutableMapOf<String, List<OracionEjemplo>>()
 
+    // Plan 4a.1 (ArmadorMazosTest): si está en true, buscarKanji devuelve una
+    // entrada sintética para CUALQUIER kanji en vez de solo los cargados a mano
+    // en `kanjis` — simula "el diccionario real conoce casi todo" sin tener que
+    // poblar 217 entradas a mano en el test.
+    var todosLosKanjisConocidos = false
+
     override fun buscarPalabra(termino: String) = palabras[termino] ?: emptyList()
     override fun buscarPorLectura(lectura: String): List<Palabra> =
         palabras.values.flatten().filter { it.lectura == lectura }
-    override fun buscarKanji(kanji: String) = kanjis[kanji]
+    override fun buscarKanji(kanji: String) = kanjis[kanji] ?: if (todosLosKanjisConocidos) {
+        KanjiInfo(kanji, listOf("meaning-$kanji"), listOf("オン"), listOf("くん"), null, null)
+    } else {
+        null
+    }
     override fun oracionesDePalabra(termino: String, limite: Int) =
         (ejemplosPalabra[termino] ?: emptyList()).take(limite)
     override fun oracionesDeKanji(kanji: String, limite: Int) =

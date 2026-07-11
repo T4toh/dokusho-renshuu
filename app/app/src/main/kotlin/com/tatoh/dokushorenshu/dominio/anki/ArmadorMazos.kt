@@ -23,6 +23,12 @@ data class ResultadoArmado(
     val kanjisOmitidos: Int,
 )
 
+/** Un mazo de pre-lectura por historia (Plan 4a.1): todos los kanjis únicos de la
+ *  historia en orden de primera aparición, oraciones SOLO de esa historia. */
+data class MazoHistoria(val idHistoria: String, val titulo: String, val notas: List<NotaKanji>)
+
+data class ResultadoHistorias(val mazos: List<MazoHistoria>, val kanjisOmitidos: Int)
+
 /** Junta los datos ya persistidos (Room + diccionario offline + historias
  *  locales) en las notas que consume `EscritorApkg`. Sin conocimiento de Anki:
  *  solo arma modelos de dominio — `ModeloNotas.kt` decide templates/formato de
@@ -67,6 +73,63 @@ class ArmadorMazos(
         }
         return notas to omitidos
     }
+
+    /** Mazos de pre-lectura, uno por historia local. El tag del usuario (si existe)
+     *  viaja en Dificultad; kanji sin entrada en el diccionario se omite y se
+     *  cuenta (mismo criterio "exported N, skipped M" que armarKanji). */
+    suspend fun armarHistorias(
+        historias: List<Historia> = historiasRepo.historiasLocales(),
+    ): ResultadoHistorias {
+        val tagPorKanji = progresoDao.kanjisTaggeados()
+            .associate { it.kanji to requireNotNull(it.dificultad) }
+        var omitidos = 0
+        val mazos = historias.map { historia ->
+            val notas = kanjisEnOrdenDeAparicion(historia).mapNotNull { kanji ->
+                val info = diccionario.buscarKanji(kanji)
+                if (info == null) {
+                    omitidos++
+                    null
+                } else {
+                    NotaKanji(
+                        kanji = kanji,
+                        onYomi = info.onYomi.joinToString("、"),
+                        kunYomi = info.kunYomi.joinToString("、"),
+                        significados = info.significados.joinToString("; "),
+                        dificultad = tagPorKanji[kanji] ?: "",
+                        oraciones = oracionesDeLaHistoria(historia, kanji),
+                        claveGuidPropia = "story:${historia.id}:$kanji",
+                    )
+                }
+            }
+            MazoHistoria(historia.id, historia.titulo, notas)
+        }
+        return ResultadoHistorias(mazos, omitidos)
+    }
+
+    /** Kanjis únicos en orden de primera aparición — el mazo se estudia en el
+     *  orden en que se van a encontrar leyendo. */
+    private fun kanjisEnOrdenDeAparicion(historia: Historia): List<String> {
+        val vistos = LinkedHashSet<Char>()
+        for (parrafo in historia.parrafos)
+            for (oracion in parrafo.oraciones)
+                for (c in oracion.texto)
+                    if (esKanji(c)) vistos.add(c)
+        return vistos.map { it.toString() }
+    }
+
+    /** Oraciones de ESA historia solamente (spec 4a.1: sin relleno Tatoeba — el
+     *  punto del mazo es prepararse para ese texto). */
+    private fun oracionesDeLaHistoria(historia: Historia, kanji: String): List<String> =
+        historia.parrafos.asSequence()
+            .flatMap { it.oraciones.asSequence() }
+            .filter { it.texto.contains(kanji) }
+            .map { oracionARubyHtml(it) }
+            .take(CAP_ORACIONES)
+            .toList()
+
+    // Mismo rango que BuscadorPalabras.esKanji (helper privado de 1 línea,
+    // duplicado a propósito para no acoplar dominio/anki con dominio/).
+    private fun esKanji(c: Char): Boolean = c in '一'..'鿿'
 
     private fun armarNotaWords(termino: String, historias: List<Historia>): NotaWords {
         // buscarPalabra por superficie; tokens en kana puro sin entrada propia
