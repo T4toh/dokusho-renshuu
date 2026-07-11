@@ -58,6 +58,7 @@ class LectorViewModelTest {
             },
             listarAssetsHistorias = { listOf("momotaro.json") },
             dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+            dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
         )
         return LectorViewModel(
             idHistoria = idHistoria,
@@ -547,6 +548,7 @@ class LectorViewModelTest {
             leerAsset = { n -> if (n == "historias/momotaro.json") momotaroJson else null },
             listarAssetsHistorias = { listOf("momotaro.json") },
             dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+            dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
         )
         val historia = repo.cargarHistoria("momotaro")!!
         val tokenizador = Tokenizador()

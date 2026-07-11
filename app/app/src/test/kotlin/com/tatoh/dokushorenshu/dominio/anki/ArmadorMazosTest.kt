@@ -21,6 +21,7 @@ class ArmadorMazosTest {
         leerAsset = { nombre -> if (nombre == "historias/momotaro.json") momotaroJson else null },
         listarAssetsHistorias = { listOf("momotaro.json") },
         dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+        dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
     )
 
     private fun armador(
