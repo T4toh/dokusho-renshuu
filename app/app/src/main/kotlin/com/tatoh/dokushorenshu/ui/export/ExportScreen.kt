@@ -13,8 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -107,7 +108,12 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                 // weight(1f, fill = false): la lista scrollea en el espacio del medio
                 // sin empujar el bloque Exported/Share fuera de pantalla, y con pocas
                 // historias no se estira (el bloque queda pegado a la lista).
-                LazyColumn(Modifier.weight(1f, fill = false)) {
+                // Adaptive(300.dp): mismo minSize que la grilla de biblioteca — en
+                // tablet rinde ~2 columnas portrait / ~3 landscape; en teléfono 1.
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 300.dp),
+                    modifier = Modifier.weight(1f, fill = false),
+                ) {
                     items(historiasStories, key = { it.id }) { historia ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
