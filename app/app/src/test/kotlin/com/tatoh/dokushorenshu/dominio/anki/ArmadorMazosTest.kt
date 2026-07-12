@@ -274,7 +274,8 @@ class ArmadorMazosTest {
     @Test
     fun `resumenHistorias devuelve id titulo autor y dificultad de las locales`() {
         val resumen = armadorDos().resumenHistorias()
-        assertTrue(resumen.isNotEmpty())
+        assertEquals(2, resumen.size)
+        assertEquals(setOf("momotaro", "otra"), resumen.map { it.id }.toSet())
         assertTrue(resumen.all { it.id.isNotBlank() && it.titulo.isNotBlank() })
         // autor y dificultad vienen de la Historia parseada (fixture momotaro: 楠山正雄 / facil)
         val momotaro = resumen.first { it.id == "momotaro" }
