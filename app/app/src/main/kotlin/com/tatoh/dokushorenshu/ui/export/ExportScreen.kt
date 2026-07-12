@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -102,14 +104,24 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
 
             if (historiasStories.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                Column {
-                    for (historia in historiasStories) {
+                // weight(1f, fill = false): la lista scrollea en el espacio del medio
+                // sin empujar el bloque Exported/Share fuera de pantalla, y con pocas
+                // historias no se estira (el bloque queda pegado a la lista).
+                LazyColumn(Modifier.weight(1f, fill = false)) {
+                    items(historiasStories, key = { it.id }) { historia ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
                                 checked = historia.id in seleccionadas,
                                 onCheckedChange = { vm.toggleHistoria(historia.id) },
                             )
-                            Text(historia.titulo, style = MaterialTheme.typography.bodyMedium)
+                            Column {
+                                Text(historia.titulo, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    detalleHistoria(historia.autor, historia.dificultad),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -176,3 +188,19 @@ private fun compartirMazo(context: Context, archivo: File) {
     }
     context.startActivity(Intent.createChooser(intent, "Share Anki deck"))
 }
+
+// Mapea la dificultad cruda a display en inglés (duplicado a propósito del helper
+// privado de BibliotecaScreen — convención del repo: no acoplar screens entre sí).
+private fun dificultadDisplay(dificultad: String): String = when (dificultad) {
+    "facil" -> "Easy"
+    "media" -> "Medium"
+    "dificil" -> "Hard"
+    else -> dificultad.replaceFirstChar { it.uppercase() }
+}
+
+/** Línea secundaria de la fila: solo partes no vacías — una importada sin autor
+ *  muestra "Medium", nunca " · Medium" con separador colgante. */
+private fun detalleHistoria(autor: String, dificultad: String): String =
+    listOf(autor, dificultadDisplay(dificultad))
+        .filter { it.isNotBlank() }
+        .joinToString(" · ")
