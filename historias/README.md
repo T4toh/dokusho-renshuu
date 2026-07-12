@@ -12,6 +12,12 @@ Python stdlib only, sin pip.
 | urashima_taro | 浦島太郎 — 楠山正雄 | [3390](https://www.aozora.gr.jp/cards/000329/card3390.html) |
 | issunboshi | 一寸法師 — 楠山正雄 | [43457](https://www.aozora.gr.jp/cards/000329/card43457.html) |
 | kachikachi_yama | かちかち山 — 楠山正雄 | [18377](https://www.aozora.gr.jp/cards/000329/card18377.html) |
+| hanasaka_jijii | 花咲かじじい — 楠山正雄 | [3391](https://www.aozora.gr.jp/cards/000329/card3391.html) |
+| shitakiri_suzume | 舌切りすずめ — 楠山正雄 | [18378](https://www.aozora.gr.jp/cards/000329/card18378.html) |
+| kintaro | 金太郎 — 楠山正雄 | [18337](https://www.aozora.gr.jp/cards/000329/card18337.html) |
+| gongitsune | ごん狐 — 新美南吉 | [628](https://www.aozora.gr.jp/cards/000121/card628.html) |
+| tebukuro_wo_kaini | 手袋を買いに — 新美南吉 | [637](https://www.aozora.gr.jp/cards/000121/card637.html) |
+| kumo_no_ito | 蜘蛛の糸 — 芥川龍之介 | [92](https://www.aozora.gr.jp/cards/000879/card92.html) |
 
 ## Descarga de fuentes (manual, a `fuentes/`, gitignored)
 

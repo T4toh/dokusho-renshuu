@@ -30,5 +30,53 @@
   "titulo_lectura": "かちかちやま",
   "titulo_en": "Kachi-Kachi Mountain",
   "url": "https://www.aozora.gr.jp/cards/000329/files/18377_ruby_11923.zip"
+ },
+ {
+  "id": "hanasaka_jijii",
+  "archivo": "hanasaka_jijii.txt",
+  "fuente": "aozora:3391",
+  "titulo_lectura": "はなさかじじい",
+  "titulo_en": "The Old Man Who Made Flowers Bloom",
+  "url": "https://www.aozora.gr.jp/cards/000329/files/3391_ruby.zip"
+ },
+ {
+  "id": "shitakiri_suzume",
+  "archivo": "shitakiri_suzume.txt",
+  "fuente": "aozora:18378",
+  "titulo_lectura": "したきりすずめ",
+  "titulo_en": "The Tongue-Cut Sparrow",
+  "url": "https://www.aozora.gr.jp/cards/000329/files/18378_ruby_12072.zip"
+ },
+ {
+  "id": "kintaro",
+  "archivo": "kintaro.txt",
+  "fuente": "aozora:18337",
+  "titulo_lectura": "きんたろう",
+  "titulo_en": "Kintarō",
+  "url": "https://www.aozora.gr.jp/cards/000329/files/18337_ruby_11924.zip"
+ },
+ {
+  "id": "gongitsune",
+  "archivo": "gongitsune.txt",
+  "fuente": "aozora:628",
+  "titulo_lectura": "ごんぎつね",
+  "titulo_en": "Gon, the Little Fox",
+  "url": "https://www.aozora.gr.jp/cards/000121/files/628_ruby_649.zip"
+ },
+ {
+  "id": "tebukuro_wo_kaini",
+  "archivo": "tebukuro_wo_kaini.txt",
+  "fuente": "aozora:637",
+  "titulo_lectura": "てぶくろをかいに",
+  "titulo_en": "Buying Mittens",
+  "url": "https://www.aozora.gr.jp/cards/000121/files/637_ruby_4095.zip"
+ },
+ {
+  "id": "kumo_no_ito",
+  "archivo": "kumo_no_ito.txt",
+  "fuente": "aozora:92",
+  "titulo_lectura": "くものいと",
+  "titulo_en": "The Spider's Thread",
+  "url": "https://www.aozora.gr.jp/cards/000879/files/92_ruby_164.zip"
  }
 ]

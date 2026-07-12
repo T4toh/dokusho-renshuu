@@ -16,13 +16,14 @@
 | 4a   | `app/` — mazos Anki (.apkg) con oraciones rotativas | ✅ Completo ([PR #7](https://github.com/T4toh/dokusho-renshuu/pull/7)) |
 | 4a.1 | `app/` — mazos por historia (subdecks de pre-lectura) | ✅ Completo ([PR #8](https://github.com/T4toh/dokusho-renshuu/pull/8)) |
 | 4b   | `app/` — import de texto propio                  | ✅ Completo ([PR #9](https://github.com/T4toh/dokusho-renshuu/pull/9))                                               |
+| 4c   | catalogo/ — tanda 2 de historias (6 obras)       | ✅ Completo ([PR #10](https://github.com/T4toh/dokusho-renshuu/pull/10))                                             |
 
 ## Datos operativos
 
 - **Release db vigente**: `db-v2` = `diccionario-v2.db` (73.3 MB, metadata version=2, glosas limpias: parser Jitendex descarta 23 marcadores de structured content; MAX_ORACIONES_POR_KANJI=30). db-v1 queda obsoleto.
 - **Fuentes** (URLs vigentes en `diccionario/README.md`): Jitendex ya NO distribuye por GitHub release assets; Tatoeba discontinuó el export directo de pares → `diccionario/fuentes_tatoeba.py` los arma desde exports por-idioma.
 - **Contrato para la app (Plan 3)**: `oracion_palabra` solo indexa términos de 2-6 chars; palabras de 1 kanji → fallback a `oracion_kanji`. Listas en el db = JSON arrays (`ensure_ascii=False`). Versión de esquema en tabla `metadata`.
-- **Catálogo**: schema v2 (`titulo_lectura`, `titulo_en` nullable, `kanjis_unicos`, `oraciones`; sin encabezados de sección; urashima_taro ahora `media`). La app exige version==2. URL raw `https://raw.githubusercontent.com/T4toh/dokusho-renshuu/main/catalogo/catalogo.json`.
+- **Catálogo**: schema v2 (`titulo_lectura`, `titulo_en` nullable, `kanjis_unicos`, `oraciones`; sin encabezados de sección; urashima_taro ahora `media`). La app exige version==2. URL raw `https://raw.githubusercontent.com/T4toh/dokusho-renshuu/main/catalogo/catalogo.json`. **Tanda 2 (Plan 4c)**: +6 historias (10 en total, sin suplentes) — `hanasaka_jijii`, `shitakiri_suzume`, `kintaro` de 楠山正雄; `gongitsune`, `tebukuro_wo_kaini` de 新美南吉; `kumo_no_ito` de 芥川龍之介 (dificultad `facil` las 5 primeras, `media` kumo_no_ito). Invariante byte-idéntico de los 4 JSON de tanda 1 verificado. Gaiji de 3er/4to nivel (`犍` en 犍陀多, kumo_no_ito) resueltos vía tabla `_GAIJI_CONOCIDOS` en `historias/src/aozora.py`.
 - **Entorno**: builds JVM (gradle/Android Studio, Planes 3-4) van en la PC secundaria — la principal tiene un bug de CPU que cuelga con Java. Python (Plan 2) anda en cualquiera.
 - **Contrato furigana**: `[inicio, fin, lectura]` con fin exclusivo sobre el texto de la oración; diálogo `「…」` = 1 oración (portar igual en Kotlin, Plan 3).
 - `historias/src/jlpt.py` es generado (regenerar con `genera_jlpt.py` solo si cambia KANJIDIC2).
@@ -75,7 +76,7 @@
 
 ## Backlog diferido (Plan 4b — no bloqueante)
 
-- Agregar más historias base al catálogo (pipeline Plan 2).
+- ~~Agregar más historias base al catálogo (pipeline Plan 2).~~ Resuelto en Plan 4c (tanda 2, +6 obras).
 - Deck names Anki: dos imports con mismo título → mismo nombre de deck `Dokusho — Stories::<título>` con ids distintos (Anki resuelve por nombre → cartas mezcladas); título con `::` anida de más. Desambiguar nombre o filtrar `::`.
 - Tarjeta de biblioteca: autor vacío muestra `" · Medium"` (separador colgante) — armar string solo con partes no vacías.
 - `puedeImportar` en ImportViewModel es dead code (la Screen recomputa el predicado) — borrar o usar.

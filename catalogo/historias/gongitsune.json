@@ -1,0 +1,1469 @@
+{
+ "id": "gongitsune",
+ "titulo": "ごん狐",
+ "autor": "新美南吉",
+ "fuente": "aozora:628",
+ "licencia": "dominio público",
+ "dificultad": "facil",
+ "version": 2,
+ "parrafos": [
+  {
+   "oraciones": [
+    {
+     "texto": "これは、私が小さいときに、村の茂平というおじいさんからきいたお話です。",
+     "furigana": [
+      [
+       4,
+       5,
+       "わたし"
+      ],
+      [
+       15,
+       17,
+       "もへい"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "むかしは、私たちの村のちかくの、中山というところに小さなお城があって、中山さまというおとのさまが、おられたそうです。",
+     "furigana": [
+      [
+       16,
+       18,
+       "なかやま"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "その中山から、少しはなれた山の中に、「ごん狐」という狐がいました。",
+     "furigana": [
+      [
+       21,
+       22,
+       "ぎつね"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんは、一人ぼっちの小狐で、しだの一ぱいしげった森の中に穴をほって住んでいました。",
+     "furigana": [
+      [
+       4,
+       6,
+       "ひとり"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "そして、夜でも昼でも、あたりの村へ出てきて、いたずらばかりしました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "はたけへ入って芋をほりちらしたり、菜種がらの、ほしてあるのへ火をつけたり、百姓家の裏手につるしてあるとんがらしをむしりとって、いったり、いろんなことをしました。",
+     "furigana": [
+      [
+       17,
+       19,
+       "なたね"
+      ],
+      [
+       37,
+       40,
+       "ひゃくしょうや"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "或秋のことでした。",
+     "furigana": [
+      [
+       0,
+       1,
+       "ある"
+      ],
+      [
+       1,
+       2,
+       "あき"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "二、三日雨がふりつづいたその間、ごんは、外へも出られなくて穴の中にしゃがんでいました。",
+     "furigana": [
+      [
+       14,
+       15,
+       "あいだ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "雨があがると、ごんは、ほっとして穴からはい出ました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "空はからっと晴れていて、百舌鳥の声がきんきん、ひびいていました。",
+     "furigana": [
+      [
+       12,
+       15,
+       "もず"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、村の小川の堤まで出て来ました。",
+     "furigana": [
+      [
+       6,
+       8,
+       "おがわ"
+      ],
+      [
+       9,
+       10,
+       "つつみ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "あたりの、すすきの穂には、まだ雨のしずくが光っていました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "川は、いつもは水が少いのですが、三日もの雨で、水が、どっとましていました。",
+     "furigana": [
+      [
+       9,
+       10,
+       "すくな"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "ただのときは水につかることのない、川べりのすすきや、萩の株が、黄いろくにごった水に横だおしになって、もまれています。",
+     "furigana": [
+      [
+       26,
+       27,
+       "はぎ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんは川下の方へと、ぬかるみみちを歩いていきました。",
+     "furigana": [
+      [
+       3,
+       5,
+       "かわしも"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ふと見ると、川の中に人がいて、何かやっています。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんは、見つからないように、そうっと草の深いところへ歩きよって、そこからじっとのぞいてみました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「兵十だな」と、ごんは思いました。",
+     "furigana": [
+      [
+       1,
+       3,
+       "ひょうじゅう"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "兵十はぼろぼろの黒いきものをまくし上げて、腰のところまで水にひたりながら、魚をとる、はりきりという、網をゆすぶっていました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "はちまきをした顔の横っちょうに、まるい萩の葉が一まい、大きな黒子みたいにへばりついていました。",
+     "furigana": [
+      [
+       30,
+       32,
+       "ほくろ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "しばらくすると、兵十は、はりきり網の一ばんうしろの、袋のようになったところを、水の中からもちあげました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "その中には、芝の根や、草の葉や、くさった木ぎれなどが、ごちゃごちゃはいっていましたが、でもところどころ、白いものがきらきら光っています。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "それは、ふというなぎの腹や、大きなきすの腹でした。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "兵十は、びくの中へ、そのうなぎやきすを、ごみと一しょにぶちこみました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "そして、また、袋の口をしばって、水の中へ入れました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "兵十はそれから、びくをもって川から上りびくを土手においといて、何をさがしにか、川上の方へかけていきました。",
+     "furigana": [
+      [
+       17,
+       18,
+       "あが"
+      ],
+      [
+       22,
+       24,
+       "どて"
+      ],
+      [
+       39,
+       41,
+       "かわかみ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "兵十がいなくなると、ごんは、ぴょいと草の中からとび出して、びくのそばへかけつけました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "ちょいと、いたずらがしたくなったのです。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんはびくの中の魚をつかみ出しては、はりきり網のかかっているところより下手の川の中を目がけて、ぽんぽんなげこみました。",
+     "furigana": [
+      [
+       35,
+       37,
+       "しもて"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "どの魚も、「とぼん」と音を立てながら、にごった水の中へもぐりこみました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "一ばんしまいに、太いうなぎをつかみにかかりましたが、何しろぬるぬるとすべりぬけるので、手ではつかめません。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんはじれったくなって、頭をびくの中につッこんで、うなぎの頭を口にくわえました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "うなぎは、キュッと言ってごんの首へまきつきました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "そのとたんに兵十が、向うから、",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「うわアぬすと狐め」と、どなりたてました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんは、びっくりしてとびあがりました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "うなぎをふりすててにげようとしましたが、うなぎは、ごんの首にまきついたままはなれません。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんはそのまま横っとびにとび出して一しょうけんめいに、にげていきました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ほら穴の近くの、はんの木の下でふりかえって見ましたが、兵十は追っかけては来ませんでした。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、ほっとして、うなぎの頭をかみくだき、やっとはずして穴のそとの、草の葉の上にのせておきました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "十日ほどたって、ごんが、弥助というお百姓の家の裏を通りかかりますと、そこの、いちじくの木のかげで、弥助の家内が、おはぐろをつけていました。",
+     "furigana": [
+      [
+       0,
+       2,
+       "とおか"
+      ],
+      [
+       12,
+       14,
+       "やすけ"
+      ],
+      [
+       52,
+       54,
+       "かない"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "鍛冶屋の新兵衛の家のうらを通ると、新兵衛の家内が髪をすいていました。",
+     "furigana": [
+      [
+       0,
+       3,
+       "かじや"
+      ],
+      [
+       4,
+       7,
+       "しんべえ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんは、",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「ふふん、村に何かあるんだな」と、思いました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「何だろう、秋祭かな。祭なら、太鼓や笛の音がしそうなものだ。それに第一、お宮にのぼりが立つはずだが」",
+     "furigana": [
+      [
+       1,
+       2,
+       "なん"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "こんなことを考えながらやって来ますと、いつの間にか、表に赤い井戸のある、兵十の家の前へ来ました。",
+     "furigana": [
+      [
+       22,
+       23,
+       "ま"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "その小さな、こわれかけた家の中には、大勢の人があつまっていました。",
+     "furigana": [
+      [
+       18,
+       20,
+       "おおぜい"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "よそいきの着物を着て、腰に手拭をさげたりした女たちが、表のかまどで火をたいています。",
+     "furigana": [
+      [
+       13,
+       15,
+       "てぬぐい"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "大きな鍋の中では、何かぐずぐず煮えていました。",
+     "furigana": [
+      [
+       3,
+       4,
+       "なべ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「ああ、葬式だ」と、ごんは思いました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「兵十の家のだれが死んだんだろう」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "お午がすぎると、ごんは、村の墓地へ行って、六地蔵さんのかげにかくれていました。",
+     "furigana": [
+      [
+       1,
+       2,
+       "ひる"
+      ],
+      [
+       21,
+       24,
+       "ろくじぞう"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "いいお天気で、遠く向うには、お城の屋根瓦が光っています。",
+     "furigana": [
+      [
+       17,
+       20,
+       "やねがわら"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "墓地には、ひがん花が、赤い布のようにさきつづいていました。",
+     "furigana": [
+      [
+       8,
+       9,
+       "ばな"
+      ],
+      [
+       13,
+       14,
+       "きれ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "と、村の方から、カーン、カーン、と、鐘が鳴って来ました。",
+     "furigana": [
+      [
+       18,
+       19,
+       "かね"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "葬式の出る合図です。",
+     "furigana": [
+      [
+       5,
+       7,
+       "あいず"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "やがて、白い着物を着た葬列のものたちがやって来るのがちらちら見えはじめました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "話声も近くなりました。",
+     "furigana": [
+      [
+       0,
+       2,
+       "はなしごえ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "葬列は墓地へはいって来ました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "人々が通ったあとには、ひがん花が、ふみおられていました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんはのびあがって見ました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "兵十が、白いかみしもをつけて、位牌をささげています。",
+     "furigana": [
+      [
+       15,
+       17,
+       "いはい"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "いつもは、赤いさつま芋みたいな元気のいい顔が、きょうは何だかしおれていました。",
+     "furigana": [
+      [
+       10,
+       11,
+       "いも"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「ははん、死んだのは兵十のおっ母だ」",
+     "furigana": [
+      [
+       15,
+       16,
+       "かあ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんはそう思いながら、頭をひっこめました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "その晩、ごんは、穴の中で考えました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「兵十のおっ母は、床についていて、うなぎが食べたいと言ったにちがいない。それで兵十がはりきり網をもち出したんだ。ところが、わしがいたずらをして、うなぎをとって来てしまった。だから兵十は、おっ母にうなぎを食べさせることができなかった。そのままおっ母は、死んじゃったにちがいない。ああ、うなぎが食べたい、うなぎが食べたいとおもいながら、死んだんだろう。ちょッ、あんないたずらをしなけりゃよかった。」",
+     "furigana": [
+      [
+       9,
+       10,
+       "とこ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "兵十が、赤い井戸のところで、麦をといでいました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "兵十は今まで、おっ母と二人きりで、貧しいくらしをしていたもので、おっ母が死んでしまっては、もう一人ぼっちでした。",
+     "furigana": [
+      [
+       11,
+       13,
+       "ふたり"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「おれと同じ一人ぼっちの兵十か」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "こちらの物置の後から見ていたごんは、そう思いました。",
+     "furigana": [
+      [
+       4,
+       6,
+       "ものおき"
+      ],
+      [
+       7,
+       8,
+       "うしろ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは物置のそばをはなれて、向うへいきかけますと、どこかで、いわしを売る声がします。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「いわしのやすうりだアい。いきのいいいわしだアい」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、その、いせいのいい声のする方へ走っていきました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "と、弥助のおかみさんが、裏戸口から、",
+     "furigana": [
+      [
+       2,
+       4,
+       "やすけ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「いわしをおくれ。」と言いました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "いわし売は、いわしのかごをつんだ車を、道ばたにおいて、ぴかぴか光るいわしを両手でつかんで、弥助の家の中へもってはいりました。",
+     "furigana": [
+      [
+       3,
+       4,
+       "うり"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんはそのすきまに、かごの中から、五、六ぴきのいわしをつかみ出して、もと来た方へかけだしました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "そして、兵十の家の裏口から、家の中へいわしを投げこんで、穴へ向ってかけもどりました。",
+     "furigana": [
+      [
+       30,
+       31,
+       "むか"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "途中の坂の上でふりかえって見ますと、兵十がまだ、井戸のところで麦をといでいるのが小さく見えました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、うなぎのつぐないに、まず一つ、いいことをしたと思いました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "つぎの日には、ごんは山で栗をどっさりひろって、それをかかえて、兵十の家へいきました。",
+     "furigana": [
+      [
+       12,
+       13,
+       "くり"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "裏口からのぞいて見ますと、兵十は、午飯をたべかけて、茶椀をもったまま、ぼんやりと考えこんでいました。",
+     "furigana": [
+      [
+       17,
+       19,
+       "ひるめし"
+      ],
+      [
+       26,
+       28,
+       "ちゃわん"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "へんなことには兵十の頬ぺたに、かすり傷がついています。",
+     "furigana": [
+      [
+       10,
+       11,
+       "ほっ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "どうしたんだろうと、ごんが思っていますと、兵十がひとりごとをいいました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「一たいだれが、いわしなんかをおれの家へほうりこんでいったんだろう。おかげでおれは、盗人と思われて、いわし屋のやつに、ひどい目にあわされた」と、ぶつぶつ言っています。",
+     "furigana": [
+      [
+       42,
+       44,
+       "ぬすびと"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、これはしまったと思いました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "かわいそうに兵十は、いわし屋にぶんなぐられて、あんな傷までつけられたのか。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんはこうおもいながら、そっと物置の方へまわってその入口に、栗をおいてかえりました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "つぎの日も、そのつぎの日もごんは、栗をひろっては、兵十の家へもって来てやりました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "そのつぎの日には、栗ばかりでなく、まつたけも二、三ぼんもっていきました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "月のいい晩でした。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんは、ぶらぶらあそびに出かけました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "中山さまのお城の下を通ってすこしいくと、細い道の向うから、だれか来るようです。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "話声が聞えます。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "チンチロリン、チンチロリンと松虫が鳴いています。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、道の片がわにかくれて、じっとしていました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "話声はだんだん近くなりました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "それは、兵十と加助というお百姓でした。",
+     "furigana": [
+      [
+       7,
+       9,
+       "かすけ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「そうそう、なあ加助」と、兵十がいいました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「ああん？」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「おれあ、このごろ、とてもふしぎなことがあるんだ」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「何が？」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「おっ母が死んでからは、だれだか知らんが、おれに栗やまつたけなんかを、まいにちまいにちくれるんだよ」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「ふうん、だれが？」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「それがわからんのだよ。おれの知らんうちに、おいていくんだ」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、ふたりのあとをつけていきました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「ほんとかい？」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「ほんとだとも。うそと思うなら、あした見に来いよ。その栗を見せてやるよ」",
+     "furigana": [
+      [
+       21,
+       22,
+       "こ"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「へえ、へんなこともあるもんだなア」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "それなり、二人はだまって歩いていきました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "加助がひょいと、後を見ました。",
+     "furigana": [
+      [
+       8,
+       9,
+       "うしろ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんはびくっとして、小さくなってたちどまりました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "加助は、ごんには気がつかないで、そのままさっさとあるきました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "吉兵衛というお百姓の家まで来ると、二人はそこへはいっていきました。",
+     "furigana": [
+      [
+       0,
+       3,
+       "きちべえ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "ポンポンポンポンと木魚の音がしています。",
+     "furigana": [
+      [
+       9,
+       11,
+       "もくぎょ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "窓の障子にあかりがさしていて、大きな坊主頭がうつって動いていました。",
+     "furigana": [
+      [
+       2,
+       4,
+       "しょうじ"
+      ],
+      [
+       18,
+       21,
+       "ぼうずあたま"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんは、",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「おねんぶつがあるんだな」と思いながら井戸のそばにしゃがんでいました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "しばらくすると、また三人ほど、人がつれだって吉兵衛の家へはいっていきました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "お経を読む声がきこえて来ました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、おねんぶつがすむまで、井戸のそばにしゃがんでいました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "兵十と加助は、また一しょにかえっていきます。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんは、二人の話をきこうと思って、ついていきました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "兵十の影法師をふみふみいきました。",
+     "furigana": [
+      [
+       3,
+       6,
+       "かげぼうし"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "お城の前まで来たとき、加助が言い出しました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「さっきの話は、きっと、そりゃあ、神さまのしわざだぞ」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「えっ？」と、兵十はびっくりして、加助の顔を見ました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「おれは、あれからずっと考えていたが、どうも、そりゃ、人間じゃない、神さまだ、神さまが、お前がたった一人になったのをあわれに思わっしゃって、いろんなものをめぐんで下さるんだよ」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「そうかなあ」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「そうだとも。だから、まいにち神さまにお礼を言うがいいよ」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「うん」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、へえ、こいつはつまらないなと思いました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "おれが、栗や松たけを持っていってやるのに、そのおれにはお礼をいわないで、神さまにお礼をいうんじゃア、おれは、引き合わないなあ。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "そのあくる日もごんは、栗をもって、兵十の家へ出かけました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "兵十は物置で縄をなっていました。",
+     "furigana": [
+      [
+       6,
+       7,
+       "なわ"
+      ]
+     ],
+     "traduccion": null
+    },
+    {
+     "texto": "それでごんは家の裏口から、こっそり中へはいりました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "そのとき兵十は、ふと顔をあげました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "と狐が家の中へはいったではありませんか。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "こないだうなぎをぬすみやがったあのごん狐めが、またいたずらをしに来たな。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「ようし。」",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "兵十は立ちあがって、納屋にかけてある火縄銃をとって、火薬をつめました。",
+     "furigana": [
+      [
+       10,
+       12,
+       "なや"
+      ],
+      [
+       18,
+       21,
+       "ひなわじゅう"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "そして足音をしのばせてちかよって、今戸口を出ようとするごんを、ドンと、うちました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "ごんは、ばたりとたおれました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "兵十はかけよって来ました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "家の中を見ると、土間に栗が、かためておいてあるのが目につきました。",
+     "furigana": [
+      [
+       8,
+       10,
+       "どま"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「おや」と兵十は、びっくりしてごんに目を落しました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "「ごん、お前だったのか。いつも栗をくれたのは」",
+     "furigana": [
+      [
+       5,
+       6,
+       "まい"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "ごんは、ぐったりと目をつぶったまま、うなずきました。",
+     "furigana": [],
+     "traduccion": null
+    }
+   ]
+  },
+  {
+   "oraciones": [
+    {
+     "texto": "兵十は火縄銃をばたりと、とり落しました。",
+     "furigana": [],
+     "traduccion": null
+    },
+    {
+     "texto": "青い煙が、まだ筒口から細く出ていました。",
+     "furigana": [
+      [
+       7,
+       9,
+       "つつぐち"
+      ]
+     ],
+     "traduccion": null
+    }
+   ]
+  }
+ ]
+}

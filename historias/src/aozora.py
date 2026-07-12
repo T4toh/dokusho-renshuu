@@ -3,8 +3,22 @@ import re
 
 from . import japones
 
-_ANOTACION = re.compile(r'［＃.*?］')
+_ANOTACION = re.compile(r'(※)?［＃(.*?)］')
 _DELIMITADOR = re.compile(r'^-{10,}\s*$')
+
+# Gaiji conocidos: código JIS (tal como aparece en la anotación ※［＃...］)
+# → carácter real. Sin esto, un gaiji sin resolver deja un ※ residual que
+# verify_catalogo.py detecta (a propósito, para que no pase desapercibido).
+_GAIJI_CONOCIDOS = {
+    '「特のへん＋廴＋聿」、第3水準1-87-71': '犍',  # 犍陀多 (Kandata), 蜘蛛の糸
+}
+
+
+def _resolver_anotacion(m: re.Match) -> str:
+    marca, contenido = m.group(1), m.group(2)
+    if marca and contenido in _GAIJI_CONOCIDOS:
+        return _GAIJI_CONOCIDOS[contenido]
+    return marca or ''
 
 
 def limpiar_linea(linea: str) -> tuple:
@@ -13,7 +27,7 @@ def limpiar_linea(linea: str) -> tuple:
     furigana = [[inicio, fin, lectura], ...] con fin exclusivo,
     índices sobre texto_limpio.
     """
-    linea = _ANOTACION.sub('', linea)
+    linea = _ANOTACION.sub(_resolver_anotacion, linea)
     linea = linea.strip().lstrip('　')  # sangría Aozora
     texto = []
     furigana = []
