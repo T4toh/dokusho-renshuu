@@ -63,6 +63,22 @@ data class HistoriaResumen(val id: String, val titulo: String, val autor: String
   3. Exportar Stories → "Exported…" + Share visibles sin scrollear, con la lista larga.
 - Suite completa de la app verde antes del PR.
 
+## Addendum 2026-07-12: grid adaptivo (feedback post-smoke, mismo PR #11)
+
+En tablet landscape la lista de una columna deja ~70% del ancho vacío. Validado con
+el usuario: la lista pasa a grid adaptivo, sin tocar el resto del layout.
+
+- `LazyColumn` → `LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp))`,
+  mismo `Modifier.weight(1f, fill = false)`, mismo `items(historiasStories, key = { it.id })`,
+  fila interna idéntica (Checkbox + título + detalle).
+- `300.dp` = mismo valor que la grilla de la biblioteca (`BibliotecaScreen.kt:119`) —
+  consistencia visual y de código. Tablet: ~2 columnas portrait, ~3 landscape;
+  teléfono angosto: 1 columna (degrada solo, sin ramas por tamaño de pantalla).
+- Header y bloque Listo/Share sin cambios; el grid scrollea en el espacio del medio.
+- Testing: sin unit tests nuevos (screen); compile + suite completa + smoke tablet
+  en ambas orientaciones (columnas esperadas, scroll con header fijo, Exported+Share
+  visibles sin scrollear).
+
 ## Fuera de alcance
 
 - Toggle de checkboxes durante `Generando` (minor conocido, benigno — backlog).
