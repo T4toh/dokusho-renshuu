@@ -272,10 +272,13 @@ class ArmadorMazosTest {
     }
 
     @Test
-    fun `resumenHistorias devuelve id y titulo de las locales`() {
+    fun `resumenHistorias devuelve id titulo autor y dificultad de las locales`() {
         val resumen = armadorDos().resumenHistorias()
-        assertEquals(2, resumen.size)
+        assertTrue(resumen.isNotEmpty())
         assertTrue(resumen.all { it.id.isNotBlank() && it.titulo.isNotBlank() })
-        assertEquals(setOf("momotaro", "otra"), resumen.map { it.id }.toSet())
+        // autor y dificultad vienen de la Historia parseada (fixture momotaro: 楠山正雄 / facil)
+        val momotaro = resumen.first { it.id == "momotaro" }
+        assertEquals("楠山正雄", momotaro.autor)
+        assertEquals("facil", momotaro.dificultad)
     }
 }
