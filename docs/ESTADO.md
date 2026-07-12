@@ -83,6 +83,17 @@
 - `resumenHistorias()` doc sugiere ahorro de I/O que no existe (parsea historias completas igual).
 - DetectorJapones: katakana halfwidth (U+FF61–FF9F) no cuenta como japonés (texto legacy dispara el aviso; benigno).
 
+## Backlog UI Export (feedback de uso post-tanda 2)
+
+- **BUG**: la lista de checkboxes de historias en ExportScreen no scrollea — con 10 historias desborda el viewport y los ticks se superponen (visto en tablet: el último ítem renderiza doble/encimado). Pasar la sección a algo scrolleable (o LazyColumn con altura acotada) y verificar en tablet y teléfono.
+- Filas de la lista de export muy peladas: mostrar detalles junto al título de cada obra (autor · dificultad, estilo tarjeta de biblioteca) para distinguir obras homónimas o importadas.
+
+## Backlog diferido (tanda 2 — review final, teórico)
+
+- `aozora.py`: gaiji conocido SIN prefijo ※ se dropearía (convención Aozora siempre lo trae) — hardening: lookup incondicional en `_GAIJI_CONOCIDOS`.
+- Sin test de línea con gaiji + anotación normal juntas (re.sub multi-match, cubierto por trace).
+- Si aparecen más gaiji: keyear `_GAIJI_CONOCIDOS` por sufijo JIS (`第3水準1-87-71`) en vez de la descripción exacta (varía entre archivos).
+
 ## Proceso de trabajo usado
 
 Brainstorming → spec → plan por subsistema (`docs/superpowers/plans/`) → ejecución subagent-driven (implementer + reviewer por tarea, review final de branch) → PR. Repetir por plan.
