@@ -2,8 +2,10 @@ package com.tatoh.dokushorenshu.ui.export
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -71,10 +73,14 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
             )
 
             Spacer(Modifier.height(24.dp))
-            // width(IntrinsicSize.Max): los tres botones toman el ancho del más
-            // largo en vez de ajustarse cada uno a su texto
+            // FlowRow: los botones van en fila cuando el ancho alcanza (tablet,
+            // landscape) y bajan de línea solos en angosto — sin ramas por tamaño
+            // de pantalla. Cada botón toma el ancho de su propio texto.
             val tipoGenerando = (estado as? EstadoExport.Generando)?.tipo
-            Column(Modifier.width(IntrinsicSize.Max)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 BotonExport(
                     titulo = "Export Words deck",
                     habilitado = contadores.words > 0,
@@ -82,8 +88,8 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.WORDS,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.WORDS,
                     onClick = { vm.exportar(TipoExport.WORDS) },
+                    modifier = Modifier.width(IntrinsicSize.Max),
                 )
-                Spacer(Modifier.height(12.dp))
                 BotonExport(
                     titulo = "Export Kanji deck",
                     habilitado = contadores.kanjisTaggeados > 0,
@@ -91,8 +97,8 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.KANJI,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.KANJI,
                     onClick = { vm.exportar(TipoExport.KANJI) },
+                    modifier = Modifier.width(IntrinsicSize.Max),
                 )
-                Spacer(Modifier.height(12.dp))
                 BotonExport(
                     titulo = "Export Stories deck",
                     habilitado = contadores.historias > 0 && seleccionadas.isNotEmpty(),
@@ -100,6 +106,7 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.STORIES,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.STORIES,
                     onClick = { vm.exportar(TipoExport.STORIES) },
+                    modifier = Modifier.width(IntrinsicSize.Max),
                 )
             }
 
@@ -155,8 +162,9 @@ private fun BotonExport(
     generandoEste: Boolean,
     generandoOtro: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column {
+    Column(modifier) {
         Button(
             onClick = onClick,
             enabled = habilitado && !generandoEste && !generandoOtro,
