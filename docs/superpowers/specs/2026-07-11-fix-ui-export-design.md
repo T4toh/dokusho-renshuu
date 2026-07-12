@@ -79,6 +79,25 @@ el usuario: la lista pasa a grid adaptivo, sin tocar el resto del layout.
   en ambas orientaciones (columnas esperadas, scroll con header fijo, Exported+Share
   visibles sin scrollear).
 
+## Addendum 2026-07-12 (2): botones de export en fila cuando hay ancho
+
+En landscape los 3 botones apilados desaprovechan el ancho. Validado con el usuario:
+FlowRow auto-wrap, sin ramas por tamaño de pantalla.
+
+- El `Column(Modifier.width(IntrinsicSize.Max))` que envuelve los 3 `BotonExport`
+  pasa a `FlowRow(horizontalArrangement/verticalArrangement = spacedBy(12.dp))`;
+  los `Spacer(12.dp)` intermedios se van (los reemplaza el arrangement).
+- Cada `BotonExport` se envuelve en `Modifier.width(IntrinsicSize.Max)` (el botón
+  toma el ancho de su propio texto). Trade-off aceptado: apilados (teléfono
+  portrait) ya no comparten el ancho del más largo — textos casi iguales,
+  diferencia mínima. `BotonExport` gana parámetro `modifier` para recibirlo.
+- Con ancho (tablet, teléfono landscape): fila de 3; angosto: bajan de línea solos.
+- `FlowRow` puede requerir `@OptIn(ExperimentalLayoutApi::class)` según versión de
+  foundation — agregar solo si el compile lo pide.
+- Testing: compile + suite + smoke tablet (fila en ambas orientaciones o wrap
+  correcto) y POCO portrait (apilados, sin regresión); POCO sin taps adb —
+  navega el usuario, capturas por screencap.
+
 ## Fuera de alcance
 
 - Toggle de checkboxes durante `Generando` (minor conocido, benigno — backlog).
