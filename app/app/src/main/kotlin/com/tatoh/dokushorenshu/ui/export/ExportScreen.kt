@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -75,7 +76,8 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
             Spacer(Modifier.height(24.dp))
             // FlowRow: los botones van en fila cuando el ancho alcanza (tablet,
             // landscape) y bajan de línea solos en angosto — sin ramas por tamaño
-            // de pantalla. Cada botón toma el ancho de su propio texto.
+            // de pantalla. widthIn(min 160): los tres quedan del mismo ancho (el
+            // texto más largo entra cómodo); si un texto lo excede, crece solo.
             val tipoGenerando = (estado as? EstadoExport.Generando)?.tipo
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -88,7 +90,7 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.WORDS,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.WORDS,
                     onClick = { vm.exportar(TipoExport.WORDS) },
-                    modifier = Modifier.width(IntrinsicSize.Max),
+                    modifier = Modifier.widthIn(min = 160.dp).width(IntrinsicSize.Max),
                 )
                 BotonExport(
                     titulo = "Export Kanji deck",
@@ -97,7 +99,7 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.KANJI,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.KANJI,
                     onClick = { vm.exportar(TipoExport.KANJI) },
-                    modifier = Modifier.width(IntrinsicSize.Max),
+                    modifier = Modifier.widthIn(min = 160.dp).width(IntrinsicSize.Max),
                 )
                 BotonExport(
                     titulo = "Export Stories deck",
@@ -106,7 +108,7 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.STORIES,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.STORIES,
                     onClick = { vm.exportar(TipoExport.STORIES) },
-                    modifier = Modifier.width(IntrinsicSize.Max),
+                    modifier = Modifier.widthIn(min = 160.dp).width(IntrinsicSize.Max),
                 )
             }
 

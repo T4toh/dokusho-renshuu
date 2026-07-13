@@ -87,10 +87,13 @@ FlowRow auto-wrap, sin ramas por tamaño de pantalla.
 - El `Column(Modifier.width(IntrinsicSize.Max))` que envuelve los 3 `BotonExport`
   pasa a `FlowRow(horizontalArrangement/verticalArrangement = spacedBy(12.dp))`;
   los `Spacer(12.dp)` intermedios se van (los reemplaza el arrangement).
-- Cada `BotonExport` se envuelve en `Modifier.width(IntrinsicSize.Max)` (el botón
-  toma el ancho de su propio texto). Trade-off aceptado: apilados (teléfono
-  portrait) ya no comparten el ancho del más largo — textos casi iguales,
-  diferencia mínima. `BotonExport` gana parámetro `modifier` para recibirlo.
+- Cada `BotonExport` se envuelve en `Modifier.widthIn(min = 160.dp).width(IntrinsicSize.Max)`.
+  El `widthIn` externo iguala los 3 botones (feedback del usuario en POCO: anchos
+  por texto se veían desparejos): 160.dp cubre cómodo el texto más largo actual
+  (~150.dp); si un texto futuro lo excede, ese botón crece solo. Con 160.dp la
+  tablet mantiene fila de 3 en ambas orientaciones; en teléfono portrait (~443.dp)
+  pueden entrar 2 por línea (wrap 2+1, uniforme). `BotonExport` gana parámetro
+  `modifier` para recibirlo.
 - Con ancho (tablet, teléfono landscape): fila de 3; angosto: bajan de línea solos.
 - `FlowRow` puede requerir `@OptIn(ExperimentalLayoutApi::class)` según versión de
   foundation — agregar solo si el compile lo pide.
