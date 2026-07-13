@@ -21,7 +21,7 @@
 
 ## Datos operativos
 
-- **Release app vigente**: [v0.1.0-beta.1](https://github.com/T4toh/dokusho-renshuu/releases/tag/v0.1.0-beta.1) (prerelease, APK release minificado R8 firmado con debug key, 42.6 MB, main 7571c07 post-PR #11). Para compartir la app. El usuario la usa en el día a día y junta feedback para la próxima tanda.
+- **Release app vigente**: [v0.1.0-beta.2](https://github.com/T4toh/dokusho-renshuu/releases/tag/v0.1.0-beta.2) (prerelease, APK release minificado R8 firmado con debug key, 42.7 MB, main 26e4af6 post-PR #12 — catálogo con furigana completa en assets; smoke OK en tablet, instalada ahí con `install -r`). beta.1 queda obsoleta: muestra furigana vieja porque la app no re-descarga historias bundleadas. El usuario la usa en el día a día y junta feedback para la próxima tanda.
 - **Release db vigente**: `db-v2` = `diccionario-v2.db` (73.3 MB, metadata version=2, glosas limpias: parser Jitendex descarta 23 marcadores de structured content; MAX_ORACIONES_POR_KANJI=30). db-v1 queda obsoleto.
 - **Fuentes** (URLs vigentes en `diccionario/README.md`): Jitendex ya NO distribuye por GitHub release assets; Tatoeba discontinuó el export directo de pares → `diccionario/fuentes_tatoeba.py` los arma desde exports por-idioma.
 - **Contrato para la app (Plan 3)**: `oracion_palabra` solo indexa términos de 2-6 chars; palabras de 1 kanji → fallback a `oracion_kanji`. Listas en el db = JSON arrays (`ensure_ascii=False`). Versión de esquema en tabla `metadata`.
