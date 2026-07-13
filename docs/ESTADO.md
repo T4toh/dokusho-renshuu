@@ -111,7 +111,7 @@
 - Poder seleccionar cualquier texto del lector (selección libre).
 - Poder buscar lo seleccionado — ¿búsqueda en Google? Definir alcance.
 - ~~Furigana faltante en momotaro: por alguna razón siempre falta antes de へ (catálogo → alineador `historias/src/aozora.py`, no Kuromoji).~~ Resuelto: la fuente Aozora trae ruby parcial (no era bug del alineador); relleno con janome en el pipeline.
-- ~~Faltan muchas más furiganas en general (auditar cobertura).~~ Resuelto: cobertura 11.5%–92.9% → ~100% con relleno janome/IPADIC.
+- ~~Faltan muchas más furiganas en general (auditar cobertura).~~ Resuelto: cobertura 11.5%–92.9% → 94.3%–100% con relleno janome/IPADIC (gap residual: 犍陀多 y ~13 kanji sueltos fuera de IPADIC).
 - ~~Algunas furiganas están mal: p. ej. 水 = "miizu" (¿みいず?) en vez de みず — revisar origen (ruby Aozora vs `GeneradorFurigana`/Kuromoji).~~ No es bug: `水《みいず》` es la canción del cuento (alarga vocales: かあらいぞ/ああまいぞ); fiel al original.
 
 ## Proceso de trabajo usado
