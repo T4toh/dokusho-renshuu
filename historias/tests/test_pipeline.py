@@ -61,6 +61,20 @@ class TestProcesarObra(unittest.TestCase):
                 os.path.join(self.tmp, 'nada.txt'),
                 {'id': 'x', 'fuente': 'aozora:0'})
 
+    def test_rellena_furigana_faltante(self):
+        historia = pipeline.procesar_obra(
+            self.ruta_txt, {'id': 'momotaro', 'fuente': 'aozora:18376'})
+        oracion = historia['parrafos'][0]['oraciones'][1]
+        self.assertIn('山へ', oracion['texto'])
+        lecturas = {(t[0], t[1]): t[2] for t in oracion['furigana']}
+        idx_yama = oracion['texto'].index('山')
+        idx_kawa = oracion['texto'].index('川')
+        idx_sen = oracion['texto'].index('洗濯')
+        self.assertEqual(lecturas.get((idx_yama, idx_yama + 1)), 'やま')
+        self.assertEqual(lecturas.get((idx_kawa, idx_kawa + 1)), 'かわ')
+        # el ruby Aozora original sigue intacto
+        self.assertEqual(lecturas.get((idx_sen, idx_sen + 2)), 'せんたく')
+
 
 class TestProcesarObraDescartaEncabezados(unittest.TestCase):
     def setUp(self):
