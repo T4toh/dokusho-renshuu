@@ -25,7 +25,7 @@
 - **Release db vigente**: `db-v2` = `diccionario-v2.db` (73.3 MB, metadata version=2, glosas limpias: parser Jitendex descarta 23 marcadores de structured content; MAX_ORACIONES_POR_KANJI=30). db-v1 queda obsoleto.
 - **Fuentes** (URLs vigentes en `diccionario/README.md`): Jitendex ya NO distribuye por GitHub release assets; Tatoeba discontinuó el export directo de pares → `diccionario/fuentes_tatoeba.py` los arma desde exports por-idioma.
 - **Contrato para la app (Plan 3)**: `oracion_palabra` solo indexa términos de 2-6 chars; palabras de 1 kanji → fallback a `oracion_kanji`. Listas en el db = JSON arrays (`ensure_ascii=False`). Versión de esquema en tabla `metadata`.
-- **Catálogo**: schema v2 (`titulo_lectura`, `titulo_en` nullable, `kanjis_unicos`, `oraciones`; sin encabezados de sección; urashima_taro ahora `media`). La app exige version==2. URL raw `https://raw.githubusercontent.com/T4toh/dokusho-renshuu/main/catalogo/catalogo.json`. **Tanda 2 (Plan 4c)**: +6 historias (10 en total, sin suplentes) — `hanasaka_jijii`, `shitakiri_suzume`, `kintaro` de 楠山正雄; `gongitsune`, `tebukuro_wo_kaini` de 新美南吉; `kumo_no_ito` de 芥川龍之介 (dificultad `facil` las 5 primeras, `media` kumo_no_ito). Invariante byte-idéntico de los 4 JSON de tanda 1 verificado. Gaiji de 3er/4to nivel (`犍` en 犍陀多, kumo_no_ito) resueltos vía tabla `_GAIJI_CONOCIDOS` en `historias/src/aozora.py`.
+- **Catálogo**: schema v2 (`titulo_lectura`, `titulo_en` nullable, `kanjis_unicos`, `oraciones`; sin encabezados de sección; urashima_taro ahora `media`). La app exige version==2. URL raw `https://raw.githubusercontent.com/T4toh/dokusho-renshuu/main/catalogo/catalogo.json`. **Tanda 2 (Plan 4c)**: +6 historias (10 en total, sin suplentes) — `hanasaka_jijii`, `shitakiri_suzume`, `kintaro` de 楠山正雄; `gongitsune`, `tebukuro_wo_kaini` de 新美南吉; `kumo_no_ito` de 芥川龍之介 (dificultad `facil` las 5 primeras, `media` kumo_no_ito). Invariante byte-idéntico de los 4 JSON de tanda 1 verificado. Gaiji de 3er/4to nivel (`犍` en 犍陀多, kumo_no_ito) resueltos vía tabla `_GAIJI_CONOCIDOS` en `historias/src/aozora.py`. Furigana completa desde 2026-07-13: huecos de ruby Aozora rellenados con janome/IPADIC en el pipeline (spec docs/superpowers/specs/2026-07-13-furigana-relleno-catalogo-design.md); el invariante byte-idéntico de tanda 1 dejó de valer.
 - **Entorno**: builds JVM (gradle/Android Studio, Planes 3-4) van en la PC secundaria — la principal tiene un bug de CPU que cuelga con Java. Python (Plan 2) anda en cualquiera.
 - **Contrato furigana**: `[inicio, fin, lectura]` con fin exclusivo sobre el texto de la oración; diálogo `「…」` = 1 oración (portar igual en Kotlin, Plan 3).
 - `historias/src/jlpt.py` es generado (regenerar con `genera_jlpt.py` solo si cambia KANJIDIC2).
@@ -110,9 +110,9 @@
 
 - Poder seleccionar cualquier texto del lector (selección libre).
 - Poder buscar lo seleccionado — ¿búsqueda en Google? Definir alcance.
-- Furigana faltante en momotaro: por alguna razón siempre falta antes de へ (catálogo → alineador `historias/src/aozora.py`, no Kuromoji).
-- Faltan muchas más furiganas en general (auditar cobertura).
-- Algunas furiganas están mal: p. ej. 水 = "miizu" (¿みいず?) en vez de みず — revisar origen (ruby Aozora vs `GeneradorFurigana`/Kuromoji).
+- ~~Furigana faltante en momotaro: por alguna razón siempre falta antes de へ (catálogo → alineador `historias/src/aozora.py`, no Kuromoji).~~ Resuelto: la fuente Aozora trae ruby parcial (no era bug del alineador); relleno con janome en el pipeline.
+- ~~Faltan muchas más furiganas en general (auditar cobertura).~~ Resuelto: cobertura 11.5%–92.9% → ~100% con relleno janome/IPADIC.
+- ~~Algunas furiganas están mal: p. ej. 水 = "miizu" (¿みいず?) en vez de みず — revisar origen (ruby Aozora vs `GeneradorFurigana`/Kuromoji).~~ No es bug: `水《みいず》` es la canción del cuento (alarga vocales: かあらいぞ/ああまいぞ); fiel al original.
 
 ## Proceso de trabajo usado
 
