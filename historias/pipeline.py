@@ -9,7 +9,7 @@ import argparse
 import json
 import os
 
-from src import aozora, dificultad, emisor, segmentador
+from src import aozora, dificultad, emisor, relleno_furigana, segmentador
 
 LICENCIA_DEFAULT = 'dominio público'
 
@@ -28,7 +28,7 @@ def procesar_obra(ruta_txt: str, declaracion: dict) -> dict:
     """Un .txt de Aozora → dict de historia listo para emitir."""
     obra = aozora.parsear(leer_fuente(ruta_txt))
     parrafos = [
-        oraciones
+        [(t, relleno_furigana.completar(t, f)) for t, f in oraciones]
         for texto, furigana in obra['parrafos']
         if (oraciones := segmentador.segmentar_parrafo(texto, furigana))
     ]

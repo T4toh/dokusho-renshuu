@@ -2,7 +2,8 @@
 
 Convierte cuentos de Aozora Bunko en los JSON que consume la app
 (`catalogo/` en la raíz del repo, servido vía raw.githubusercontent).
-Python stdlib only, sin pip.
+Python stdlib + janome (relleno de furigana faltante, `requirements.txt`):
+`python3 -m pip install --user -r requirements.txt`.
 
 ## Obras (declaradas en `obras.json`)
 
@@ -35,10 +36,11 @@ mv *.txt momotaro.txt
 ## Uso
 
 ```bash
-python3 genera_jlpt.py                  # regenerar src/jlpt.py (solo si cambia KANJIDIC2)
-python3 pipeline.py                     # fuentes/ + obras.json → ../catalogo/
-python3 verify_catalogo.py              # verificación (exit 1 si falla)
-python3 -m unittest discover tests -v   # tests
+python3 -m pip install --user -r requirements.txt  # instalar dependencias
+python3 genera_jlpt.py                             # regenerar src/jlpt.py (solo si cambia KANJIDIC2)
+python3 pipeline.py                                # fuentes/ + obras.json → ../catalogo/
+python3 verify_catalogo.py                         # verificación (exit 1 si falla)
+python3 -m unittest discover tests -v              # tests
 ```
 
 ## Contrato de datos (app, catálogo v2)
