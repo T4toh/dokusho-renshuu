@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -76,8 +75,8 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
             Spacer(Modifier.height(24.dp))
             // FlowRow: los botones van en fila cuando el ancho alcanza (tablet,
             // landscape) y bajan de línea solos en angosto — sin ramas por tamaño
-            // de pantalla. widthIn(min 160): los tres quedan del mismo ancho (el
-            // texto más largo entra cómodo); si un texto lo excede, crece solo.
+            // de pantalla. Los tres comparten ancho: el texto invisible con el
+            // label más largo dentro de BotonExport define el intrínseco común.
             val tipoGenerando = (estado as? EstadoExport.Generando)?.tipo
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -90,7 +89,7 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.WORDS,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.WORDS,
                     onClick = { vm.exportar(TipoExport.WORDS) },
-                    modifier = Modifier.widthIn(min = 160.dp).width(IntrinsicSize.Max),
+                    modifier = Modifier.width(IntrinsicSize.Max),
                 )
                 BotonExport(
                     titulo = "Export Kanji deck",
@@ -99,7 +98,7 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.KANJI,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.KANJI,
                     onClick = { vm.exportar(TipoExport.KANJI) },
-                    modifier = Modifier.widthIn(min = 160.dp).width(IntrinsicSize.Max),
+                    modifier = Modifier.width(IntrinsicSize.Max),
                 )
                 BotonExport(
                     titulo = "Export Stories deck",
@@ -108,7 +107,7 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.STORIES,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.STORIES,
                     onClick = { vm.exportar(TipoExport.STORIES) },
-                    modifier = Modifier.widthIn(min = 160.dp).width(IntrinsicSize.Max),
+                    modifier = Modifier.width(IntrinsicSize.Max),
                 )
             }
 
@@ -156,6 +155,10 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
     }
 }
 
+// El más largo de los 3 títulos de BotonExport — define el ancho común de los
+// botones vía el texto invisible del Box. Si se agrega/cambia un título, revisar.
+private const val TITULO_BOTON_MAS_LARGO = "Export Stories deck"
+
 @Composable
 private fun BotonExport(
     titulo: String,
@@ -176,6 +179,10 @@ private fun BotonExport(
             // texto queda invisible (alpha 0) pero compuesto, así sigue definiendo
             // el ancho y el botón no cambia de tamaño.
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                // Texto invisible con el label más largo: iguala el ancho intrínseco
+                // de los 3 botones con cualquier fuente del sistema (en dp fijo la
+                // fuente del POCO los desparejaba); mismo truco que el del spinner.
+                Text(TITULO_BOTON_MAS_LARGO, Modifier.alpha(0f))
                 Text(titulo, Modifier.alpha(if (generandoEste) 0f else 1f))
                 if (generandoEste) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)

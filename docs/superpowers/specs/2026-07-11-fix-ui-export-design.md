@@ -87,13 +87,14 @@ FlowRow auto-wrap, sin ramas por tamaño de pantalla.
 - El `Column(Modifier.width(IntrinsicSize.Max))` que envuelve los 3 `BotonExport`
   pasa a `FlowRow(horizontalArrangement/verticalArrangement = spacedBy(12.dp))`;
   los `Spacer(12.dp)` intermedios se van (los reemplaza el arrangement).
-- Cada `BotonExport` se envuelve en `Modifier.widthIn(min = 160.dp).width(IntrinsicSize.Max)`.
-  El `widthIn` externo iguala los 3 botones (feedback del usuario en POCO: anchos
-  por texto se veían desparejos): 160.dp cubre cómodo el texto más largo actual
-  (~150.dp); si un texto futuro lo excede, ese botón crece solo. Con 160.dp la
-  tablet mantiene fila de 3 en ambas orientaciones; en teléfono portrait (~443.dp)
-  pueden entrar 2 por línea (wrap 2+1, uniforme). `BotonExport` gana parámetro
-  `modifier` para recibirlo.
+- Cada `BotonExport` se envuelve en `Modifier.width(IntrinsicSize.Max)` y el Box
+  interno del botón compone un texto invisible (alpha 0) con el label más largo
+  (`TITULO_BOTON_MAS_LARGO = "Export Stories deck"`, const privada del archivo):
+  el ancho intrínseco de los 3 queda idéntico con cualquier fuente del sistema.
+  (Primer intento con `widthIn(min = 160.dp)` falló: MiSans del POCO es más ancha
+  y dos labels superaban el mínimo — un dp fijo no puede igualar tipografías
+  distintas; mismo patrón que el texto invisible del spinner.) `BotonExport` gana
+  parámetro `modifier` para recibir el width.
 - Con ancho (tablet, teléfono landscape): fila de 3; angosto: bajan de línea solos.
 - `FlowRow` puede requerir `@OptIn(ExperimentalLayoutApi::class)` según versión de
   foundation — agregar solo si el compile lo pide.
