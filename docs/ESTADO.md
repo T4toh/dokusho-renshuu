@@ -96,6 +96,24 @@
 - Sin test de línea con gaiji + anotación normal juntas (re.sub multi-match, cubierto por trace).
 - Si aparecen más gaiji: keyear `_GAIJI_CONOCIDOS` por sufijo JIS (`第3水準1-87-71`) en vez de la descripción exacta (varía entre archivos).
 
+## Backlog feedback de uso (2026-07-13 — leyendo momotaro)
+
+### Mazos Anki (`dominio/anki/`)
+
+- Marcar (resaltar) el kanji objetivo dentro de la oración de la tarjeta.
+- Agregar traducción literal al inglés de la oración.
+- Separar un poco más las pronunciaciones entre sí (espaciado visual).
+- Poner siempre primero la pronunciación en hiragana (uso más común, también en doblajes).
+- Mejorar los separadores entre pronunciaciones.
+
+### App Dokusho
+
+- Poder seleccionar cualquier texto del lector (selección libre).
+- Poder buscar lo seleccionado — ¿búsqueda en Google? Definir alcance.
+- Furigana faltante en momotaro: por alguna razón siempre falta antes de へ (catálogo → alineador `historias/src/aozora.py`, no Kuromoji).
+- Faltan muchas más furiganas en general (auditar cobertura).
+- Algunas furiganas están mal: p. ej. 水 = "miizu" (¿みいず?) en vez de みず — revisar origen (ruby Aozora vs `GeneradorFurigana`/Kuromoji).
+
 ## Proceso de trabajo usado
 
 Brainstorming → spec → plan por subsistema (`docs/superpowers/plans/`) → ejecución subagent-driven (implementer + reviewer por tarea, review final de branch) → PR. Repetir por plan.
