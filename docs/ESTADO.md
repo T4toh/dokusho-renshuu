@@ -17,6 +17,7 @@
 | 4a.1 | `app/` — mazos por historia (subdecks de pre-lectura) | ✅ Completo ([PR #8](https://github.com/T4toh/dokusho-renshuu/pull/8)) |
 | 4b   | `app/` — import de texto propio                  | ✅ Completo ([PR #9](https://github.com/T4toh/dokusho-renshuu/pull/9))                                               |
 | 4c   | catalogo/ — tanda 2 de historias (6 obras)       | ✅ Completo ([PR #10](https://github.com/T4toh/dokusho-renshuu/pull/10))                                             |
+| fix  | app/ — UI export: grid adaptivo + autor · dificultad + botones en fila (FlowRow) | ✅ Completo ([PR #11](https://github.com/T4toh/dokusho-renshuu/pull/11))            |
 
 ## Datos operativos
 
@@ -83,10 +84,10 @@
 - `resumenHistorias()` doc sugiere ahorro de I/O que no existe (parsea historias completas igual).
 - DetectorJapones: katakana halfwidth (U+FF61–FF9F) no cuenta como japonés (texto legacy dispara el aviso; benigno).
 
-## Backlog UI Export (feedback de uso post-tanda 2)
+## Backlog diferido (fix UI export — review final, teórico)
 
-- **BUG**: la lista de checkboxes de historias en ExportScreen no scrollea — con 10 historias desborda el viewport y los ticks se superponen (visto en tablet: el último ítem renderiza doble/encimado). Pasar la sección a algo scrolleable (o LazyColumn con altura acotada) y verificar en tablet y teléfono.
-- Filas de la lista de export muy peladas: mostrar detalles junto al título de cada obra (autor · dificultad, estilo tarjeta de biblioteca) para distinguir obras homónimas o importadas.
+- ExportScreen: toggle de un checkbox recompone todas las filas visibles (la lambda del item lee el set `seleccionadas` entero) — imperceptible con 10 historias; revisar si la lista crece mucho.
+- Viewport muy corto (teléfono en landscape): header y bloque Exported se miden primero y la lista weighted puede quedar ~0dp — decisión del spec (header/footer fijos), tablet OK en ambas orientaciones.
 
 ## Backlog diferido (tanda 2 — review final, teórico)
 

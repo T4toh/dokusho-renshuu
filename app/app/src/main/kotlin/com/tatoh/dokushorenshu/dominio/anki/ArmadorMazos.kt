@@ -31,9 +31,9 @@ data class MazoHistoria(val idHistoria: String, val titulo: String, val notas: L
 
 data class ResultadoHistorias(val mazos: List<MazoHistoria>, val kanjisOmitidos: Int)
 
-/** Id/título de una historia local — lo que necesita la pantalla de Export
+/** Id/título/autor/dificultad de una historia local — lo que necesita la pantalla de Export
  *  para listar checkboxes sin cargar la historia completa (parrafos/oraciones). */
-data class HistoriaResumen(val id: String, val titulo: String)
+data class HistoriaResumen(val id: String, val titulo: String, val autor: String, val dificultad: String)
 
 /** Junta los datos ya persistidos (Room + diccionario offline + historias
  *  locales) en las notas que consume `EscritorApkg`. Sin conocimiento de Anki:
@@ -50,7 +50,7 @@ class ArmadorMazos(
      *  `contarHistoriasLocales()` (ahora el VM ya necesita esta lista de todos
      *  modos, así que contar aparte sería I/O duplicado). */
     fun resumenHistorias(): List<HistoriaResumen> =
-        historiasRepo.historiasLocales().map { HistoriaResumen(it.id, it.titulo) }
+        historiasRepo.historiasLocales().map { HistoriaResumen(it.id, it.titulo, it.autor, it.dificultad) }
 
     /** Arma ambos mazos leyendo las historias locales una sola vez (evita I/O
      *  duplicado: `historiasLocales()` re-lee todos los JSON de assets/filesDir

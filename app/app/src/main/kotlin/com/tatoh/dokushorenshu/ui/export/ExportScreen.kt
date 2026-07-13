@@ -2,8 +2,10 @@ package com.tatoh.dokushorenshu.ui.export
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -68,10 +73,15 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
             )
 
             Spacer(Modifier.height(24.dp))
-            // width(IntrinsicSize.Max): los tres botones toman el ancho del más
-            // largo en vez de ajustarse cada uno a su texto
+            // FlowRow: los botones van en fila cuando el ancho alcanza (tablet,
+            // landscape) y bajan de línea solos en angosto — sin ramas por tamaño
+            // de pantalla. Los tres comparten ancho: el texto invisible con el
+            // label más largo dentro de BotonExport define el intrínseco común.
             val tipoGenerando = (estado as? EstadoExport.Generando)?.tipo
-            Column(Modifier.width(IntrinsicSize.Max)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 BotonExport(
                     titulo = "Export Words deck",
                     habilitado = contadores.words > 0,
@@ -79,8 +89,8 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.WORDS,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.WORDS,
                     onClick = { vm.exportar(TipoExport.WORDS) },
+                    modifier = Modifier.width(IntrinsicSize.Max),
                 )
-                Spacer(Modifier.height(12.dp))
                 BotonExport(
                     titulo = "Export Kanji deck",
                     habilitado = contadores.kanjisTaggeados > 0,
@@ -88,8 +98,8 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.KANJI,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.KANJI,
                     onClick = { vm.exportar(TipoExport.KANJI) },
+                    modifier = Modifier.width(IntrinsicSize.Max),
                 )
-                Spacer(Modifier.height(12.dp))
                 BotonExport(
                     titulo = "Export Stories deck",
                     habilitado = contadores.historias > 0 && seleccionadas.isNotEmpty(),
@@ -97,19 +107,35 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.STORIES,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.STORIES,
                     onClick = { vm.exportar(TipoExport.STORIES) },
+                    modifier = Modifier.width(IntrinsicSize.Max),
                 )
             }
 
             if (historiasStories.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                Column {
-                    for (historia in historiasStories) {
+                // weight(1f, fill = false): la lista scrollea en el espacio del medio
+                // sin empujar el bloque Exported/Share fuera de pantalla, y con pocas
+                // historias no se estira (el bloque queda pegado a la lista).
+                // Adaptive(300.dp): mismo minSize que la grilla de biblioteca — en
+                // tablet rinde ~2 columnas portrait / ~3 landscape; en teléfono 1.
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 300.dp),
+                    modifier = Modifier.weight(1f, fill = false),
+                ) {
+                    items(historiasStories, key = { it.id }) { historia ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
                                 checked = historia.id in seleccionadas,
                                 onCheckedChange = { vm.toggleHistoria(historia.id) },
                             )
-                            Text(historia.titulo, style = MaterialTheme.typography.bodyMedium)
+                            Column {
+                                Text(historia.titulo, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    detalleHistoria(historia.autor, historia.dificultad),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -129,6 +155,10 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
     }
 }
 
+// El más largo de los 3 títulos de BotonExport — define el ancho común de los
+// botones vía el texto invisible del Box. Si se agrega/cambia un título, revisar.
+private const val TITULO_BOTON_MAS_LARGO = "Export Stories deck"
+
 @Composable
 private fun BotonExport(
     titulo: String,
@@ -137,8 +167,9 @@ private fun BotonExport(
     generandoEste: Boolean,
     generandoOtro: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column {
+    Column(modifier) {
         Button(
             onClick = onClick,
             enabled = habilitado && !generandoEste && !generandoOtro,
@@ -148,6 +179,10 @@ private fun BotonExport(
             // texto queda invisible (alpha 0) pero compuesto, así sigue definiendo
             // el ancho y el botón no cambia de tamaño.
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                // Texto invisible con el label más largo: iguala el ancho intrínseco
+                // de los 3 botones con cualquier fuente del sistema (en dp fijo la
+                // fuente del POCO los desparejaba); mismo truco que el del spinner.
+                Text(TITULO_BOTON_MAS_LARGO, Modifier.alpha(0f))
                 Text(titulo, Modifier.alpha(if (generandoEste) 0f else 1f))
                 if (generandoEste) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -176,3 +211,19 @@ private fun compartirMazo(context: Context, archivo: File) {
     }
     context.startActivity(Intent.createChooser(intent, "Share Anki deck"))
 }
+
+// Mapea la dificultad cruda a display en inglés (duplicado a propósito del helper
+// privado de BibliotecaScreen — convención del repo: no acoplar screens entre sí).
+private fun dificultadDisplay(dificultad: String): String = when (dificultad) {
+    "facil" -> "Easy"
+    "media" -> "Medium"
+    "dificil" -> "Hard"
+    else -> dificultad.replaceFirstChar { it.uppercase() }
+}
+
+/** Línea secundaria de la fila: solo partes no vacías — una importada sin autor
+ *  muestra "Medium", nunca " · Medium" con separador colgante. */
+private fun detalleHistoria(autor: String, dificultad: String): String =
+    listOf(autor, dificultadDisplay(dificultad))
+        .filter { it.isNotBlank() }
+        .joinToString(" · ")

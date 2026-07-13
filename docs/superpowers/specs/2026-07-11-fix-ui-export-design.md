@@ -63,6 +63,45 @@ data class HistoriaResumen(val id: String, val titulo: String, val autor: String
   3. Exportar Stories → "Exported…" + Share visibles sin scrollear, con la lista larga.
 - Suite completa de la app verde antes del PR.
 
+## Addendum 2026-07-12: grid adaptivo (feedback post-smoke, mismo PR #11)
+
+En tablet landscape la lista de una columna deja ~70% del ancho vacío. Validado con
+el usuario: la lista pasa a grid adaptivo, sin tocar el resto del layout.
+
+- `LazyColumn` → `LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 300.dp))`,
+  mismo `Modifier.weight(1f, fill = false)`, mismo `items(historiasStories, key = { it.id })`,
+  fila interna idéntica (Checkbox + título + detalle).
+- `300.dp` = mismo valor que la grilla de la biblioteca (`BibliotecaScreen.kt:119`) —
+  consistencia visual y de código. Tablet: ~2 columnas portrait, ~3 landscape;
+  teléfono angosto: 1 columna (degrada solo, sin ramas por tamaño de pantalla).
+- Header y bloque Listo/Share sin cambios; el grid scrollea en el espacio del medio.
+- Testing: sin unit tests nuevos (screen); compile + suite completa + smoke tablet
+  en ambas orientaciones (columnas esperadas, scroll con header fijo, Exported+Share
+  visibles sin scrollear).
+
+## Addendum 2026-07-12 (2): botones de export en fila cuando hay ancho
+
+En landscape los 3 botones apilados desaprovechan el ancho. Validado con el usuario:
+FlowRow auto-wrap, sin ramas por tamaño de pantalla.
+
+- El `Column(Modifier.width(IntrinsicSize.Max))` que envuelve los 3 `BotonExport`
+  pasa a `FlowRow(horizontalArrangement/verticalArrangement = spacedBy(12.dp))`;
+  los `Spacer(12.dp)` intermedios se van (los reemplaza el arrangement).
+- Cada `BotonExport` se envuelve en `Modifier.width(IntrinsicSize.Max)` y el Box
+  interno del botón compone un texto invisible (alpha 0) con el label más largo
+  (`TITULO_BOTON_MAS_LARGO = "Export Stories deck"`, const privada del archivo):
+  el ancho intrínseco de los 3 queda idéntico con cualquier fuente del sistema.
+  (Primer intento con `widthIn(min = 160.dp)` falló: MiSans del POCO es más ancha
+  y dos labels superaban el mínimo — un dp fijo no puede igualar tipografías
+  distintas; mismo patrón que el texto invisible del spinner.) `BotonExport` gana
+  parámetro `modifier` para recibir el width.
+- Con ancho (tablet, teléfono landscape): fila de 3; angosto: bajan de línea solos.
+- `FlowRow` puede requerir `@OptIn(ExperimentalLayoutApi::class)` según versión de
+  foundation — agregar solo si el compile lo pide.
+- Testing: compile + suite + smoke tablet (fila en ambas orientaciones o wrap
+  correcto) y POCO portrait (apilados, sin regresión); POCO sin taps adb —
+  navega el usuario, capturas por screencap.
+
 ## Fuera de alcance
 
 - Toggle de checkboxes durante `Generando` (minor conocido, benigno — backlog).
