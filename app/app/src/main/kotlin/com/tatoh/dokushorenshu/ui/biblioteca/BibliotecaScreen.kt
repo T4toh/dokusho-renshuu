@@ -84,6 +84,7 @@ fun BibliotecaScreen(
     val locales by vm.locales.collectAsState()
     val catalogo by vm.catalogo.collectAsState()
     val review by vm.review.collectAsState()
+    val actualizables by vm.actualizables.collectAsState()
 
     // carga inicial al entrar a la pantalla
     LaunchedEffect(Unit) { vm.cargar() }
@@ -176,6 +177,18 @@ fun BibliotecaScreen(
                                     progress = { item.progresoPct / 100f },
                                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                                 )
+                            }
+                            // Update disponible (fix "la app nunca actualiza historias bundleadas"): el
+                            // catálogo remoto trae esta historia con otro tamaño — re-descargarla pisa el
+                            // asset/descarga vieja (prioridad descargada > asset en historiasLocales) y
+                            // descargar() recarga todo, lo que limpia este flag.
+                            if (item.historia.id in actualizables) {
+                                Button(
+                                    onClick = { vm.descargar(item.historia.id) },
+                                    modifier = Modifier.padding(top = 8.dp),
+                                ) {
+                                    Text("Update")
+                                }
                             }
                         }
                     }

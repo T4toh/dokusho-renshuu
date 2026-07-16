@@ -21,6 +21,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** Selección de un rango de tokens dentro de UNA oración (backlog feedback de uso
+ *  2026-07-13: buscar en el browser expresiones/frases que el diccionario no tiene).
+ *  [inicio]/[fin] son offsets de chars sobre `oracion.texto` (fin EXCLUSIVO, mismo
+ *  contrato que [PalabraToken]): el rango cubre tokens completos, y el texto
+ *  seleccionado es el substring crudo — partículas intermedias incluidas, sin
+ *  furigana. */
+data class SeleccionTexto(val indiceOracion: Int, val inicio: Int, val fin: Int)
+
 data class OracionPlana(
     val parrafo: Int,
     val oracionEnParrafo: Int,
@@ -59,10 +67,16 @@ data class EstadoLector(
     // queda centrado por el snap del fling) no dispara una SEGUNDA corrección — esa
     // doble corrección era el "rubberbanding" reportado.
     val centradoPedido: Int = 0,
+    // selección activa (long-press + taps que extienden, ver SeleccionTexto); null = sin
+    // selección. La limpia cualquier navegación (mover/enfocar a otra oración).
+    val seleccion: SeleccionTexto? = null,
 ) {
     val enPortada: Boolean get() = indiceActual == -1
     val porcentajeLeido: Int get() =
         if (oraciones.isEmpty()) 0 else ((indiceActual.coerceAtLeast(0) + 1) * 100) / oraciones.size
+    val textoSeleccionado: String? get() = seleccion?.let { s ->
+        oraciones.getOrNull(s.indiceOracion)?.oracion?.texto?.substring(s.inicio, s.fin)
+    }
 }
 
 /** Resultado intermedio de cargar(): agrupa lo leído en IO antes de publicar el estado. */
@@ -152,6 +166,7 @@ class LectorViewModel(
             indiceActual = nuevo,
             progresoGuardado = if (nuevo >= 0) nuevo else estado.progresoGuardado,
             centradoPedido = estado.centradoPedido + 1,
+            seleccion = null,
         )
         if (nuevo >= 0) {
             persistirProgreso(estado.oraciones[nuevo])
@@ -172,7 +187,7 @@ class LectorViewModel(
         if (estado.oraciones.isEmpty()) return
         if (indice < 0 || indice > estado.oraciones.lastIndex) return
         if (indice == estado.indiceActual) return
-        _estado.value = estado.copy(indiceActual = indice, progresoGuardado = indice)
+        _estado.value = estado.copy(indiceActual = indice, progresoGuardado = indice, seleccion = null)
         persistirProgreso(estado.oraciones[indice])
     }
 
@@ -204,6 +219,39 @@ class LectorViewModel(
             }
             _estado.value = _estado.value.copy(consulta = consulta)
         }
+    }
+
+    /** Long-press sobre un token: ancla (o re-ancla) la selección en ese token y enfoca
+     *  su oración. No abre el sheet de diccionario — eso queda para el tap simple. */
+    fun iniciarSeleccion(indice: Int, token: PalabraToken) {
+        val estado = _estado.value
+        if (indice !in estado.oraciones.indices) return
+        enfocar(indice)  // limpia una selección previa en otra oración, enfoca y persiste
+        _estado.value = _estado.value.copy(seleccion = SeleccionTexto(indice, token.inicio, token.fin))
+    }
+
+    /** Tap sobre un token (reemplaza el par enfocar+tocarPalabra que armaba la Screen):
+     *  con selección activa en la MISMA oración, extiende el rango a la unión
+     *  [min(inicio), max(fin)] en vez de abrir el diccionario; en cualquier otro caso
+     *  (sin selección, u otra oración) comportamiento original — enfocar limpia la
+     *  selección vieja y tocarPalabra abre la consulta. */
+    fun tapPalabra(indice: Int, token: PalabraToken) {
+        val seleccion = _estado.value.seleccion
+        if (seleccion != null && seleccion.indiceOracion == indice) {
+            _estado.value = _estado.value.copy(
+                seleccion = seleccion.copy(
+                    inicio = minOf(seleccion.inicio, token.inicio),
+                    fin = maxOf(seleccion.fin, token.fin),
+                ),
+            )
+            return
+        }
+        enfocar(indice)
+        tocarPalabra(token)
+    }
+
+    fun limpiarSeleccion() {
+        _estado.value = _estado.value.copy(seleccion = null)
     }
 
     fun cerrarSheet() {

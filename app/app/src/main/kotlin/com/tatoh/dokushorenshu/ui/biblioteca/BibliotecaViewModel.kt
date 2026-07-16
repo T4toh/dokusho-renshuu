@@ -57,6 +57,13 @@ class BibliotecaViewModel(
     private val _review = MutableStateFlow<List<TarjetaReview>>(emptyList())
     val review: StateFlow<List<TarjetaReview>> = _review
 
+    // ids de historias locales cuya versión remota difiere (fix "la app nunca actualiza
+    // historias bundleadas", backlog feedback de uso 2026-07-13): comparación de
+    // tamanio remoto vs tamanioLocal en refrescarCatalogo. La UI muestra Update en la
+    // tarjeta y descargar(id) — que ya recarga todo vía cargar() — limpia el flag.
+    private val _actualizables = MutableStateFlow<Set<String>>(emptySet())
+    val actualizables: StateFlow<Set<String>> = _actualizables
+
     fun cargar() {
         viewModelScope.launch {
             _locales.value = withContext(ioDispatcher) {
@@ -96,9 +103,26 @@ class BibliotecaViewModel(
             val idsLocales = _locales.value.map { it.historia.id }.toSet()
             _catalogo.value = historiasRepo.catalogoRemoto().fold(
                 onSuccess = { catalogo ->
+                    // update disponible: historia YA local cuyo tamaño remoto difiere del
+                    // local (tamanioLocal: descargada = bytes del archivo, bundleada =
+                    // entrada del catálogo asset, importada/desconocida = null → nunca
+                    // actualizable). File I/O → ioDispatcher, como el resto de cargar().
+                    _actualizables.value = withContext(ioDispatcher) {
+                        catalogo.historias
+                            .filter { it.id in idsLocales }
+                            .filter { remota ->
+                                historiasRepo.tamanioLocal(remota.id)
+                                    ?.let { local -> local != remota.tamanio } == true
+                            }
+                            .map { it.id }
+                            .toSet()
+                    }
                     EstadoCatalogo.Ok(catalogo.historias.filter { it.id !in idsLocales })
                 },
-                onFailure = { EstadoCatalogo.Error("Couldn't load the catalog") },
+                onFailure = {
+                    _actualizables.value = emptySet()
+                    EstadoCatalogo.Error("Couldn't load the catalog")
+                },
             )
         }
     }
