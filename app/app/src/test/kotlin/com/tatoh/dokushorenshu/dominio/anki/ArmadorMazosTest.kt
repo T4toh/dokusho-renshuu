@@ -1,10 +1,13 @@
 package com.tatoh.dokushorenshu.dominio.anki
 
 import com.tatoh.dokushorenshu.datos.DiccionarioFake
+import com.tatoh.dokushorenshu.datos.Historia
 import com.tatoh.dokushorenshu.datos.HistoriasRepo
 import com.tatoh.dokushorenshu.datos.KanjiInfo
+import com.tatoh.dokushorenshu.datos.Oracion
 import com.tatoh.dokushorenshu.datos.OracionEjemplo
 import com.tatoh.dokushorenshu.datos.Palabra
+import com.tatoh.dokushorenshu.datos.Parrafo
 import com.tatoh.dokushorenshu.datos.progreso.KanjiTocado
 import com.tatoh.dokushorenshu.datos.progreso.PalabraTocada
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDaoFake
@@ -161,11 +164,13 @@ class ArmadorMazosTest {
         val notas = armador(dao, diccionario).armarWords()
         val oraciones = notas.single { it.palabra == "洗濯" }.oraciones
         assertEquals(5, oraciones.size)
-        assertEquals(3, oraciones.count { !it.contains("<br>") })  // de las historias, ruby sin <br>
-        assertEquals(2, oraciones.count { it.contains("<br>") })   // relleno Tatoeba, "jp<br>en"
+        // el fixture de historias no trae traduccion (null) — solo el relleno
+        // Tatoeba emite el span (siempre trae traducción); el viejo <br> desapareció.
+        assertEquals(3, oraciones.count { !it.contains("traduccion") })  // de las historias, sin span
+        assertEquals(2, oraciones.count { it.contains("traduccion") })  // relleno Tatoeba, con span
         // prioridad: las 3 primeras son de historias, las 2 últimas de Tatoeba
-        assertTrue(oraciones.take(3).none { it.contains("<br>") })
-        assertTrue(oraciones.takeLast(2).all { it.contains("<br>") })
+        assertTrue(oraciones.take(3).none { it.contains("traduccion") })
+        assertTrue(oraciones.takeLast(2).all { it.contains("traduccion") })
     }
 
     @Test
@@ -179,7 +184,10 @@ class ArmadorMazosTest {
         }
         val notas = armador(dao, diccionario).armarWords()
         val oraciones = notas.single { it.palabra == "犬犬犬" }.oraciones
-        assertEquals(listOf("a&lt;b&gt;c<br>x &amp; y &lt;script&gt;"), oraciones)
+        assertEquals(
+            listOf("""a&lt;b&gt;c<span class="traduccion">x &amp; y &lt;script&gt;</span>"""),
+            oraciones,
+        )
     }
 
     @Test
@@ -191,6 +199,84 @@ class ArmadorMazosTest {
         val oraciones = notas.single { it.palabra == "桃太郎" }.oraciones
         assertEquals(5, oraciones.size)
         assertTrue(oraciones.none { it.contains("<br>") })
+    }
+
+    // --- Task 3: objetivo resaltado, traduccion en tarjeta, separador ・ ---
+
+    @Test
+    fun `oracion de historia lleva objetivo resaltado y traduccion en span`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("川", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["川"] = KanjiInfo("川", listOf("river"), listOf("セン"), listOf("かわ"), null, null)
+        }
+        val historias = listOf(
+            Historia(
+                id = "t", titulo = "t", autor = "a", fuente = "f", licencia = "l",
+                dificultad = "facil", version = 1,
+                parrafos = listOf(
+                    Parrafo(
+                        listOf(Oracion("川へ行った。", emptyList(), "To the river (he) went.")),
+                    ),
+                ),
+            ),
+        )
+        val resultado = armador(dao, diccionario).armarKanji(historias)
+        val oracion = resultado.first.single { it.kanji == "川" }.oraciones.first()
+        assertTrue(oracion.contains("""<b class="objetivo">川</b>"""))
+        assertTrue(oracion.contains("""<span class="traduccion">To the river (he) went.</span>"""))
+    }
+
+    @Test
+    fun `oracion de historia sin traduccion no emite span vacio`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("川", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["川"] = KanjiInfo("川", listOf("river"), listOf("セン"), listOf("かわ"), null, null)
+        }
+        val historias = listOf(
+            Historia(
+                id = "t", titulo = "t", autor = "a", fuente = "f", licencia = "l",
+                dificultad = "facil", version = 1,
+                parrafos = listOf(
+                    Parrafo(
+                        listOf(Oracion("川へ行った。", emptyList(), traduccion = null)),
+                    ),
+                ),
+            ),
+        )
+        val resultado = armador(dao, diccionario).armarKanji(historias)
+        val oracion = resultado.first.single { it.kanji == "川" }.oraciones.first()
+        assertFalse(oracion.contains("traduccion"))
+    }
+
+    @Test
+    fun `relleno tatoeba lleva objetivo resaltado y traduccion en span sin br`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("川", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["川"] = KanjiInfo("川", listOf("river"), listOf("セン"), listOf("かわ"), null, null)
+            ejemplosKanji["川"] = listOf(OracionEjemplo("川で泳ぐ。", "Swim in the river."))
+        }
+        // sin oraciones de historia para 川 (lista de historias vacía) — el relleno Tatoeba es la única oración.
+        val resultado = armador(dao, diccionario).armarKanji(emptyList())
+        val oracion = resultado.first.single { it.kanji == "川" }.oraciones.single()
+        assertEquals(
+            """<b class="objetivo">川</b>で泳ぐ。<span class="traduccion">Swim in the river.</span>""",
+            oracion,
+        )
+    }
+
+    @Test
+    fun `lecturas se unen con punto medio espaciado`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("水", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["水"] = KanjiInfo("水", listOf("water"), listOf("スイ"), listOf("みず", "みず-"), null, null)
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single { it.kanji == "水" }
+        assertEquals("みず ・ みず-", nota.kunYomi)
+        assertEquals("スイ", nota.onYomi)
     }
 
     // --- armar(): combina ambos mazos ---

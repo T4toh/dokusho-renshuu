@@ -110,8 +110,8 @@ class ArmadorMazos(
                 } else {
                     NotaKanji(
                         kanji = kanji,
-                        onYomi = info.onYomi.joinToString("、"),
-                        kunYomi = info.kunYomi.joinToString("、"),
+                        onYomi = info.onYomi.joinToString(" ・ "),
+                        kunYomi = info.kunYomi.joinToString(" ・ "),
                         significados = info.significados.joinToString("; "),
                         dificultad = tagPorKanji[kanji] ?: "",
                         oraciones = oracionesDeLaHistoria(historia, kanji),
@@ -141,7 +141,7 @@ class ArmadorMazos(
         historia.parrafos.asSequence()
             .flatMap { it.oraciones.asSequence() }
             .filter { it.texto.contains(kanji) }
-            .map { oracionARubyHtml(it) }
+            .map { oracionDeTarjeta(it, kanji) }
             .take(CAP_ORACIONES)
             .toList()
 
@@ -170,8 +170,8 @@ class ArmadorMazos(
         NotaKanji(
             kanji = tocado.kanji,
             // ModeloNotas espera strings ya formateados (contrato de Task 1)
-            onYomi = info.onYomi.joinToString("、"),
-            kunYomi = info.kunYomi.joinToString("、"),
+            onYomi = info.onYomi.joinToString(" ・ "),
+            kunYomi = info.kunYomi.joinToString(" ・ "),
             significados = info.significados.joinToString("; "),
             dificultad = requireNotNull(tocado.dificultad) {
                 "kanjisTaggeados() no debería traer dificultad null"
@@ -181,9 +181,12 @@ class ArmadorMazos(
             },
         )
 
-    /** Prioridad historias > Tatoeba, cap 5. Las oraciones de historias no
-     *  llevan traducción (las historias no traducen); las de Tatoeba sí,
-     *  formato `"oración<br>traducción"`. */
+    /** Prioridad historias > Tatoeba, cap 5. Las oraciones de historias AHORA
+     *  pueden llevar traducción (PR B): si la trae, va en un
+     *  `<span class="traduccion">` junto al ruby (ver `oracionDeTarjeta`). Las
+     *  de Tatoeba siempre traen traducción (inglés provisto por Tatoeba),
+     *  mismo formato de span — sin el `<br>` viejo, la clase ya es
+     *  `display:block` en el CSS del template. */
     private fun armarOraciones(
         historias: List<Historia>,
         termino: String,
@@ -193,12 +196,14 @@ class ArmadorMazos(
             .flatMap { it.parrafos.asSequence() }
             .flatMap { it.oraciones.asSequence() }
             .filter { it.texto.contains(termino) }
-            .map { oracionARubyHtml(it) }
+            .map { oracionDeTarjeta(it, termino) }
             .take(CAP_ORACIONES)
             .toList()
         if (deHistorias.size >= CAP_ORACIONES) return deHistorias
-        val relleno = tatoeba(CAP_ORACIONES - deHistorias.size)
-            .map { "${escapeHtml(it.japones)}<br>${escapeHtml(it.ingles)}" }
+        val relleno = tatoeba(CAP_ORACIONES - deHistorias.size).map {
+            val japones = oracionARubyHtml(Oracion(it.japones, emptyList()), objetivo = termino)
+            """$japones<span class="traduccion">${escapeHtml(it.ingles)}</span>"""
+        }
         return deHistorias + relleno
     }
 }
@@ -231,6 +236,16 @@ internal fun oracionARubyHtml(oracion: Oracion, objetivo: String? = null): Strin
     }
     if (cursor < texto.length) sb.append(tramo(cursor, texto.length))
     return sb.toString()
+}
+
+/** Oración de historia lista para el campo de la tarjeta: ruby + objetivo
+ *  resaltado + traducción (si la historia la trae — PR B) en un span con la
+ *  clase `.traduccion` ya definida en el CSS del template. */
+internal fun oracionDeTarjeta(oracion: Oracion, objetivo: String): String {
+    val ruby = oracionARubyHtml(oracion, objetivo)
+    val traduccion = oracion.traduccion
+        ?.let { """<span class="traduccion">${escapeHtml(it)}</span>""" } ?: ""
+    return ruby + traduccion
 }
 
 /** Rangos [inicio, fin) de cada ocurrencia (no solapada) del objetivo. */
