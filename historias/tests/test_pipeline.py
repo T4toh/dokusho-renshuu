@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -74,6 +75,38 @@ class TestProcesarObra(unittest.TestCase):
         self.assertEqual(lecturas.get((idx_kawa, idx_kawa + 1)), 'かわ')
         # el ruby Aozora original sigue intacto
         self.assertEqual(lecturas.get((idx_sen, idx_sen + 2)), 'せんたく')
+
+    def test_procesar_obra_con_traducciones(self):
+        """Carga traducciones/<id>.json si existe y las mergea al emitir."""
+        # Primero sin traducciones para conocer las oraciones emitidas
+        base = pipeline.procesar_obra(
+            self.ruta_txt, {'id': 'momotaro', 'fuente': 'aozora:18376'})
+        planas = [o['texto'] for p in base['parrafos'] for o in p['oraciones']]
+        dir_trad = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, dir_trad)
+        with open(os.path.join(dir_trad, 'momotaro.json'),
+                  'w', encoding='utf-8') as f:
+            json.dump({'id': 'momotaro',
+                       'oraciones': [{'texto': t, 'traduccion': f'lit {i}'}
+                                     for i, t in enumerate(planas)]},
+                      f, ensure_ascii=False)
+        con_trad = pipeline.procesar_obra(
+            self.ruta_txt, {'id': 'momotaro', 'fuente': 'aozora:18376'},
+            dir_traducciones=dir_trad)
+        emitidas = [o['traduccion']
+                    for p in con_trad['parrafos'] for o in p['oraciones']]
+        self.assertEqual([f'lit {i}' for i in range(len(planas))], emitidas)
+
+    def test_procesar_obra_sin_archivo_de_traducciones_emite_null(self):
+        """Sin archivo de traducciones, traduccion queda None."""
+        dir_trad = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, dir_trad)
+        historia = pipeline.procesar_obra(
+            self.ruta_txt, {'id': 'momotaro', 'fuente': 'aozora:18376'},
+            dir_traducciones=dir_trad)
+        self.assertTrue(all(o['traduccion'] is None
+                            for p in historia['parrafos']
+                            for o in p['oraciones']))
 
 
 class TestProcesarObraDescartaEncabezados(unittest.TestCase):
