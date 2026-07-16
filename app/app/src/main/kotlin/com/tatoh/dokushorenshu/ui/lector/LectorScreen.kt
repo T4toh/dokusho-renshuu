@@ -1,6 +1,5 @@
 package com.tatoh.dokushorenshu.ui.lector
 
-import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -431,15 +430,13 @@ private fun BarraSeleccion(
     }
 }
 
-/** Abre la búsqueda web del texto seleccionado. ACTION_WEB_SEARCH primero (respeta
- *  el buscador default del dispositivo); si no hay handler (package visibility de
- *  Android 11+ o dispositivo sin app de búsqueda), fallback a una URL de Google por
- *  ACTION_VIEW, que cualquier browser resuelve. Si tampoco hay browser (emulador
+/** Abre la búsqueda web del texto seleccionado en el BROWSER DEFAULT del usuario:
+ *  ACTION_VIEW con la URL de búsqueda. Antes se intentaba ACTION_WEB_SEARCH
+ *  primero, pero en MIUI (y otros OEM) lo captura la app de búsqueda
+ *  (Google/Xiaomi) que abre su webview embebido en vez del browser elegido por
+ *  el usuario — feedback de uso 2026-07-16. Si no hay browser (emulador
  *  pelado), no crashear: la selección queda para Copy. */
 private fun buscarEnWeb(contexto: Context, texto: String) {
-    val busqueda = Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, texto)
-    runCatching { contexto.startActivity(busqueda) }.recoverCatching {
-        val url = "https://www.google.com/search?q=${Uri.encode(texto)}"
-        contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    }
+    val url = "https://www.google.com/search?q=${Uri.encode(texto)}"
+    runCatching { contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
 }
