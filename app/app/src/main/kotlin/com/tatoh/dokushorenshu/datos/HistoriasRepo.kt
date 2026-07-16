@@ -109,6 +109,24 @@ class HistoriasRepo(
 
     fun esImportada(id: String): Boolean = File(dirImportadas, "$id.json").exists()
 
+    /** Tamaño en bytes de la historia local, comparable con [EntradaCatalogo.tamanio]
+     *  remoto (fix "la app nunca actualiza historias bundleadas", backlog feedback de
+     *  uso 2026-07-13): el catálogo publica `tamaño` = os.path.getsize del JSON
+     *  (emisor.py), así que para una descargada los bytes del archivo son EXACTAMENTE
+     *  ese valor al momento de bajarla, y para una bundleada vale el `tamanio` de la
+     *  entrada del catálogo asset (misma generación que el asset). Importadas y ids
+     *  desconocidos devuelven null: no existen en el catálogo remoto, nunca son
+     *  actualizables. Limitación aceptada (spec): un cambio remoto de igual tamaño
+     *  en bytes no se detecta. */
+    fun tamanioLocal(id: String): Long? {
+        val descargada = File(dirDescargas, "$id.json")
+        if (descargada.exists()) return descargada.length()
+        if (leerAsset("historias/$id.json") != null) {
+            return catalogoLocal()?.historias?.firstOrNull { it.id == id }?.tamanio
+        }
+        return null
+    }
+
     /** Serializa y valida con round-trip ANTES de escribir (mismo criterio que
      *  descargarHistoria: nunca guardar JSON a medias); escritura atómica.
      *  Si el id ya existe como asset o descargada, no-op: una importada NUNCA
