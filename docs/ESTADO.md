@@ -18,7 +18,7 @@
 | 4b   | `app/` — import de texto propio                  | ✅ Completo ([PR #9](https://github.com/T4toh/dokusho-renshuu/pull/9))                                               |
 | 4c   | catalogo/ — tanda 2 de historias (6 obras)       | ✅ Completo ([PR #10](https://github.com/T4toh/dokusho-renshuu/pull/10))                                             |
 | fix  | app/ — UI export: grid adaptivo + autor · dificultad + botones en fila (FlowRow) | ✅ Completo ([PR #11](https://github.com/T4toh/dokusho-renshuu/pull/11))            |
-| B    | historias/catalogo — traducciones literales en inglés por oración | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
+| B    | historias/catalogo — traducciones literales en inglés por oración | ✅ Completo ([PR #14](https://github.com/T4toh/dokusho-renshuu/pull/14)) |
 
 ## Datos operativos
 
