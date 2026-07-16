@@ -20,7 +20,8 @@
 | fix  | app/ — UI export: grid adaptivo + autor · dificultad + botones en fila (FlowRow) | ✅ Completo ([PR #11](https://github.com/T4toh/dokusho-renshuu/pull/11))            |
 | A    | app/ — backlog feedback de uso: update de historias + nº de oración + selección/Search web | ✅ Completo ([PR #13](https://github.com/T4toh/dokusho-renshuu/pull/13); smoke en tablet pendiente) |
 | B    | historias/catalogo — traducciones literales en inglés por oración | ✅ Completo ([PR #14](https://github.com/T4toh/dokusho-renshuu/pull/14)) |
-| C    | app/ — tarjetas Anki: objetivo resaltado, traducción, kun primero, separadores ・ | ✅ Completo ([PR #15](https://github.com/T4toh/dokusho-renshuu/pull/15); smoke AnkiDroid pendiente) |
+| C    | app/ — tarjetas Anki: objetivo resaltado, traducción, kun primero, separadores ・ | ✅ Completo ([PR #15](https://github.com/T4toh/dokusho-renshuu/pull/15)) |
+| fix  | app/ — selección: extender con auxiliares/partículas + Search web en browser default | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
 
 ## Datos operativos
 
