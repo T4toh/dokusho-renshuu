@@ -61,4 +61,56 @@ class OracionARubyHtmlTest {
         val oracion = Oracion("かえる", listOf(Furigana(0, 2, "かえ"), Furigana(1, 3, "える")))
         assertEquals("<ruby>かえ<rt>かえ</rt></ruby>る", oracionARubyHtml(oracion))
     }
+
+    @Test
+    fun `objetivo en texto plano queda envuelto en b objetivo`() {
+        val oracion = Oracion("川へ行った。", emptyList())
+        assertEquals(
+            """<b class="objetivo">川</b>へ行った。""",
+            oracionARubyHtml(oracion, objetivo = "川"),
+        )
+    }
+
+    @Test
+    fun `objetivo dentro de un span de ruby se resalta en la base sin tocar rt`() {
+        val oracion = Oracion("桃太郎", listOf(Furigana(0, 3, "ももたろう")))
+        assertEquals(
+            """<ruby><b class="objetivo">桃</b>太郎<rt>ももたろう</rt></ruby>""",
+            oracionARubyHtml(oracion, objetivo = "桃"),
+        )
+    }
+
+    @Test
+    fun `objetivo multichar que cruza el limite de un span se resalta por fragmentos`() {
+        // ruby solo sobre 大 [0,1): el objetivo 大人 cruza el límite del span
+        val oracion = Oracion("大人だ。", listOf(Furigana(0, 1, "おと")))
+        assertEquals(
+            """<ruby><b class="objetivo">大</b><rt>おと</rt></ruby><b class="objetivo">人</b>だ。""",
+            oracionARubyHtml(oracion, objetivo = "大人"),
+        )
+    }
+
+    @Test
+    fun `ocurrencias multiples se resaltan todas`() {
+        val oracion = Oracion("山と山。", emptyList())
+        assertEquals(
+            """<b class="objetivo">山</b>と<b class="objetivo">山</b>。""",
+            oracionARubyHtml(oracion, objetivo = "山"),
+        )
+    }
+
+    @Test
+    fun `objetivo null u ausente no cambia la salida existente`() {
+        val oracion = Oracion("桃太郎", listOf(Furigana(0, 3, "ももたろう")))
+        assertEquals(oracionARubyHtml(oracion), oracionARubyHtml(oracion, objetivo = null))
+    }
+
+    @Test
+    fun `objetivo con caracteres html se escapa dentro del resalte`() {
+        val oracion = Oracion("a<b", emptyList())
+        assertEquals(
+            """a<b class="objetivo">&lt;</b>b""",
+            oracionARubyHtml(oracion, objetivo = "<"),
+        )
+    }
 }

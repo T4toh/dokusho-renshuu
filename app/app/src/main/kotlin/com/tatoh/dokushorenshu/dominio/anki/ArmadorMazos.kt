@@ -206,9 +206,17 @@ class ArmadorMazos(
 /** Convierte una oración con spans de furigana fin-exclusivo a HTML con
  *  `<ruby>` (formato que Anki/AnkiDroid renderiza en cualquier cliente, a
  *  diferencia del filtro `{{furigana:}}` que depende del parsing de
- *  corchetes). Pura, sin dependencias de Android — testeable en JVM plano. */
-internal fun oracionARubyHtml(oracion: Oracion): String {
+ *  corchetes). Pura, sin dependencias de Android — testeable en JVM plano.
+ *
+ *  [objetivo] (backlog feedback de uso 2026-07-13): ocurrencias del
+ *  término/kanji objetivo envueltas en `<b class="objetivo">`. El resalte se
+ *  calcula por RANGOS sobre el texto original, así un objetivo que cruza el
+ *  límite de un span de ruby se resalta por fragmentos (la lectura `rt`
+ *  nunca se resalta). */
+internal fun oracionARubyHtml(oracion: Oracion, objetivo: String? = null): String {
     val texto = oracion.texto
+    val resaltes = rangosDeObjetivo(texto, objetivo)
+    fun tramo(desde: Int, hasta: Int) = emitirConResalte(texto, desde, hasta, resaltes)
     val sb = StringBuilder()
     var cursor = 0
     for (f in oracion.furigana.sortedBy { it.inicio }) {
@@ -216,12 +224,42 @@ internal fun oracionARubyHtml(oracion: Oracion): String {
         // 3.6 — momotaro.json llegó a traer furigana solapada); se ignora el
         // segundo span en vez de lanzar con un rango de substring inválido.
         if (f.inicio < cursor) continue
-        if (f.inicio > cursor) sb.append(escapeHtml(texto.substring(cursor, f.inicio)))
-        sb.append("<ruby>").append(escapeHtml(texto.substring(f.inicio, f.fin)))
+        if (f.inicio > cursor) sb.append(tramo(cursor, f.inicio))
+        sb.append("<ruby>").append(tramo(f.inicio, f.fin))
             .append("<rt>").append(escapeHtml(f.lectura)).append("</rt></ruby>")
         cursor = f.fin
     }
-    if (cursor < texto.length) sb.append(escapeHtml(texto.substring(cursor)))
+    if (cursor < texto.length) sb.append(tramo(cursor, texto.length))
+    return sb.toString()
+}
+
+/** Rangos [inicio, fin) de cada ocurrencia (no solapada) del objetivo. */
+private fun rangosDeObjetivo(texto: String, objetivo: String?): List<IntRange> {
+    if (objetivo.isNullOrEmpty()) return emptyList()
+    val rangos = mutableListOf<IntRange>()
+    var i = texto.indexOf(objetivo)
+    while (i >= 0) {
+        rangos.add(i until i + objetivo.length)
+        i = texto.indexOf(objetivo, i + objetivo.length)
+    }
+    return rangos
+}
+
+/** Emite texto[desde, hasta) escapado, envolviendo en `<b class="objetivo">`
+ *  las intersecciones con [resaltes]. */
+private fun emitirConResalte(texto: String, desde: Int, hasta: Int, resaltes: List<IntRange>): String {
+    if (resaltes.isEmpty()) return escapeHtml(texto.substring(desde, hasta))
+    val sb = StringBuilder()
+    var cursor = desde
+    for (r in resaltes) {
+        val ini = maxOf(r.first, cursor)
+        val fin = minOf(r.last + 1, hasta)
+        if (fin <= ini) continue
+        if (ini > cursor) sb.append(escapeHtml(texto.substring(cursor, ini)))
+        sb.append("""<b class="objetivo">""").append(escapeHtml(texto.substring(ini, fin))).append("</b>")
+        cursor = fin
+    }
+    if (cursor < hasta) sb.append(escapeHtml(texto.substring(cursor, hasta)))
     return sb.toString()
 }
 
