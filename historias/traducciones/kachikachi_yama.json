@@ -1,0 +1,581 @@
+{
+ "id": "kachikachi_yama",
+ "oraciones": [
+  {
+   "texto": "むかし、むかし、あるところに、おじいさんとおばあさんがありました。",
+   "traduccion": "Long ago, long ago, in a certain place, there was an old man and an old woman."
+  },
+  {
+   "texto": "おじいさんがいつも畑に出て働いていますと、裏の山から一ぴきの古だぬきが出てきて、おじいさんがせっかく丹精をしてこしらえた畑のものを荒らした上に、どんどん石ころや土くれをおじいさんのうしろから投げつけました。",
+   "traduccion": "As for (the) old man, when he always went out to the field and was working, from the mountain behind (the house), one old raccoon dog came out, and, on top of ravaging the field things that (the) old man had carefully and diligently made, (it) kept throwing stones and clods of earth one after another from behind the old man."
+  },
+  {
+   "texto": "おじいさんがおこって追っかけますと、すばやく逃げて行ってしまいます。",
+   "traduccion": "When (the) old man got angry and chased (it), (it) would quickly run away."
+  },
+  {
+   "texto": "しばらくするとまたやって来て、あいかわらずいたずらをしました。",
+   "traduccion": "After a while, (it) came again, and as usual did mischief."
+  },
+  {
+   "texto": "おじいさんも困りきって、わなをかけておきますと、ある日、たぬきはとうとうそのわなにかかりました。",
+   "traduccion": "(The) old man too, being at his wits' end, set a trap and left it, and one day, the raccoon dog finally got caught in that trap."
+  },
+  {
+   "texto": "おじいさんは躍り上がって喜びました。",
+   "traduccion": "(The) old man jumped up and rejoiced."
+  },
+  {
+   "texto": "「ああいい気味だ。とうとうつかまえてやった。」",
+   "traduccion": "“Ah, serves (it) right. (I) finally caught (it).”"
+  },
+  {
+   "texto": "こう言って、たぬきの四つ足をしばって、うちへかついで帰りました。",
+   "traduccion": "Saying this, (he) tied the raccoon dog's four legs, and carried (it) home on (his) shoulder and returned."
+  },
+  {
+   "texto": "そして天井のはりにぶら下げて、おばあさんに、",
+   "traduccion": "And (he) hung (it) from the ceiling beam, and to (his) wife,"
+  },
+  {
+   "texto": "「逃がさないように番をして、晩にわたしが帰るまでにたぬき汁をこしらえておいておくれ。」",
+   "traduccion": "“Keep watch so (it) doesn't escape, and by evening, by the time I come back, please have raccoon-dog soup prepared.”"
+  },
+  {
+   "texto": "と言いのこして、また畑へ出ていきました。",
+   "traduccion": "Leaving these words, (he) went out to the field again."
+  },
+  {
+   "texto": "たぬきがしばられてぶら下げられている下で、おばあさんは臼を出して、とんとん麦をついていました。",
+   "traduccion": "Below where the raccoon dog was tied up and hung, (the) old woman took out a mortar, and was pounding barley, thump-thump (pounding sound)."
+  },
+  {
+   "texto": "そのうち、",
+   "traduccion": "Presently,"
+  },
+  {
+   "texto": "「ああくたびれた。」",
+   "traduccion": "“Ah, (I'm) tired.”"
+  },
+  {
+   "texto": "とおばあさんは言って、汗をふきました。",
+   "traduccion": "Saying this, (the) old woman wiped (her) sweat."
+  },
+  {
+   "texto": "するとそのときまで、おとなしくぶら下がっていたたぬきが、上から声をかけました。",
+   "traduccion": "Then, the raccoon dog, which until that moment had been hanging quietly, called out from above."
+  },
+  {
+   "texto": "「もしもし、おばあさん、くたびれたら少しお手伝いをいたしましょう。その代わりこの縄をといて下さい。」",
+   "traduccion": "“Excuse me, excuse me, old woman, if (you are) tired, (I) will help (you) a little. In exchange, please untie this rope.”"
+  },
+  {
+   "texto": "「どうしてどうして、お前なんぞに手伝ってもらえるものか。縄をといてやったら、手伝うどころか、すぐ逃げて行ってしまうだろう。」",
+   "traduccion": "“No, no, how could that be — how could (I) have the likes of you help (me)? If (I) untied the rope for you, far from helping, (you) would probably immediately run away.”"
+  },
+  {
+   "texto": "「いいえ、もうこうしてつかまったのですもの、今さら逃げるものですか。まあ、ためしに下ろしてごらんなさい。」",
+   "traduccion": "“No, since (I) have already been caught like this, why would (I) run away now? Well, please try lowering (me) down and see.”"
+  },
+  {
+   "texto": "あんまりしつっこく、殊勝らしくたのむものですから、おばあさんもうかうか、たぬきの言うことをほんとうにして、縄をといて下ろしてやりました。",
+   "traduccion": "Since (it) begged so persistently and admirably, (the) old woman too, carelessly, took the raccoon dog's words as true, and untied the rope and lowered (it) down for (it)."
+  },
+  {
+   "texto": "するとたぬきは、",
+   "traduccion": "Then the raccoon dog,"
+  },
+  {
+   "texto": "「やれやれ。」",
+   "traduccion": "“Whew, whew (what a relief).”"
+  },
+  {
+   "texto": "としばられた手足をさすりました。",
+   "traduccion": "(it) said, and rubbed its bound hands and feet."
+  },
+  {
+   "texto": "そして、",
+   "traduccion": "And then,"
+  },
+  {
+   "texto": "「どれ、わたしがついてあげましょう。」",
+   "traduccion": "“Well then, I will pound (the barley) for you.”"
+  },
+  {
+   "texto": "と言いながら、おばあさんのきねを取り上げて、麦をつくふりをして、いきなりおばあさんの脳天からきねを打ち下ろしますと、「きゃっ。」という間もなく、おばあさんは目をまわして、倒れて死んでしまいました。",
+   "traduccion": "Saying this, (it) picked up (the) old woman's pestle, and, pretending to pound the barley, suddenly brought the pestle down from the top of (the) old woman's head, and, before (she) could even say “kya (scream),” (the) old woman fainted, and collapsed and died."
+  },
+  {
+   "texto": "たぬきはさっそくおばあさんをお料理して、たぬき汁の代わりにばばあ汁をこしらえて、自分はおばあさんに化けて、すました顔をして炉の前に座って、おじいさんの帰りを待ちうけていました。",
+   "traduccion": "The raccoon dog immediately cooked (the) old woman, and in place of raccoon-dog soup made old-woman soup, and (it) itself transformed into (the) old woman, and with a composed face sat in front of the hearth, and was waiting for (the) old man's return."
+  },
+  {
+   "texto": "夕方になって、なんにも知らないおじいさんは、",
+   "traduccion": "When it became evening, (the) old man, who knew nothing at all,"
+  },
+  {
+   "texto": "「晩はたぬき汁が食べられるな。」",
+   "traduccion": "“Tonight, (I) will get to eat raccoon-dog soup, won't (I).”"
+  },
+  {
+   "texto": "と思って、一人でにこにこしながら、急いでうちへ帰って来ました。",
+   "traduccion": "(he) thought, and, smiling to himself alone, hurried and came home."
+  },
+  {
+   "texto": "するとたぬきのおばあさんはさも待ちかねたというように、",
+   "traduccion": "Then the raccoon dog disguised as (the) old woman, as if (she) had indeed been waiting impatiently,"
+  },
+  {
+   "texto": "「おや、おじいさん、おかいんなさい。さっきからたぬき汁をこしらえて待っていましたよ。」",
+   "traduccion": "“Oh my, old man, welcome back. Since a while ago (I) have been making raccoon-dog soup and waiting.”"
+  },
+  {
+   "texto": "と言いました。",
+   "traduccion": "(she) said."
+  },
+  {
+   "texto": "「おやおや、そうか。それはありがたいな。」",
+   "traduccion": "“Oh my, is that so. That is grateful (of you).”"
+  },
+  {
+   "texto": "と言いながら、すぐにお膳の前に座りました。",
+   "traduccion": "Saying this, (he) at once sat in front of the (dining) tray."
+  },
+  {
+   "texto": "そして、たぬきのおばあさんのお給仕で、",
+   "traduccion": "And, with the raccoon dog disguised as (the) old woman's serving,"
+  },
+  {
+   "texto": "「これはおいしい、おいしい。」",
+   "traduccion": "“This is delicious, delicious.”"
+  },
+  {
+   "texto": "と言って、舌つづみをうって、ばばあ汁のおかわりをして、夢中になって食べていました。",
+   "traduccion": "(he) said, and, smacking his tongue (in relish), had a second helping of old-woman soup, and, absorbed (in it), was eating."
+  },
+  {
+   "texto": "それを見てたぬきのおばあさんは、思わず、「ふふん。」と笑うひょうしにたぬきの正体を現しました。",
+   "traduccion": "Seeing that, the raccoon dog disguised as (the) old woman, unintentionally, laughed “fufun (snicker),” and at the moment of laughing, revealed the raccoon dog's true form."
+  },
+  {
+   "texto": "「ばばあくったじじい、",
+   "traduccion": "“Old man who ate the old woman,"
+  },
+  {
+   "texto": "流しの下の骨を見ろ。」",
+   "traduccion": "look at the bones under the sink.”"
+  },
+  {
+   "texto": "とたぬきは言いながら、大きなしっぽを出して、裏口からついと逃げていきました。",
+   "traduccion": "Saying this, the raccoon dog stuck out its big tail, and swiftly ran away out the back door."
+  },
+  {
+   "texto": "おじいさんはびっくりして、がっかり腰をぬかしてしまいました。",
+   "traduccion": "(The) old man was startled, and, in dismay, lost the strength in his legs (collapsed from shock)."
+  },
+  {
+   "texto": "そして流しの下のおばあさんの骨をかかえて、おいおい泣いていました。",
+   "traduccion": "And, holding (his) wife's bones from under the sink, (he) was weeping loudly (oi-oi)."
+  },
+  {
+   "texto": "すると、",
+   "traduccion": "Then,"
+  },
+  {
+   "texto": "「おじいさん、おじいさん、どうしたのです。」",
+   "traduccion": "“Old man, old man, what happened?”"
+  },
+  {
+   "texto": "と言って、これも裏の山にいる白うさぎが入って来ました。",
+   "traduccion": "saying this, a white rabbit, who also lived in the mountain behind (the house), came in."
+  },
+  {
+   "texto": "「ああ、うさぎさんか。よく来ておくれだ。まあ聞いておくれ。ひどい目にあったよ。」",
+   "traduccion": "“Ah, is it (you), Mr./Ms. Rabbit? (You) have come well (I'm glad you came). Well, please listen. (I) had a terrible experience.”"
+  },
+  {
+   "texto": "とおじいさんは言って、これこれこういうわけだとすっかり話をしました。",
+   "traduccion": "(The) old man said this, and told the whole story, (saying) “this and that, for such-and-such a reason.”"
+  },
+  {
+   "texto": "うさぎはたいそう気の毒がって、",
+   "traduccion": "The rabbit felt very sorry (for him),"
+  },
+  {
+   "texto": "「まあ、それはとんだことでしたね。けれどかたきはわたしがきっととって上げますから、安心していらっしゃい。」",
+   "traduccion": "“Well, that was a terrible thing indeed. But, as for revenge, I will surely take it for you, so please be at ease.”"
+  },
+  {
+   "texto": "とたのもしそうに言いました。",
+   "traduccion": "(the rabbit) said, sounding reliable."
+  },
+  {
+   "texto": "おじいさんはうれし涙をこぼしながら、",
+   "traduccion": "(The) old man, while shedding tears of joy,"
+  },
+  {
+   "texto": "「ああ、どうか頼みますよ。ほんとうにわたしはくやしくってたまらない。」",
+   "traduccion": "“Ah, please, I beg (you). Truly, I am so mortified that (I) cannot bear it.”"
+  },
+  {
+   "texto": "と言いました。",
+   "traduccion": "(he) said."
+  },
+  {
+   "texto": "「大丈夫。あしたはさっそくたぬきを誘い出して、ひどい目に合わしてやります。しばらく待っていらっしゃい。」",
+   "traduccion": "“It's all right. Tomorrow, (I) will at once lure the raccoon dog out, and give (it) a terrible time. Please wait a while.”"
+  },
+  {
+   "texto": "とうさぎは言って、帰っていきました。",
+   "traduccion": "The rabbit said this, and went home."
+  },
+  {
+   "texto": "さてたぬきはおじいさんのうちを逃げ出してから、何だかこわいものですから、どこへも出ずに穴にばかり引っ込んでいました。",
+   "traduccion": "Now then, since escaping from (the) old man's house, the raccoon dog, being somehow afraid, without going out anywhere, stayed shut up in its hole."
+  },
+  {
+   "texto": "するとある日、うさぎはかまを腰にさして、わざとたぬきのかくれている穴のそばへ行って、かまを出してしきりにしばを刈っていました。",
+   "traduccion": "Then, one day, the rabbit, with a sickle stuck at its waist, deliberately went near the hole where the raccoon dog was hiding, and, taking out the sickle, was busily cutting brushwood."
+  },
+  {
+   "texto": "そしてしばを刈りながら、袋へ入れて持って来たかち栗を出して、ばりばり食べました。",
+   "traduccion": "And, while cutting the brushwood, (it) took out dried chestnuts that (it) had brought in a bag, and ate (them) with a crunching sound."
+  },
+  {
+   "texto": "するとたぬきはその音を聞きつけて、穴の中からのそのそはい出してきました。",
+   "traduccion": "Then the raccoon dog, catching that sound, crawled slowly out from inside the hole."
+  },
+  {
+   "texto": "「うさぎさん、うさぎさん。何をうまそうに食べているのだね。」",
+   "traduccion": "“Mr./Ms. Rabbit, Mr./Ms. Rabbit. What is (it) that (you) are eating so deliciously?”"
+  },
+  {
+   "texto": "「栗の実さ。」",
+   "traduccion": "“Chestnuts, that's what.”"
+  },
+  {
+   "texto": "「少しわたしにくれないか。」",
+   "traduccion": "“Won't (you) give a little to me?”"
+  },
+  {
+   "texto": "「上げるから、このしばを半分向こうの山までしょっていっておくれ。」",
+   "traduccion": "“(I) will give (some) to you, so please carry half of this brushwood on your back to the mountain over there.”"
+  },
+  {
+   "texto": "たぬきは栗がほしいものですから、しかたなしにしばを背負って、先に立って歩き出しました。",
+   "traduccion": "Since the raccoon dog wanted the chestnuts, having no choice, (it) shouldered the brushwood, and, taking the lead, started walking."
+  },
+  {
+   "texto": "向こうの山まで行くと、たぬきはふり返って、",
+   "traduccion": "When (it) reached the mountain over there, the raccoon dog turned around, and,"
+  },
+  {
+   "texto": "「うさぎさん、うさぎさん。かち栗をくれないか。」",
+   "traduccion": "“Mr./Ms. Rabbit, Mr./Ms. Rabbit. Won't (you) give (me) the dried chestnuts?”"
+  },
+  {
+   "texto": "「ああ、上げるよ、もう一つ向こうの山まで行ったら。」",
+   "traduccion": "“Ah, (I) will give (them to you), once (we) go to one more mountain over there.”"
+  },
+  {
+   "texto": "しかたがないので、またたぬきはずんずん先に立って歩いていきました。",
+   "traduccion": "Since there was no help for it, again the raccoon dog, taking the lead, kept walking on steadily."
+  },
+  {
+   "texto": "やがてもう一つ向こうの山まで行くと、たぬきはふり返って、",
+   "traduccion": "Presently, when (it) reached one more mountain over there, the raccoon dog turned around, and,"
+  },
+  {
+   "texto": "「うさぎさん、うさぎさん。かち栗をくれないか。」",
+   "traduccion": "“Mr./Ms. Rabbit, Mr./Ms. Rabbit. Won't (you) give (me) the dried chestnuts?”"
+  },
+  {
+   "texto": "「ああ、上げるけれど、ついでにもう一つ向こうの山まで行っておくれ。こんどはきっと上げるから。」",
+   "traduccion": "“Ah, (I) will give (them), but while (we're) at it, please go to one more mountain over there. This time, (I) will surely give (them).”"
+  },
+  {
+   "texto": "しかたがないので、たぬきはまた先に立って、こんどは何でも早く向こうの山まで行きつこうと思って、うしろもふり向かずにせっせと歩いていきました。",
+   "traduccion": "Since there was no help for it, the raccoon dog again took the lead, and this time, thinking (it) would by all means quickly arrive at the mountain over there, walked on diligently without even turning around."
+  },
+  {
+   "texto": "うさぎはそのひまに、ふところから火打ち石を出して、「かちかち。」と火をきりました。",
+   "traduccion": "The rabbit, in that interval, took out a flint from (its) bosom, and struck fire (making the sound) “kachikachi (clicking).”"
+  },
+  {
+   "texto": "たぬきはへんに思って、",
+   "traduccion": "The raccoon dog, thinking (it) strange,"
+  },
+  {
+   "texto": "「うさぎさん、うさぎさん、かちかちいうのは何だろう。」",
+   "traduccion": "“Mr./Ms. Rabbit, Mr./Ms. Rabbit, what could that “kachikachi” sound be?”"
+  },
+  {
+   "texto": "「この山はかちかち山だからさ。」",
+   "traduccion": "“It's because this mountain is Kachikachi Mountain, that's why.”"
+  },
+  {
+   "texto": "「ああ、そうか。」",
+   "traduccion": "“Ah, is that so.”"
+  },
+  {
+   "texto": "と言って、たぬきはまた歩き出しました。",
+   "traduccion": "(it) said, and the raccoon dog started walking again."
+  },
+  {
+   "texto": "そのうちにうさぎのつけた火が、たぬきの背中のしばにうつって、ぼうぼう燃え出しました。",
+   "traduccion": "In the meantime, the fire that the rabbit had lit caught onto the brushwood on the raccoon dog's back, and began to burn with a bōbō (roaring) sound."
+  },
+  {
+   "texto": "たぬきはまたへんに思って、",
+   "traduccion": "The raccoon dog, again thinking (it) strange,"
+  },
+  {
+   "texto": "「うさぎさん、うさぎさん、ぼうぼういうのは何だろう。」",
+   "traduccion": "“Mr./Ms. Rabbit, Mr./Ms. Rabbit, what could that “bōbō” sound be?”"
+  },
+  {
+   "texto": "「向こうの山はぼうぼう山だからさ。」",
+   "traduccion": "“It's because the mountain over there is Bōbō Mountain, that's why.”"
+  },
+  {
+   "texto": "「ああ、そうか。」",
+   "traduccion": "“Ah, is that so.”"
+  },
+  {
+   "texto": "とたぬきが言ううちに、もう火はずんずん背中に燃えひろがってしまいました。",
+   "traduccion": "While the raccoon dog was saying this, already the fire had spread steadily burning over its back."
+  },
+  {
+   "texto": "たぬきは、",
+   "traduccion": "The raccoon dog,"
+  },
+  {
+   "texto": "「あつい、あつい、助けてくれ。」",
+   "traduccion": "“Hot, hot, help me.”"
+  },
+  {
+   "texto": "とさけびながら、夢中でかけ出しますと、山風がうしろからどっと吹きつけて、よけい火が大きくなりました。",
+   "traduccion": "shouted, and, running frantically, when (it) did so, a mountain wind blew hard from behind, and the fire grew all the bigger."
+  },
+  {
+   "texto": "たぬきはひいひい泣き声を上げて、苦しがって、ころげまわって、やっとのことで燃えるしばをふり落として、穴の中にかけ込みました。",
+   "traduccion": "The raccoon dog let out a whimpering, crying voice, suffered, rolled about, and at last managed to shake off the burning brushwood, and ran into its hole."
+  },
+  {
+   "texto": "うさぎはわざと大きな声で、",
+   "traduccion": "The rabbit, deliberately in a loud voice,"
+  },
+  {
+   "texto": "「やあ、たいへん。火事だ。火事だ。」",
+   "traduccion": "“Oh, terrible! Fire! Fire!”"
+  },
+  {
+   "texto": "と言いながら帰っていきました。",
+   "traduccion": "(it) said, and went home."
+  },
+  {
+   "texto": "そのあくる日、うさぎはおみその中に唐がらしをすり込んでこうやくをこしらえて、それを持ってたぬきのところへお見舞いにやって来ました。",
+   "traduccion": "The next day, the rabbit ground red pepper into miso and made an ointment (plaster), and, bringing it, came to visit the raccoon dog to inquire after (its) health."
+  },
+  {
+   "texto": "たぬきは背中中大やけどをして、うんうんうなりながら、まっくらな穴の中にころがっていました。",
+   "traduccion": "The raccoon dog, having a bad burn over its whole back, while groaning “un-un,” was lying rolled up inside the pitch-dark hole."
+  },
+  {
+   "texto": "「たぬきさん、たぬきさん。ほんとうにきのうはひどい目にあったねえ。」",
+   "traduccion": "“Mr. Raccoon Dog, Mr. Raccoon Dog. (You) really had a terrible time yesterday, didn't (you).”"
+  },
+  {
+   "texto": "「ああ、ほんとうにひどい目にあったよ。この大やけどはどうしたらなおるだろう。」",
+   "traduccion": "“Ah, (I) really had a terrible time. This bad burn — what should (I) do to make (it) heal, I wonder.”"
+  },
+  {
+   "texto": "「うん、それでね、あんまり気の毒だから、わたしがやけどにいちばん利くこうやくをこしらえて持って来たのだよ。」",
+   "traduccion": "“Yes, and so, since (it) was so pitiful, I made the ointment that works best on burns and brought (it).”"
+  },
+  {
+   "texto": "「そうかい。それはありがたいな。さっそくぬってもらおう。」",
+   "traduccion": "“Is that so. That is grateful (of you). Let (me) have (you) apply (it) at once.”"
+  },
+  {
+   "texto": "こういってたぬきが火ぶくれになって、赤肌にただれている背中を出しますと、うさぎはその上に唐がらしみそをところかまわずこてこてぬりつけました。",
+   "traduccion": "Saying this, when the raccoon dog bared its back, which had become blistered and was raw with reddened skin, the rabbit smeared the red-pepper miso thickly all over it without regard to (where)."
+  },
+  {
+   "texto": "すると背中はまた火がついたようにあつくなって、",
+   "traduccion": "Then its back became hot again, as if fire had caught (it), and,"
+  },
+  {
+   "texto": "「いたい、いたい。」",
+   "traduccion": "“Painful, painful.”"
+  },
+  {
+   "texto": "と言いながら、たぬきは穴の中をころげまわっていました。",
+   "traduccion": "(it) said, and the raccoon dog was rolling around inside the hole."
+  },
+  {
+   "texto": "うさぎはその様子を見てにこにこしながら、",
+   "traduccion": "The rabbit, seeing that state, while smiling,"
+  },
+  {
+   "texto": "「なあにたぬきさん、ぴりぴりするのははじめのうちだけだよ。じきになおるから、少しの間がまんおし。」",
+   "traduccion": "“Now, now, Mr. Raccoon Dog, the stinging is only at the beginning. It will heal soon, so please bear (it) for a little while.”"
+  },
+  {
+   "texto": "と言って帰っていきました。",
+   "traduccion": "(it) said, and went home."
+  },
+  {
+   "texto": "それから四、五日たちました。",
+   "traduccion": "After that, four or five days passed."
+  },
+  {
+   "texto": "ある日うさぎは、",
+   "traduccion": "One day the rabbit,"
+  },
+  {
+   "texto": "「たぬきのやつどうしたろう。こんどはひとつ海に連れ出して、ひどい目にあわせてやろう。」",
+   "traduccion": "“That raccoon dog, I wonder how (it) is doing. This time, let (me) take (it) out to the sea, and give (it) a terrible time.”"
+  },
+  {
+   "texto": "と独り言を言っているところへ、ひょっこりたぬきがたずねて来ました。",
+   "traduccion": "was saying to itself, when, right there, the raccoon dog unexpectedly came to visit."
+  },
+  {
+   "texto": "「おやおや、たぬきさん、もうやけどはなおったかい。」",
+   "traduccion": "“Oh my, oh my, Mr. Raccoon Dog, has your burn already healed?”"
+  },
+  {
+   "texto": "「ああ、お陰でたいぶよくなったよ。」",
+   "traduccion": "“Ah, thanks (to you), (it) has gotten quite a lot better.”"
+  },
+  {
+   "texto": "「それはいいな。じゃあまたどこかへ出かけようか。」",
+   "traduccion": "“That is good. Well then, shall (we) go out somewhere again?”"
+  },
+  {
+   "texto": "「いやもう、山はこりごりだ。」",
+   "traduccion": "“No, really, (I've) had enough of mountains.”"
+  },
+  {
+   "texto": "「それなら山はよして、こんどは海へ行こうじゃないか、海はおさかながとれるよ。」",
+   "traduccion": "“In that case, let's give up mountains, and this time, why don't (we) go to the sea — at the sea, (you) can catch fish, (you know).”"
+  },
+  {
+   "texto": "「なるほど、海はおもしろそうだね。」",
+   "traduccion": "“Indeed, the sea seems interesting, doesn't it.”"
+  },
+  {
+   "texto": "そこでうさぎとたぬきは連れだって海へ出かけました。",
+   "traduccion": "So the rabbit and the raccoon dog went out together to the sea."
+  },
+  {
+   "texto": "うさぎが木の舟をこしらえますと、たぬきはうらやましがって、まねをして土の舟をこしらえました。",
+   "traduccion": "When the rabbit made a boat of wood, the raccoon dog, feeling envious, imitated (it) and made a boat of clay."
+  },
+  {
+   "texto": "舟ができ上がると、うさぎは木の舟に乗りました。",
+   "traduccion": "When the boats were completed, the rabbit got into the wooden boat."
+  },
+  {
+   "texto": "たぬきは土の舟に乗りました。",
+   "traduccion": "The raccoon dog got into the clay boat."
+  },
+  {
+   "texto": "べつべつに舟をこいで沖へ出ますと、",
+   "traduccion": "When (they) rowed the boats separately and went out to the offing,"
+  },
+  {
+   "texto": "「いいお天気だねえ。」",
+   "traduccion": "“What good weather it is.”"
+  },
+  {
+   "texto": "「いいけしきだねえ。」",
+   "traduccion": "“What good scenery it is.”"
+  },
+  {
+   "texto": "とてんでんに言いながら、めずらしそうに海をながめていましたが、うさぎは、",
+   "traduccion": "(they) each said this on their own, and, looking at the sea as though it were rare (and fascinating), were gazing (at it), but the rabbit,"
+  },
+  {
+   "texto": "「ここらにはまだおさかなはいないよ。もっと沖の方までこいで行こう。さあ、どっちが早いか競争しよう。」",
+   "traduccion": "“Around here, there are no fish yet. Let's row further toward the offing. Now, let's race to see which of (us) is faster.”"
+  },
+  {
+   "texto": "と言いました。",
+   "traduccion": "(it) said."
+  },
+  {
+   "texto": "たぬきは、",
+   "traduccion": "The raccoon dog,"
+  },
+  {
+   "texto": "「よし、よし、それはおもしろかろう。」",
+   "traduccion": "“All right, all right, that will be interesting, won't it.”"
+  },
+  {
+   "texto": "と言いました。",
+   "traduccion": "(it) said."
+  },
+  {
+   "texto": "そこで一、二、三とかけ声をして、こぎ出しました。",
+   "traduccion": "So, with the call “one, two, three,” (they) started rowing."
+  },
+  {
+   "texto": "うさぎはかんかん舟ばたをたたいて、",
+   "traduccion": "The rabbit struck the side of the boat sharply (kan-kan), and,"
+  },
+  {
+   "texto": "「どうだ、木の舟は軽くって速かろう。」",
+   "traduccion": "“How is that — the wooden boat is light and probably fast, isn't it.”"
+  },
+  {
+   "texto": "と言いました。",
+   "traduccion": "(it) said."
+  },
+  {
+   "texto": "するとたぬきも負けない気になって、舟ばたをこんこんたたいて、",
+   "traduccion": "Then the raccoon dog too, getting into a not-to-be-outdone mood, struck the side of the boat (kon-kon), and,"
+  },
+  {
+   "texto": "「なあに、土の舟は重くって丈夫だ。」",
+   "traduccion": "“What of it — the clay boat is heavy and sturdy.”"
+  },
+  {
+   "texto": "と言いました。",
+   "traduccion": "(it) said."
+  },
+  {
+   "texto": "そのうちにだんだん水がしみて土の舟は崩れ出しました。",
+   "traduccion": "In the meantime, water gradually seeped in, and the clay boat began to crumble."
+  },
+  {
+   "texto": "「やあ、たいへん。舟がこわれてきた。」",
+   "traduccion": "“Oh, terrible! The boat has begun to break apart.”"
+  },
+  {
+   "texto": "とたぬきがびっくりして、大さわぎをはじめました。",
+   "traduccion": "the raccoon dog said, startled, and began making a great fuss."
+  },
+  {
+   "texto": "「ああ、沈む、沈む、助けてくれ。」",
+   "traduccion": "“Ah, (it's) sinking, sinking, help me.”"
+  },
+  {
+   "texto": "うさぎはたぬきのあわてる様子をおもしろそうにながめながら、",
+   "traduccion": "The rabbit, while watching the raccoon dog's flustered state as though it were amusing,"
+  },
+  {
+   "texto": "「ざまを見ろ。おばあさんをだまして殺して、おじいさんにばばあ汁を食わせたむくいだ。」",
+   "traduccion": "“Look at (your) sorry state (serves you right). This is the retribution for deceiving and killing the old woman, and making the old man eat old-woman soup.”"
+  },
+  {
+   "texto": "と言いますと、たぬきはもうそんなことはしないから助けてくれと言って、うさぎをおがみました。",
+   "traduccion": "(it) said, and the raccoon dog, saying that (it) would never do such a thing again so please help (it), pressed its hands together in prayer to the rabbit."
+  },
+  {
+   "texto": "そのうちどんどん舟は崩れて、あっぷあっぷいうまもなく、たぬきはとうとう沈んでしまいました。",
+   "traduccion": "In the meantime, the boat kept crumbling rapidly, and, before (it) could even go “appu-appu (gasping/gurgling),” the raccoon dog finally sank."
+  }
+ ]
+}
