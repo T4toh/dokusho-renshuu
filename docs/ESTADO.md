@@ -18,6 +18,7 @@
 | 4b   | `app/` — import de texto propio                  | ✅ Completo ([PR #9](https://github.com/T4toh/dokusho-renshuu/pull/9))                                               |
 | 4c   | catalogo/ — tanda 2 de historias (6 obras)       | ✅ Completo ([PR #10](https://github.com/T4toh/dokusho-renshuu/pull/10))                                             |
 | fix  | app/ — UI export: grid adaptivo + autor · dificultad + botones en fila (FlowRow) | ✅ Completo ([PR #11](https://github.com/T4toh/dokusho-renshuu/pull/11))            |
+| A    | app/ — backlog feedback de uso: update de historias + nº de oración + selección/Search web | ✅ Completo (PR pendiente — actualizar con #N al abrir; smoke en tablet pendiente) |
 
 ## Datos operativos
 
@@ -108,13 +109,13 @@
 
 ### App Dokusho
 
-- Poder seleccionar cualquier texto del lector (selección libre).
-- Poder buscar lo seleccionado — ¿búsqueda en Google? Definir alcance.
+- ~~Poder seleccionar cualquier texto del lector (selección libre).~~ Resuelto (PR A backlog-app): long-press ancla, tap extiende rango de tokens en la misma oración; resaltado + barra contextual.
+- ~~Poder buscar lo seleccionado — ¿búsqueda en Google? Definir alcance.~~ Resuelto (PR A): Search web (`ACTION_WEB_SEARCH`, fallback URL de Google) + Copy; texto sin furigana, partículas intermedias incluidas.
 - ~~Furigana faltante en momotaro: por alguna razón siempre falta antes de へ (catálogo → alineador `historias/src/aozora.py`, no Kuromoji).~~ Resuelto: la fuente Aozora trae ruby parcial (no era bug del alineador); relleno con janome en el pipeline.
 - ~~Faltan muchas más furiganas en general (auditar cobertura).~~ Resuelto: cobertura 11.5%–92.9% → 94.3%–100% con relleno janome/IPADIC (gap residual: 犍陀多 y ~13 kanji sueltos fuera de IPADIC).
 - ~~Algunas furiganas están mal: p. ej. 水 = "miizu" (¿みいず?) en vez de みず — revisar origen (ruby Aozora vs `GeneradorFurigana`/Kuromoji).~~ No es bug: `水《みいず》` es la canción del cuento (alarga vocales: かあらいぞ/ああまいぞ); fiel al original.
-- **La app nunca actualiza historias bundleadas** (descubierto en smoke de PR #12): `BibliotecaViewModel.refrescarCatalogo` filtra el catálogo remoto a `id !in idsLocales` y `HistoriasRepo.cargarHistoria` sirve el asset si no hay descargada — un catálogo regenerado NO llega a apps instaladas, solo con APK nuevo. Fix candidato: comparar `tamaño` (o hash) del catálogo remoto vs local y re-descargar/ofrecer update.
-- Mostrar número de oración en el lector (p. ej. atrás del piquito de navegación) para poder reportar casos puntuales (pedido de uso real, 2026-07-13).
+- ~~**La app nunca actualiza historias bundleadas**~~ Resuelto (PR A): `HistoriasRepo.tamanioLocal` + `BibliotecaViewModel.actualizables` comparan `tamaño` remoto vs local; botón Update por historia re-descarga (descargada pisa asset). Limitaciones aceptadas: cambio remoto de igual tamaño en bytes no se detecta; comparación ciega a dirección (un remoto MÁS VIEJO que el asset también ofrece Update y "downgradearía" — mitigable comparando `version` si alguna vez molesta); CDN desincronizado (catalogo.json nuevo + historia vieja) deja el flag hasta que sincroniza.
+- ~~Mostrar número de oración en el lector (p. ej. atrás del piquito de navegación) para poder reportar casos puntuales (pedido de uso real, 2026-07-13).~~ Resuelto (PR A): número 1-based junto al piquito ▸.
 
 ## Proceso de trabajo usado
 
