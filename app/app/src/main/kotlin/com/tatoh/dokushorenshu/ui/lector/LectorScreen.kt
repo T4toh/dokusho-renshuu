@@ -1,5 +1,9 @@
 package com.tatoh.dokushorenshu.ui.lector
 
+import android.app.SearchManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -14,6 +18,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tatoh.dokushorenshu.dominio.PalabraToken
 import kotlinx.coroutines.CancellationException
@@ -31,6 +39,8 @@ fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
     // (el drag-up del handle y el scroll interno no lo expanden) dejando contenido
     // inalcanzable — bug validado en tablet.
     val estadoSheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val contexto = LocalContext.current
+    val portapapeles = LocalClipboardManager.current
 
     // carga inicial al entrar a la pantalla (mismo patrón que BibliotecaScreen, Task 9)
     LaunchedEffect(Unit) { vm.cargar() }
@@ -52,15 +62,32 @@ fun LectorScreen(vm: LectorViewModel, onVerKanji: (String) -> Unit) {
             )
         },
         bottomBar = {
-            Row(
-                Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                OutlinedButton(onClick = vm::retroceder, enabled = estado.indiceActual > -1) {
-                    Text("Previous")
-                }
-                Button(onClick = vm::avanzar) {
-                    Text(if (estado.enPortada) (if (estado.progresoGuardado >= 0) "Continue reading" else "Start reading") else "Next")
+            val seleccionado = estado.textoSeleccionado
+            if (seleccionado != null) {
+                // Con selección activa la barra de navegación cede su lugar a las acciones
+                // de selección (backlog feedback de uso 2026-07-13): Search web abre el
+                // browser con la frase (el diccionario no tiene expresiones largas), Copy
+                // al portapapeles, ✕ cancela. Previous/Next vuelven al limpiar.
+                BarraSeleccion(
+                    texto = seleccionado,
+                    onBuscarWeb = { buscarEnWeb(contexto, seleccionado) },
+                    onCopiar = {
+                        portapapeles.setText(AnnotatedString(seleccionado))
+                        vm.limpiarSeleccion()
+                    },
+                    onCancelar = vm::limpiarSeleccion,
+                )
+            } else {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    OutlinedButton(onClick = vm::retroceder, enabled = estado.indiceActual > -1) {
+                        Text("Previous")
+                    }
+                    Button(onClick = vm::avanzar) {
+                        Text(if (estado.enPortada) (if (estado.progresoGuardado >= 0) "Continue reading" else "Start reading") else "Next")
+                    }
                 }
             }
         },
@@ -249,10 +276,15 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
                     plana = plana,
                     furiganaActiva = estado.furiganaActiva,
                     katakanaActiva = estado.katakanaActiva,
-                    onTapPalabra = { token ->
-                        vm.enfocar(indice)
-                        vm.tocarPalabra(token)
-                    },
+                    onTapPalabra = { token -> vm.tapPalabra(indice, token) },
+                    onLongPressPalabra = { token -> vm.iniciarSeleccion(indice, token) },
+                    // rango de selección SOLO si pertenece a esta oración (mismo criterio
+                    // que esActual, ver doc de ItemOracion): nunca entra EstadoLector
+                    // completo, así un cambio de selección solo recompone los items cuyo
+                    // param cambió.
+                    rangoSeleccion = estado.seleccion
+                        ?.takeIf { it.indiceOracion == indice }
+                        ?.let { it.inicio until it.fin },
                 )
             }
         }
@@ -264,12 +296,25 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
         // BoxWithConstraints) así que NO scrollea con el contenido; no tiene ningún
         // modifier de gestos (sin `clickable` ni `pointerInput`) así que no intercepta
         // toques — el scroll/tap de la lista de abajo pasa de largo.
-        Text(
-            text = "▸",
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-            style = MaterialTheme.typography.titleLarge,
+        // Al lado va el número (1-based) de la oración enfocada (backlog feedback de
+        // uso 2026-07-13: poder reportar casos puntuales por número de oración).
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp),
-        )
+        ) {
+            if (estado.indiceActual >= 0) {
+                Text(
+                    text = "${estado.indiceActual + 1}",
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+            Text(
+                text = "▸",
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.titleLarge,
+            )
+        }
 
         // Contraparte espejada del indicador de centro, en el margen derecho (Plan 3.6):
         // misma línea vertical central, misma altura, mismo estilo/alpha — así la marca
@@ -298,6 +343,12 @@ private fun ItemOracion(
     furiganaActiva: Boolean,
     katakanaActiva: Boolean,
     onTapPalabra: (PalabraToken) -> Unit,
+    onLongPressPalabra: (PalabraToken) -> Unit,
+    // rango de selección SOLO si pertenece a esta oración (ya filtrado en el
+    // callsite de itemsIndexed, mismo criterio que esActual: nunca entra
+    // EstadoLector completo — un cambio de selección solo recompone los items
+    // cuyo param cambió).
+    rangoSeleccion: IntRange?,
 ) {
     // Foco SOLO por alpha (animado), nunca por tamaño: todas las oraciones tienen la
     // misma altura de item siempre, así que cambiar el foco jamás reflowea la
@@ -315,6 +366,8 @@ private fun ItemOracion(
             furiganaActiva = furiganaActiva,
             katakanaActiva = katakanaActiva,
             onTapPalabra = onTapPalabra,
+            onLongPressPalabra = onLongPressPalabra,
+            rangoSeleccion = rangoSeleccion,
         )
     }
 }
@@ -348,5 +401,45 @@ private fun Portada(estado: EstadoLector, modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(top = 16.dp),
             )
         }
+    }
+}
+
+/** Barra contextual de selección: texto elegido + Search web / Copy / cancelar.
+ *  Reemplaza a Previous/Next en el bottomBar mientras hay selección activa. */
+@Composable
+private fun BarraSeleccion(
+    texto: String,
+    onBuscarWeb: () -> Unit,
+    onCopiar: () -> Unit,
+    onCancelar: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            texto,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onCopiar) { Text("Copy") }
+        Button(onClick = onBuscarWeb) { Text("Search web") }
+        TextButton(onClick = onCancelar) { Text("✕") }
+    }
+}
+
+/** Abre la búsqueda web del texto seleccionado. ACTION_WEB_SEARCH primero (respeta
+ *  el buscador default del dispositivo); si no hay handler (package visibility de
+ *  Android 11+ o dispositivo sin app de búsqueda), fallback a una URL de Google por
+ *  ACTION_VIEW, que cualquier browser resuelve. Si tampoco hay browser (emulador
+ *  pelado), no crashear: la selección queda para Copy. */
+private fun buscarEnWeb(contexto: Context, texto: String) {
+    val busqueda = Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, texto)
+    runCatching { contexto.startActivity(busqueda) }.recoverCatching {
+        val url = "https://www.google.com/search?q=${Uri.encode(texto)}"
+        contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 }
