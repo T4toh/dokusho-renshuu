@@ -694,4 +694,33 @@ class LectorViewModelTest {
         vm.limpiarSeleccion(); advanceUntilIdle()
         assertNull(vm.estado.value.seleccion)
     }
+
+    @Test
+    fun `tap con seleccion activa extiende con tokens no-contenido (auxiliares y particulas)`() = runTest {
+        // Feedback de uso 2026-07-16: "siempre me falta el final, p.ej. ました" —
+        // los 助動詞/partículas eran intappeables en la UI y la frase no se podía
+        // cerrar. El VM SIEMPRE supo extender con cualquier token (tapPalabra no
+        // filtra esContenido); este test lo pinnea para que la UI (que ahora los
+        // habilita en modo selección) tenga contrato estable.
+        val vm = vmMomotaro(ProgresoDaoFake())
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        // buscar una oración que tenga un token no-contenido después de uno de contenido
+        val indice = vm.estado.value.oraciones.indexOfFirst { plana ->
+            val contenido = plana.tokens.indexOfFirst { it.esContenido }
+            contenido >= 0 && plana.tokens.drop(contenido + 1).any { !it.esContenido }
+        }
+        assertTrue("momotaro debería tener oraciones con partículas tras contenido", indice >= 0)
+        val tokens = vm.estado.value.oraciones[indice].tokens
+        val ancla = tokens.first { it.esContenido }
+        val noContenido = tokens.drop(tokens.indexOf(ancla) + 1).first { !it.esContenido }
+
+        vm.iniciarSeleccion(indice, ancla); advanceUntilIdle()
+        vm.tapPalabra(indice, noContenido); advanceUntilIdle()
+
+        val seleccion = vm.estado.value.seleccion!!
+        assertEquals(ancla.inicio, seleccion.inicio)
+        assertEquals(noContenido.fin, seleccion.fin)  // el auxiliar/partícula CIERRA la frase
+        assertNull(vm.estado.value.consulta)          // extender jamás abre el sheet
+    }
 }

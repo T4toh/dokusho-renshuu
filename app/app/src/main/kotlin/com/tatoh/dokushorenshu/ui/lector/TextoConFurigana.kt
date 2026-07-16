@@ -168,7 +168,15 @@ private fun FilaGrupo(
                         } else Modifier,
                     )
                     .then(
-                        if (segmento.token.esContenido && onTapPalabra != null) {
+                        // Sin selección: solo tokens de contenido (tap = diccionario;
+                        // partículas/auxiliares no tienen entrada útil). CON selección
+                        // activa en esta oración (rangoSeleccion != null), TODOS los
+                        // tokens son tappeables para extender el rango — feedback de
+                        // uso 2026-07-16: "siempre me falta el final, p.ej. ました"
+                        // (助動詞/partículas eran intappeables y la frase no se podía
+                        // cerrar). El VM extiende con cualquier token; el gate era
+                        // solo de UI.
+                        if ((segmento.token.esContenido || rangoSeleccion != null) && onTapPalabra != null) {
                             Modifier.combinedClickable(
                                 onClick = { onTapPalabra(segmento.token) },
                                 onLongClick = onLongPressPalabra?.let { alMantener ->
