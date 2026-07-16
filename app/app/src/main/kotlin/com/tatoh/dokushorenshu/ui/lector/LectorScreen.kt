@@ -249,10 +249,15 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
                     plana = plana,
                     furiganaActiva = estado.furiganaActiva,
                     katakanaActiva = estado.katakanaActiva,
-                    onTapPalabra = { token ->
-                        vm.enfocar(indice)
-                        vm.tocarPalabra(token)
-                    },
+                    onTapPalabra = { token -> vm.tapPalabra(indice, token) },
+                    onLongPressPalabra = { token -> vm.iniciarSeleccion(indice, token) },
+                    // rango de selección SOLO si pertenece a esta oración (mismo criterio
+                    // que esActual, ver doc de ItemOracion): nunca entra EstadoLector
+                    // completo, así un cambio de selección solo recompone los items cuyo
+                    // param cambió.
+                    rangoSeleccion = estado.seleccion
+                        ?.takeIf { it.indiceOracion == indice }
+                        ?.let { it.inicio until it.fin },
                 )
             }
         }
@@ -311,6 +316,12 @@ private fun ItemOracion(
     furiganaActiva: Boolean,
     katakanaActiva: Boolean,
     onTapPalabra: (PalabraToken) -> Unit,
+    onLongPressPalabra: (PalabraToken) -> Unit,
+    // rango de selección SOLO si pertenece a esta oración (ya filtrado en el
+    // callsite de itemsIndexed, mismo criterio que esActual: nunca entra
+    // EstadoLector completo — un cambio de selección solo recompone los items
+    // cuyo param cambió).
+    rangoSeleccion: IntRange?,
 ) {
     // Foco SOLO por alpha (animado), nunca por tamaño: todas las oraciones tienen la
     // misma altura de item siempre, así que cambiar el foco jamás reflowea la
@@ -328,6 +339,8 @@ private fun ItemOracion(
             furiganaActiva = furiganaActiva,
             katakanaActiva = katakanaActiva,
             onTapPalabra = onTapPalabra,
+            onLongPressPalabra = onLongPressPalabra,
+            rangoSeleccion = rangoSeleccion,
         )
     }
 }
