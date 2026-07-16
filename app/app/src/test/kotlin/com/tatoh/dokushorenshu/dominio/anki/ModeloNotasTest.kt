@@ -103,6 +103,23 @@ class ModeloNotasTest {
     }
 
     @Test
+    fun `afmt kanji muestra kun antes que on, en lineas etiquetadas y condicionales`() {
+        val afmt = ModeloNotas.AFMT_KANJI
+        assertTrue(afmt.indexOf("{{KunYomi}}") < afmt.indexOf("{{OnYomi}}"))
+        assertTrue(afmt.contains("{{#KunYomi}}"))
+        assertTrue(afmt.contains("{{#OnYomi}}"))
+        assertTrue(afmt.contains("""<span class="etiqueta-lectura">kun</span>"""))
+        assertTrue(afmt.contains("""<span class="etiqueta-lectura">on</span>"""))
+    }
+
+    @Test
+    fun `css define objetivo y etiqueta-lectura con overrides de modo claro`() {
+        assertTrue(ModeloNotas.CSS.contains(".objetivo"))
+        assertTrue(ModeloNotas.CSS.contains(".etiqueta-lectura"))
+        assertTrue(ModeloNotas.CSS.contains(".card:not(.night_mode) #oracion .objetivo"))
+    }
+
+    @Test
     fun `IDs de modelo y mazo son distintos entre si (nunca colisionan)`() {
         val ids = setOf(
             ModeloNotas.MODEL_ID_WORDS, ModeloNotas.MODEL_ID_KANJI,
