@@ -35,6 +35,10 @@ def _verificar_historia(ruta: str, id_: str) -> list:
             f"{id_}: version {historia['version']!r} != {VERSION_HISTORIA}")
     if not historia['parrafos']:
         errores.append(f'{id_}: sin párrafos')
+
+    con_traduccion = 0
+    sin_traduccion = 0
+
     for p, parrafo in enumerate(historia['parrafos']):
         if not parrafo.get('oraciones'):
             errores.append(f'{id_} p{p}: párrafo sin oraciones')
@@ -47,8 +51,13 @@ def _verificar_historia(ruta: str, id_: str) -> list:
             if any(m in texto for m in MARCADO_RESIDUAL):
                 errores.append(
                     f'{donde}: marcado Aozora residual: {texto[:30]}')
-            if oracion.get('traduccion') is not None:
-                errores.append(f'{donde}: traduccion debe ser null en v1')
+            traduccion = oracion.get('traduccion')
+            if traduccion is None:
+                sin_traduccion += 1
+            elif isinstance(traduccion, str) and traduccion:
+                con_traduccion += 1
+            else:
+                errores.append(f'{donde}: traduccion inválida {traduccion!r}')
             anterior_fin = None
             for furi in oracion.get('furigana', []):
                 if not isinstance(furi, list) or len(furi) != 3:
@@ -67,6 +76,12 @@ def _verificar_historia(ruta: str, id_: str) -> list:
                         f'{donde}: furigana solapada o desordenada {furi} '
                         f'(fin anterior {anterior_fin})')
                 anterior_fin = fin
+
+    if con_traduccion and sin_traduccion:
+        errores.append(
+            f'{id_}: cobertura parcial de traducciones '
+            f'({con_traduccion} con, {sin_traduccion} sin) — all-or-nothing')
+
     return errores
 
 
