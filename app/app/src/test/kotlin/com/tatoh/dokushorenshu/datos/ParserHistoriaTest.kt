@@ -94,4 +94,36 @@ class ParserHistoriaTest {
         val e = assertThrows(IllegalArgumentException::class.java) { ParserHistoria.parsearCatalogo(json) }
         assertTrue(e.message!!.contains("dificultad"))
     }
+
+    @Test
+    fun `parsea traduccion cuando viene como string`() {
+        val json = """{"id":"t","titulo":"T","autor":"A","fuente":"F","licencia":"L",
+            "dificultad":"facil","version":2,"parrafos":[{"oraciones":[
+            {"texto":"桃太郎は強い。","furigana":[[0,3,"ももたろう"]],"traduccion":"Momotaro is strong."}]}]}"""
+        val historia = ParserHistoria.parsear(json)
+        assertEquals("Momotaro is strong.", historia.parrafos[0].oraciones[0].traduccion)
+    }
+
+    @Test
+    fun `traduccion null o ausente parsea como null`() {
+        val conNull = """{"id":"t","titulo":"T","autor":"A","fuente":"F","licencia":"L",
+            "dificultad":"facil","version":2,"parrafos":[{"oraciones":[
+            {"texto":"a","furigana":[],"traduccion":null},{"texto":"b","furigana":[]}]}]}"""
+        val oraciones = ParserHistoria.parsear(conNull).parrafos[0].oraciones
+        assertNull(oraciones[0].traduccion)
+        assertNull(oraciones[1].traduccion)
+    }
+
+    @Test
+    fun `round-trip serializar-parsear conserva traduccion`() {
+        val historia = Historia(
+            id = "t", titulo = "T", autor = "A", fuente = "F", licencia = "L",
+            dificultad = "facil", version = 2,
+            parrafos = listOf(Parrafo(listOf(
+                Oracion("桃太郎は強い。", listOf(Furigana(0, 3, "ももたろう")), "Momotaro is strong."),
+                Oracion("川へ行った。", emptyList()),  // sin traducción → JsonNull
+            ))),
+        )
+        assertEquals(historia, ParserHistoria.parsear(SerializadorHistoria.serializar(historia)))
+    }
 }

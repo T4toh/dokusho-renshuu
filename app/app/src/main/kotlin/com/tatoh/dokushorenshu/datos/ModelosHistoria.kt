@@ -17,7 +17,7 @@ import kotlinx.serialization.json.put
 /** fin es EXCLUSIVO, índices sobre texto (contrato de catalogo/, Plan 2).
  *  Índices = code points BMP; el catálogo no usa caracteres suplementarios. */
 data class Furigana(val inicio: Int, val fin: Int, val lectura: String)
-data class Oracion(val texto: String, val furigana: List<Furigana>)
+data class Oracion(val texto: String, val furigana: List<Furigana>, val traduccion: String? = null)
 data class Parrafo(val oraciones: List<Oracion>)
 data class Historia(
     val id: String, val titulo: String, val autor: String, val fuente: String,
@@ -100,7 +100,13 @@ object ParserHistoria {
             }
             Furigana(inicio, fin, lectura)
         } ?: emptyList()
-        return Oracion(textoOracion, furigana)
+        // traduccion (PR B, backlog feedback de uso): string no vacío o null/ausente.
+        // Catálogos viejos no traen el campo; importadas lo emiten null.
+        val traduccion = obj["traduccion"]
+            ?.takeIf { it !is JsonNull }
+            ?.jsonPrimitive?.content
+            ?.takeIf { it.isNotEmpty() }
+        return Oracion(textoOracion, furigana, traduccion)
     }
 
     private fun validarDificultad(valor: String): String {
@@ -116,8 +122,8 @@ object ParserHistoria {
 
 /** Inverso de [ParserHistoria.parsear]: emite el schema v2 exacto (mismo
  *  contrato que el emisor Python del Plan 2 — claves en español, furigana como
- *  ternas, `traduccion` siempre null, japonés sin escapar). Round-trip
- *  garantizado por test: parsear(serializar(h)) == h. */
+ *  ternas, `traduccion` = valor de la oración o null (importadas: null — Kuromoji no traduce),
+ *  japonés sin escapar). Round-trip garantizado por test: parsear(serializar(h)) == h. */
 object SerializadorHistoria {
     fun serializar(historia: Historia): String = buildJsonObject {
         put("id", historia.id)
@@ -137,7 +143,11 @@ object SerializadorHistoria {
                                 add(f.inicio); add(f.fin); add(f.lectura)
                             }
                         }
-                        put("traduccion", JsonNull)
+                        if (oracion.traduccion != null) {
+                            put("traduccion", oracion.traduccion)
+                        } else {
+                            put("traduccion", JsonNull)
+                        }
                     }
                 }
             }
