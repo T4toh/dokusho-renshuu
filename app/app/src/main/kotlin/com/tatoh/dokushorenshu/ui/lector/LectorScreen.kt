@@ -264,12 +264,25 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
         // BoxWithConstraints) así que NO scrollea con el contenido; no tiene ningún
         // modifier de gestos (sin `clickable` ni `pointerInput`) así que no intercepta
         // toques — el scroll/tap de la lista de abajo pasa de largo.
-        Text(
-            text = "▸",
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-            style = MaterialTheme.typography.titleLarge,
+        // Al lado va el número (1-based) de la oración enfocada (backlog feedback de
+        // uso 2026-07-13: poder reportar casos puntuales por número de oración).
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp),
-        )
+        ) {
+            if (estado.indiceActual >= 0) {
+                Text(
+                    text = "${estado.indiceActual + 1}",
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+            Text(
+                text = "▸",
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.titleLarge,
+            )
+        }
 
         // Contraparte espejada del indicador de centro, en el margen derecho (Plan 3.6):
         // misma línea vertical central, misma altura, mismo estilo/alpha — así la marca
