@@ -570,4 +570,128 @@ class LectorViewModelTest {
         }
         assertTrue("no se revisó ninguna oración", oracionesRevisadas > 0)
     }
+
+    // --- selección de rango de tokens (backlog feedback de uso 2026-07-13: buscar en
+    // el browser expresiones largas/frases adverbiales que el diccionario no tiene).
+    // Long-press ancla (iniciarSeleccion), tap con selección activa en la MISMA oración
+    // extiende el rango (tapPalabra), tap en otra oración o navegar limpia. El texto
+    // seleccionado es el substring del texto de la oración: incluye partículas y
+    // tokens no-contenido intermedios, sin furigana. ---
+
+    @Test
+    fun `long-press ancla la seleccion en el token y enfoca la oracion`() = runTest {
+        val vm = vmMomotaro(ProgresoDaoFake())
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        val indice = vm.estado.value.indiceActual + 1  // oración NO enfocada todavía
+        val token = vm.estado.value.oraciones[indice].tokens.first { it.esContenido }
+        vm.iniciarSeleccion(indice, token); advanceUntilIdle()
+        val estado = vm.estado.value
+        assertEquals(SeleccionTexto(indice, token.inicio, token.fin), estado.seleccion)
+        assertEquals(indice, estado.indiceActual)   // long-press también enfoca
+        assertNull(estado.consulta)                  // y NO abre el sheet de diccionario
+    }
+
+    @Test
+    fun `tap con seleccion activa extiende el rango hacia ambos lados`() = runTest {
+        val vm = vmMomotaro(ProgresoDaoFake())
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        val indice = vm.estado.value.indiceActual
+        val tokens = vm.estado.value.oraciones[indice].tokens.filter { it.esContenido }
+        // ancla en el del medio, extiende al último y después al primero
+        vm.iniciarSeleccion(indice, tokens[1]); advanceUntilIdle()
+        vm.tapPalabra(indice, tokens.last()); advanceUntilIdle()
+        assertEquals(tokens.last().fin, vm.estado.value.seleccion?.fin)
+        vm.tapPalabra(indice, tokens.first()); advanceUntilIdle()
+        val seleccion = vm.estado.value.seleccion!!
+        assertEquals(tokens.first().inicio, seleccion.inicio)
+        assertEquals(tokens.last().fin, seleccion.fin)
+        assertNull(vm.estado.value.consulta)  // extender jamás abre el sheet
+    }
+
+    @Test
+    fun `textoSeleccionado es el substring de la oracion, con particulas intermedias y sin furigana`() = runTest {
+        val vm = vmMomotaro(ProgresoDaoFake())
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        val indice = vm.estado.value.indiceActual
+        val plana = vm.estado.value.oraciones[indice]
+        val contenido = plana.tokens.filter { it.esContenido }
+        vm.iniciarSeleccion(indice, contenido[0]); advanceUntilIdle()
+        vm.tapPalabra(indice, contenido[1]); advanceUntilIdle()
+        // substring crudo del texto original: entra TODO lo que hay entre ambos tokens
+        assertEquals(
+            plana.oracion.texto.substring(contenido[0].inicio, contenido[1].fin),
+            vm.estado.value.textoSeleccionado,
+        )
+    }
+
+    @Test
+    fun `tap sin seleccion mantiene el comportamiento original (enfoca y abre consulta)`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        val indice = vm.estado.value.indiceActual
+        val token = vm.estado.value.oraciones[indice].tokens.first { it.esContenido }
+        vm.tapPalabra(indice, token); advanceUntilIdle()
+        assertNotNull(vm.estado.value.consulta)
+        assertNull(vm.estado.value.seleccion)
+        assertEquals(1, dao.palabrasDe("momotaro").size)
+    }
+
+    @Test
+    fun `tap en OTRA oracion con seleccion activa la limpia y vuelve al comportamiento normal`() = runTest {
+        val vm = vmMomotaro(ProgresoDaoFake())
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        val indice = vm.estado.value.indiceActual
+        vm.iniciarSeleccion(indice, vm.estado.value.oraciones[indice].tokens.first { it.esContenido })
+        advanceUntilIdle()
+        val otro = indice + 1
+        val tokenOtro = vm.estado.value.oraciones[otro].tokens.first { it.esContenido }
+        vm.tapPalabra(otro, tokenOtro); advanceUntilIdle()
+        assertNull(vm.estado.value.seleccion)
+        assertNotNull(vm.estado.value.consulta)
+        assertEquals(otro, vm.estado.value.indiceActual)
+    }
+
+    @Test
+    fun `navegar con Previous-Next limpia la seleccion`() = runTest {
+        val vm = vmMomotaro(ProgresoDaoFake())
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        val indice = vm.estado.value.indiceActual
+        vm.iniciarSeleccion(indice, vm.estado.value.oraciones[indice].tokens.first { it.esContenido })
+        advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        assertNull(vm.estado.value.seleccion)
+    }
+
+    @Test
+    fun `enfocar otra oracion limpia la seleccion pero enfocar la misma la conserva`() = runTest {
+        val vm = vmMomotaro(ProgresoDaoFake())
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        val indice = vm.estado.value.indiceActual
+        vm.iniciarSeleccion(indice, vm.estado.value.oraciones[indice].tokens.first { it.esContenido })
+        advanceUntilIdle()
+        vm.enfocar(indice); advanceUntilIdle()   // settle del scroll sobre la MISMA oración
+        assertNotNull(vm.estado.value.seleccion) // no borra la selección en curso
+        vm.enfocar(indice + 1); advanceUntilIdle()
+        assertNull(vm.estado.value.seleccion)
+    }
+
+    @Test
+    fun `limpiarSeleccion borra la seleccion`() = runTest {
+        val vm = vmMomotaro(ProgresoDaoFake())
+        vm.cargar(); advanceUntilIdle()
+        vm.avanzar(); advanceUntilIdle()
+        val indice = vm.estado.value.indiceActual
+        vm.iniciarSeleccion(indice, vm.estado.value.oraciones[indice].tokens.first { it.esContenido })
+        advanceUntilIdle()
+        vm.limpiarSeleccion(); advanceUntilIdle()
+        assertNull(vm.estado.value.seleccion)
+    }
 }
