@@ -95,6 +95,49 @@ class TestEmisor(unittest.TestCase):
         with open(ruta, encoding='utf-8') as f:
             self.assertIn('桃太郎', f.read())  # ensure_ascii=False
 
+    def test_construir_con_traducciones_emite_strings(self):
+        parrafos = [[('桃太郎は強い。', []), ('川へ行った。', [])]]
+        traducciones = [
+            {'texto': '桃太郎は強い。', 'traduccion': 'Momotaro is strong.'},
+            {'texto': '川へ行った。', 'traduccion': 'To the river (he) went.'},
+        ]
+        historia = emisor.construir_historia(
+            id_='t', titulo='T', autor='A', fuente='F', licencia='L',
+            dificultad='facil', parrafos=parrafos, traducciones=traducciones)
+        oraciones = historia['parrafos'][0]['oraciones']
+        self.assertEqual('Momotaro is strong.', oraciones[0]['traduccion'])
+        self.assertEqual('To the river (he) went.', oraciones[1]['traduccion'])
+
+    def test_sin_traducciones_sigue_emitiendo_null(self):
+        historia = _historia()  # helper existente, sin traducciones
+        for parrafo in historia['parrafos']:
+            for oracion in parrafo['oraciones']:
+                self.assertIsNone(oracion['traduccion'])
+
+    def test_conteo_despareja_aborta(self):
+        parrafos = [[('桃太郎は強い。', []), ('川へ行った。', [])]]
+        with self.assertRaises(ValueError):
+            emisor.construir_historia(
+                id_='t', titulo='T', autor='A', fuente='F', licencia='L',
+                dificultad='facil', parrafos=parrafos,
+                traducciones=[{'texto': '桃太郎は強い。', 'traduccion': 'x'}])
+
+    def test_texto_despareja_aborta(self):
+        parrafos = [[('桃太郎は強い。', [])]]
+        with self.assertRaises(ValueError):
+            emisor.construir_historia(
+                id_='t', titulo='T', autor='A', fuente='F', licencia='L',
+                dificultad='facil', parrafos=parrafos,
+                traducciones=[{'texto': 'OTRO TEXTO。', 'traduccion': 'x'}])
+
+    def test_traduccion_vacia_aborta(self):
+        parrafos = [[('桃太郎は強い。', [])]]
+        with self.assertRaises(ValueError):
+            emisor.construir_historia(
+                id_='t', titulo='T', autor='A', fuente='F', licencia='L',
+                dificultad='facil', parrafos=parrafos,
+                traducciones=[{'texto': '桃太郎は強い。', 'traduccion': ''}])
+
 
 if __name__ == '__main__':
     unittest.main()

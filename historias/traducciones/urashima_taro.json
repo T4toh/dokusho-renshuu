@@ -1,0 +1,597 @@
+{
+ "id": "urashima_taro",
+ "oraciones": [
+  {
+   "texto": "むかし、むかし、丹後の国水の江の浦に、浦島太郎というりょうしがありました。",
+   "traduccion": "Long, long ago, in the bay of Mizunoe in Tango Province, there was a fisherman called Urashima Taro."
+  },
+  {
+   "texto": "浦島太郎は、毎日つりざおをかついでは海へ出かけて、たいや、かつおなどのおさかなをつって、おとうさんおかあさんをやしなっていました。",
+   "traduccion": "As for Urashima Taro, every day (he) shouldered his fishing rod and went out to the sea, and caught fish such as sea bream, bonito, and such, and supported his father and mother."
+  },
+  {
+   "texto": "ある日、浦島はいつものとおり海へ出て、一日おさかなをつって、帰ってきました。",
+   "traduccion": "One day, Urashima went out to the sea as usual, fished all day, and came back."
+  },
+  {
+   "texto": "途中、子どもが五、六人往来にあつまって、がやがやいっていました。",
+   "traduccion": "On the way, five or six children were gathered on the road, and (were) talking noisily (gaya-gaya, sound of chattering)."
+  },
+  {
+   "texto": "何かとおもって浦島がのぞいてみると、小さいかめの子を一ぴきつかまえて、棒でつついたり、石でたたいたり、さんざんにいじめているのです。",
+   "traduccion": "Thinking it was something, when Urashima peeked in, (they) had caught one small baby turtle, and (were) poking it with a stick, hitting it with a stone, and thoroughly tormenting (it)."
+  },
+  {
+   "texto": "浦島は見かねて、",
+   "traduccion": "Urashima, unable to bear watching, (said),"
+  },
+  {
+   "texto": "「まあ、そんなかわいそうなことをするものではない。いい子だから」",
+   "traduccion": "\"Now, you must not do such a pitiful thing. (You are) good children, so...\""
+  },
+  {
+   "texto": "と、とめましたが、子どもたちはきき入れようともしないで、",
+   "traduccion": "(he) said, stopping (them), but the children did not even try to listen, and,"
+  },
+  {
+   "texto": "「なんだい。なんだい、かまうもんかい」",
+   "traduccion": "\"What is it. What is it, what does it matter (to us)\""
+  },
+  {
+   "texto": "といいながら、またかめの子を、あおむけにひっくりかえして、足でけったり、砂のなかにうずめたりしました。",
+   "traduccion": "saying (this), (they) again turned the baby turtle over on its back, and kicked it with their feet, and buried it in the sand, and such."
+  },
+  {
+   "texto": "浦島はますますかわいそうにおもって、",
+   "traduccion": "Urashima felt more and more pity, and,"
+  },
+  {
+   "texto": "「じゃあ、おじさんがおあしをあげるから、そのかめの子を売っておくれ」",
+   "traduccion": "\"Well then, since uncle will give (you) money, sell me that baby turtle\""
+  },
+  {
+   "texto": "といいますと、こどもたちは、",
+   "traduccion": "(he) said, and the children,"
+  },
+  {
+   "texto": "「うんうん、おあしをくれるならやってもいい」",
+   "traduccion": "\"Yeah yeah, if (you) give (us) money, (we) may as well give (it to you)\""
+  },
+  {
+   "texto": "といって、手を出しました。",
+   "traduccion": "saying (this), (they) held out their hands."
+  },
+  {
+   "texto": "そこで浦島はおあしをやってかめの子をもらいうけました。",
+   "traduccion": "So Urashima gave (them) money and received the baby turtle."
+  },
+  {
+   "texto": "子どもたちは、",
+   "traduccion": "The children,"
+  },
+  {
+   "texto": "「おじさん、ありがとう。また買っておくれよ」",
+   "traduccion": "\"Uncle, thank you. Buy (another one) again\""
+  },
+  {
+   "texto": "と、わいわいいいながら、行ってしまいました。",
+   "traduccion": "saying (this) noisily (wai-wai, sound of clamoring), (they) went away."
+  },
+  {
+   "texto": "そのあとで浦島は、こうらからそっと出したかめの首をやさしくなでてやって、",
+   "traduccion": "After that, Urashima gently stroked the neck of the turtle that (he) had quietly brought out from its shell, and,"
+  },
+  {
+   "texto": "「やれやれ、あぶないところだった。さあもうお帰りお帰り」",
+   "traduccion": "\"Well well, that was a dangerous moment. Now, go home, go home\""
+  },
+  {
+   "texto": "といって、わざわざ、かめを海ばたまで持って行ってはなしてやりました。",
+   "traduccion": "saying (this), (he) purposely carried the turtle to the seaside and released it."
+  },
+  {
+   "texto": "かめはさもうれしそうに、首や手足をうごかして、やがて、ぶくぶくあわをたてながら、水のなかにふかくしずんで行ってしまいました。",
+   "traduccion": "The turtle, looking truly happy, moved its neck and limbs, and before long, while making buku-buku (sound of bubbling) bubbles, sank deep into the water."
+  },
+  {
+   "texto": "それから二、三日たって、浦島はまた舟にのって海へつりに出かけました。",
+   "traduccion": "After that, two or three days passed, and Urashima again got on a boat and went out to the sea to fish."
+  },
+  {
+   "texto": "遠い沖のほうまでもこぎ出して、一生けんめいおさかなをつっていますと、ふとうしろのほうで",
+   "traduccion": "(He) rowed out even to the distant open sea, and while fishing with all his might, suddenly from behind,"
+  },
+  {
+   "texto": "「浦島さん、浦島さん」",
+   "traduccion": "\"Urashima-san, Urashima-san\""
+  },
+  {
+   "texto": "とよぶ声がしました。",
+   "traduccion": "a voice calling (this) was heard."
+  },
+  {
+   "texto": "おやとおもってふりかえってみますと、だれも人のかげは見えません。",
+   "traduccion": "Thinking 'oh?', when (he) turned around and looked, no shadow of a person could be seen at all."
+  },
+  {
+   "texto": "その代り、いつのまにか、一ぴきのかめが、舟のそばにきていました。",
+   "traduccion": "Instead, before (he) knew it, one turtle had come to the side of the boat."
+  },
+  {
+   "texto": "浦島がふしぎそうな顔をしていると、",
+   "traduccion": "As Urashima was making a puzzled-looking face,"
+  },
+  {
+   "texto": "「わたくしは、先日助けていただいたかめでございます。きょうはちょっとそのお礼にまいりました」",
+   "traduccion": "\"I am the turtle that (you) helped the other day. Today (I) have come a little to give thanks for that\""
+  },
+  {
+   "texto": "かめがこういったので、浦島はびっくりしました。",
+   "traduccion": "Since the turtle said this, Urashima was surprised."
+  },
+  {
+   "texto": "「まあ、そうかい。わざわざ礼なんぞいいにくるにはおよばないのに」",
+   "traduccion": "\"Well, is that so. There was no need to purposely come and say thanks (for something) like that\""
+  },
+  {
+   "texto": "「でも、ほんとうにありがとうございました。ときに、浦島さん、あなたはりゅう宮をごらんになったことがありますか」",
+   "traduccion": "\"But, thank you truly. By the way, Urashima-san, have you ever seen the Dragon Palace (Ryugu)?\""
+  },
+  {
+   "texto": "「いや、話にはきいているが、まだ見たことはないよ」",
+   "traduccion": "\"No, (I) have heard of it in stories, but (I) have never seen (it) yet\""
+  },
+  {
+   "texto": "「ではほんのお礼のしるしに、わたくしがりゅう宮を見せて上げたいとおもいますがいかがでしょう」",
+   "traduccion": "\"Then, as just a token of thanks, I would like to show you the Dragon Palace, how would that be?\""
+  },
+  {
+   "texto": "「へえ、それはおもしろいね。ぜひ行ってみたいが、それはなんでも海の底にあるということではないか。どうして行くつもりだね。わたしにはとてもそこまでおよいでは行けないよ」",
+   "traduccion": "\"Oh, that is interesting. (I) would very much like to go, but isn't it said that it is at the bottom of the sea, whatever the case? How do you intend to go there? I could never swim that far\""
+  },
+  {
+   "texto": "「なに、わけはございません。わたくしの背中におのりください」",
+   "traduccion": "\"What, there is no reason (to worry). Please get on my back\""
+  },
+  {
+   "texto": "かめはこういって、背中を出しました。",
+   "traduccion": "The turtle said this, and put out its back."
+  },
+  {
+   "texto": "浦島は半分きみわるくおもいながら、いわれるままに、かめの背中にのりました。",
+   "traduccion": "Urashima, while feeling half uneasy, got on the turtle's back just as (he) was told."
+  },
+  {
+   "texto": "かめはすぐに白い波を切って、ずんずんおよいで行きました。",
+   "traduccion": "The turtle immediately cut through the white waves, and swam forward briskly (zun-zun)."
+  },
+  {
+   "texto": "ざあざあいう波の音がだんだん遠くなって、青い青い水の底へ、ただもう夢のようにはこばれて行きますと、ふと、そこらがかっとあかるくなって、白玉のようにきれいな砂の道がつづいて、むこうにりっぱな門が見えました。",
+   "traduccion": "The sound of the waves going zaa-zaa (roaring) gradually grew distant, and as (he) was carried, just like in a dream, to the bottom of the deep blue water, suddenly, the area around there became brightly lit, and a sand path as beautiful as a white jewel continued on, and a splendid gate could be seen on the other side."
+  },
+  {
+   "texto": "その奥にきらきら光って、目のくらむような金銀のいらかが、たかくそびえていました。",
+   "traduccion": "Further within that, gold and silver roof tiles that shone glitteringly (kira-kira), dazzling to the eyes, towered up high."
+  },
+  {
+   "texto": "「さあ、りゅう宮へまいりました」",
+   "traduccion": "\"Now, (we) have arrived at the Dragon Palace\""
+  },
+  {
+   "texto": "かめはこういって、浦島を背中からおろして、",
+   "traduccion": "The turtle said this, and let Urashima down from its back, and,"
+  },
+  {
+   "texto": "「しばらくお待ちください」",
+   "traduccion": "\"Please wait a while\""
+  },
+  {
+   "texto": "といったまま、門のなかへはいって行きました。",
+   "traduccion": "having said (this), (it) went in through the gate."
+  },
+  {
+   "texto": "まもなく、かめはまた出てきて、",
+   "traduccion": "Before long, the turtle came out again, and,"
+  },
+  {
+   "texto": "「さあ、こちらへ」",
+   "traduccion": "\"Now, this way\""
+  },
+  {
+   "texto": "と、浦島を御殿のなかへ案内しました。",
+   "traduccion": "(saying this), (it) guided Urashima into the palace."
+  },
+  {
+   "texto": "たいや、ひらめやかれいや、いろいろのおさかなが、ものめずらしそうな目で見ているなかをとおって、はいって行きますと、乙姫さまがおおぜいの腰元をつれて、お迎えに出てきました。",
+   "traduccion": "(He) passed through (a place where) sea bream, flounder, flatfish, and various other fish were looking (at him) with eyes of curiosity, and as (he) went in, Princess Otohime came out to greet (him), accompanied by many ladies-in-waiting."
+  },
+  {
+   "texto": "やがて乙姫さまについて、浦島はずんずん奥へとおって行きました。",
+   "traduccion": "Before long, following Princess Otohime, Urashima went on further and further inside."
+  },
+  {
+   "texto": "めのうの天井にさんごの柱、廊下にはるりがしきつめてありました。",
+   "traduccion": "(There was) an agate ceiling and coral pillars, and in the corridor lapis lazuli was spread all over."
+  },
+  {
+   "texto": "こわごわその上をあるいて行きますと、どこからともなくいいにおいがして、たのしい楽の音がきこえてきました。",
+   "traduccion": "As (he) walked fearfully along on top of (it), a nice smell came from nowhere in particular, and (he) came to hear pleasant music."
+  },
+  {
+   "texto": "やがて、水晶の壁に、いろいろの宝石をちりばめた大広間にとおりますと、",
+   "traduccion": "Before long, as (he) passed into a great hall with crystal walls, studded with various jewels,"
+  },
+  {
+   "texto": "「浦島さん、ようこそおいでくださいました。先日はかめのいのちをお助けくださいまして、まことにありがとうございます。なんにもおもてなしはございませんが、どうぞゆっくりおあそびくださいまし」",
+   "traduccion": "\"Urashima-san, welcome, thank you for coming. The other day, (you) saved the turtle's life, for which (I am) truly grateful. There is no hospitality worth mentioning, but please relax and enjoy yourself\""
+  },
+  {
+   "texto": "と、乙姫さまはいって、ていねいにおじぎしました。",
+   "traduccion": "Princess Otohime said (this), and bowed politely."
+  },
+  {
+   "texto": "やがて、たいをかしらに、かつおだの、ふぐだの、えびだの、たこだの、大小いろいろのおさかなが、めずらしいごちそうを山とはこんできて、にぎやかなお酒盛がはじまりました。",
+   "traduccion": "Before long, with sea bream at the head, bonito, and pufferfish, and shrimp, and octopus, various fish big and small, carried in mountains of rare feasts, and a lively drinking party began."
+  },
+  {
+   "texto": "きれいな腰元たちは、歌をうたったり踊りをおどったりしました。",
+   "traduccion": "The beautiful ladies-in-waiting sang songs, danced dances, and such."
+  },
+  {
+   "texto": "浦島はただもう夢のなかで夢を見ているようでした。",
+   "traduccion": "Urashima felt just as if he were dreaming a dream within a dream."
+  },
+  {
+   "texto": "ごちそうがすむと、浦島はまた乙姫さまの案内で、御殿のなかをのこらず見せてもらいました。",
+   "traduccion": "When the feast was over, Urashima, again guided by Princess Otohime, was shown the whole of the inside of the palace, leaving nothing out."
+  },
+  {
+   "texto": "どのおへやも、どのおへやも、めずらしい宝石でかざり立ててありますからそのうつくしさは、とても口やことばではいえないくらいでした。",
+   "traduccion": "Every room, every room, was decorated with rare jewels, so that its beauty was to the extent that (it) could hardly be expressed by mouth or words at all."
+  },
+  {
+   "texto": "ひととおり見てしまうと、乙姫さまは、",
+   "traduccion": "When (he) had finished seeing (it) one whole round, Princess Otohime,"
+  },
+  {
+   "texto": "「こんどは四季のけしきをお目にかけましょう」",
+   "traduccion": "\"This time, let (me) show you the scenery of the four seasons\""
+  },
+  {
+   "texto": "といって、まず、東の戸をおあけになりました。",
+   "traduccion": "(she) said, and first, opened the east door."
+  },
+  {
+   "texto": "そこは春のけしきで、いちめん、ぼうっとかすんだなかに、さくらの花が、うつくしい絵のように咲き乱れていました。",
+   "traduccion": "There was the scenery of spring, and within a hazy mist covering the whole area, cherry blossoms were blooming in profusion like a beautiful picture."
+  },
+  {
+   "texto": "青青としたやなぎの枝が風になびいて、そのなかで小鳥がないたり、ちょうちょうが舞ったりしていました。",
+   "traduccion": "The lushly green willow branches swayed in the wind, and within them, small birds were singing, butterflies were fluttering, and such."
+  },
+  {
+   "texto": "次に、南の戸をおあけになりました。",
+   "traduccion": "Next, (she) opened the south door."
+  },
+  {
+   "texto": "そこは夏のけしきで、垣根には白いうの花が咲いて、お庭の木の青葉のなかでは、せみやひぐらしがないていました。",
+   "traduccion": "There was the scenery of summer, and on the hedge white deutzia flowers were blooming, and among the green leaves of the garden trees, cicadas and evening cicadas were singing."
+  },
+  {
+   "texto": "お池には赤と白のはすの花が咲いて、その葉の上には、水晶の珠のように露がたまっていました。",
+   "traduccion": "In the pond, red and white lotus flowers were blooming, and on top of their leaves, dew had gathered like crystal beads."
+  },
+  {
+   "texto": "お池のふちには、きれいなさざ波が立って、おしどりやかもがうかんでいました。",
+   "traduccion": "At the edge of the pond, beautiful ripples were rising, and mandarin ducks and wild ducks were floating."
+  },
+  {
+   "texto": "次に西の戸をおあけになりました。",
+   "traduccion": "Next, (she) opened the west door."
+  },
+  {
+   "texto": "そこは秋のけしきで花壇のなかには、黄ぎく、白ぎくが咲き乱れて、ぷんといいかおりを立てました。",
+   "traduccion": "There was the scenery of autumn, and in the flower bed, yellow chrysanthemums and white chrysanthemums were blooming in profusion, giving off a pleasant fragrance (pun, a whiff of scent)."
+  },
+  {
+   "texto": "むこうを見ると、かっともえ立つようなもみじの林の奥に、白い霧がたちこめていて、しかのなく声がかなしくきこえました。",
+   "traduccion": "Looking over there, deep within a maple forest that seemed to blaze up brightly, a white mist hung thick, and the cry of a deer could be heard sadly."
+  },
+  {
+   "texto": "いちばんおしまいに、北の戸をおあけになりました。",
+   "traduccion": "Very last of all, (she) opened the north door."
+  },
+  {
+   "texto": "そこは冬のけしきで、野には散りのこった枯葉の上に、霜がきらきら光っていました。",
+   "traduccion": "There was the scenery of winter, and in the fields, on top of withered leaves that remained after falling, frost was shining glitteringly."
+  },
+  {
+   "texto": "山から谷にかけて、雪がまっ白に降り埋んだなかから、柴をたくけむりがほそぼそとあがっていました。",
+   "traduccion": "From the mountains stretching to the valleys, from within (a place) where snow had fallen and buried (everything) in pure white, smoke from burning brushwood was rising thinly."
+  },
+  {
+   "texto": "浦島は何を見ても、おどろきあきれて、目ばかり見はっていました。",
+   "traduccion": "No matter what Urashima looked at, (he) was astonished and amazed, and just kept his eyes wide open."
+  },
+  {
+   "texto": "そのうちだんだんぼうっとしてきて、お酒に酔った人のようになって、何もかもわすれてしまいました。",
+   "traduccion": "Before long (he) gradually became hazy, became like a person drunk on sake, and forgot everything entirely."
+  },
+  {
+   "texto": "毎日おもしろい、めずらしいことが、それからそれとつづいて、あまりりゅう宮がたのしいので、なんということもおもわずに、うかうかあそんでくらすうち、三年の月日がたちました。",
+   "traduccion": "Every day interesting, rare things continued one after another, and since the Dragon Palace was so enjoyable, without thinking anything of it, while (he) spent his days idly playing, three years' time passed."
+  },
+  {
+   "texto": "三年めの春になったとき、浦島はときどき、ひさしくわすれていたふるさとの夢を見るようになりました。",
+   "traduccion": "When it became the spring of the third year, Urashima came to sometimes dream of his hometown, which (he) had long forgotten."
+  },
+  {
+   "texto": "春の日のぽかぽかあたっている水の江の浜べで、りょうしたちがげんきよく舟うたをうたいながら、網をひいたり舟をこいだりしているところを、まざまざと夢に見るようになりました。",
+   "traduccion": "(He) came to vividly dream of the scene at the Mizunoe beach, warmed by the balmy spring sun, where fishermen, singing boat songs energetically, were pulling nets and rowing boats, and such."
+  },
+  {
+   "texto": "浦島はいまさらのように、",
+   "traduccion": "Urashima, as if only now (realizing it),"
+  },
+  {
+   "texto": "「おとうさんや、おかあさんは、いまごろどうしておいでになるだろう」",
+   "traduccion": "\"Father, and mother, how are they doing about now, I wonder\""
+  },
+  {
+   "texto": "と、こうおもい出すと、もう、いても立ってもいられなくなるような気がしました。",
+   "traduccion": "thinking (this) and recalling (it) like this, (he) felt as if (he) could no longer sit still or stand still."
+  },
+  {
+   "texto": "なんでも早くうちへ帰りたいとばかりおもうようになりました。",
+   "traduccion": "(He) came to think of nothing but wanting to return home quickly, whatever the case."
+  },
+  {
+   "texto": "ですから、もうこのごろでは、歌をきいても、踊りを見ても、おもしろくない顔をして、ふさぎこんでばかりいました。",
+   "traduccion": "So, by these days, even when (he) listened to songs, even when (he) watched dances, (he) made an uninterested face, and did nothing but mope."
+  },
+  {
+   "texto": "その様子を見ると、乙姫さまは心配して、",
+   "traduccion": "Seeing that state, Princess Otohime, worried,"
+  },
+  {
+   "texto": "「浦島さん、ご気分でもおわるいのですか」",
+   "traduccion": "\"Urashima-san, is something the matter with how you are feeling?\""
+  },
+  {
+   "texto": "とおききになりました。",
+   "traduccion": "(she) asked."
+  },
+  {
+   "texto": "浦島はもじもじしながら、",
+   "traduccion": "Urashima, while fidgeting (mojimoji),"
+  },
+  {
+   "texto": "「いいえ、そうではありません。じつはうちへ帰りたくなったものですから」",
+   "traduccion": "\"No, that is not it. The truth is, since (I) have come to want to go home...\""
+  },
+  {
+   "texto": "といいますと、乙姫さまはきゅうに、たいそうがっかりした様子をなさいました。",
+   "traduccion": "(he) said, and Princess Otohime suddenly showed a look of great disappointment."
+  },
+  {
+   "texto": "「まあ、それはざんねんでございますこと。でもあなたのお顔をはいけんいたしますと、この上おひきとめ申しても、むだのようにおもわれます。ではいたし方ございません、行っていらっしゃいまし」",
+   "traduccion": "\"Well, that is truly regrettable. But looking at your face, it seems that it would be useless even if (I) tried to detain you any further. Then there is no help for it, please go\""
+  },
+  {
+   "texto": "こうかなしそうにいって、乙姫さまは、奥からきれいな宝石でかざった箱を持っておいでになって、",
+   "traduccion": "Saying (this) sadly, Princess Otohime brought out from within a box decorated with beautiful jewels, and,"
+  },
+  {
+   "texto": "「これは玉手箱といって、なかには、人間のいちばんだいじなたからがこめてございます。これをおわかれのしるしにさし上げますから、お持ちかえりくださいまし。ですが、あなたがもういちどりゅう宮へ帰ってきたいとおぼしめすなら、どんなことがあっても、けっしてこの箱をあけてごらんになってはいけません」",
+   "traduccion": "\"This is called the tamatebako (jeweled hand box), and inside, the most important treasure of human beings is contained. Since (I) will give this to you as a token of farewell, please take it home with you. But, if you should wish to return to the Dragon Palace once again, no matter what happens, you must never, ever open and look inside this box\""
+  },
+  {
+   "texto": "と、くれぐれもねんをおして、玉手箱をおわたしになりました。",
+   "traduccion": "(she said), pressing the point most earnestly, and handed over the tamatebako."
+  },
+  {
+   "texto": "浦島は、",
+   "traduccion": "Urashima,"
+  },
+  {
+   "texto": "「ええ、ええ、けっしてあけません」",
+   "traduccion": "\"Yes, yes, (I) will never open (it)\""
+  },
+  {
+   "texto": "といって、玉手箱をこわきにかかえたまま、りゅう宮の門を出ますと、乙姫さまは、またおおぜいの腰元をつれて、門のそとまでお見送りになりました。",
+   "traduccion": "(he) said, and, as (he) went out through the gate of the Dragon Palace holding the tamatebako under his arm just as (it was), Princess Otohime, again accompanied by many ladies-in-waiting, saw (him) off as far as outside the gate."
+  },
+  {
+   "texto": "もうそこには、れいのかめがきて待っていました。",
+   "traduccion": "Already there, that turtle from before had come and was waiting."
+  },
+  {
+   "texto": "浦島はうれしいのとかなしいのとで、胸がいっぱいになっていました。",
+   "traduccion": "Urashima's chest was full with (a mix of) being happy and being sad."
+  },
+  {
+   "texto": "そしてかめの背中にのりますと、かめはすぐ波を切って上がって行って、まもなくもとの浜べにつきました。",
+   "traduccion": "And when (he) got on the turtle's back, the turtle immediately cut through the waves and went up, and before long (they) arrived at the original beach."
+  },
+  {
+   "texto": "「では浦島さん、ごきげんよろしゅう」",
+   "traduccion": "\"Well then, Urashima-san, farewell (take care)\""
+  },
+  {
+   "texto": "と、かめはいって、また水のなかにもぐって行きました。",
+   "traduccion": "the turtle said (this), and again dove down into the water."
+  },
+  {
+   "texto": "浦島はしばらく、かめの行くえを見送っていました。",
+   "traduccion": "Urashima, for a while, watched the turtle's departing figure."
+  },
+  {
+   "texto": "浦島は海ばたに立ったまま、しばらくそこらを見まわしました。",
+   "traduccion": "Urashima, remaining standing at the seaside, looked around that area for a while."
+  },
+  {
+   "texto": "春の日がぽかぽかあたって、いちめんにかすんだ海の上に、どこからともなく、にぎやかな舟うたがきこえました。",
+   "traduccion": "The spring sun shone warmly, and over the sea hazy all across, a lively boat song could be heard from nowhere in particular."
+  },
+  {
+   "texto": "それは夢のなかで見たふるさとの浜べの景色とちっともちがったところはありませんでした。",
+   "traduccion": "That was not the least bit different from the scenery of the hometown beach (he) had seen in his dream."
+  },
+  {
+   "texto": "けれどよく見ると、そこらの様子がなんとなくかわっていて、あう人もあう人も、いっこうに見知らない顔ばかりで、むこうでもみょうな顔をして、じろじろ見ながら、ことばもかけずにすまして行ってしまいます。",
+   "traduccion": "But looking closely, the state of that area had somehow changed, and every single person (he) met was, without exception, a face (he) did not know at all, and on their side too, making strange faces, while staring (at him) intently, they went on by, composed, without even speaking a word."
+  },
+  {
+   "texto": "「おかしなこともあるものだ。たった三年のあいだに、みんなどこかへ行ってしまうはずはない。まあ、なんでも早くうちへ行ってみよう」",
+   "traduccion": "\"What a strange thing this is. In the span of a mere three years, there is no way everyone would have gone off somewhere. Well, anyway, let (me) go home quickly and see\""
+  },
+  {
+   "texto": "こうひとりごとをいいながら、浦島はじぶんの家の方角へあるき出しました。",
+   "traduccion": "Saying (this) to himself, Urashima started walking in the direction of his own house."
+  },
+  {
+   "texto": "ところが、そことおもうあたりには草やあしがぼうぼうとしげって、家なぞはかげもかたちもありません。",
+   "traduccion": "However, in the area (he) thought was there, grass and reeds grew thick and wild, and there was no house at all, neither shadow nor shape."
+  },
+  {
+   "texto": "むかし家の立っていたらしいあとさえものこってはいませんでした。",
+   "traduccion": "Not even a trace remained of what seemed like where the house had once stood."
+  },
+  {
+   "texto": "いったい、おとうさんやおかあさんはどうなったのでしょうか。",
+   "traduccion": "Whatever could have become of father and mother?"
+  },
+  {
+   "texto": "浦島は、",
+   "traduccion": "Urashima,"
+  },
+  {
+   "texto": "「ふしぎだ。ふしぎだ」",
+   "traduccion": "\"How strange. How strange\""
+  },
+  {
+   "texto": "とくり返しながら、きつねにつままれたような、きょとんとした顔をしていました。",
+   "traduccion": "repeating (this), (he) had a blank, dumbfounded face, as if (he) had been bewitched by a fox."
+  },
+  {
+   "texto": "するとそこへ、よぼよぼのおばあさんがひとり、つえにすがってやってきました。",
+   "traduccion": "Then, an old woman, feeble and tottering, came along there, one (person), leaning on a cane."
+  },
+  {
+   "texto": "浦島はさっそく、",
+   "traduccion": "Urashima, at once,"
+  },
+  {
+   "texto": "「もしもし、おばあさん、浦島太郎のうちはどこでしょう」",
+   "traduccion": "\"Excuse me, excuse me, granny, where is Urashima Taro's house?\""
+  },
+  {
+   "texto": "と、声をかけますと、おばあさんはけげんそうに、しょぼしょぼした目で、浦島の顔をながめながら、",
+   "traduccion": "(he) called out, and the old woman, looking dubious, while gazing at Urashima's face with bleary eyes,"
+  },
+  {
+   "texto": "「へえ、浦島太郎。そんな人はきいたことがありませんよ」",
+   "traduccion": "\"Hm, Urashima Taro. (I) have never heard of such a person\""
+  },
+  {
+   "texto": "といいました。",
+   "traduccion": "(she) said."
+  },
+  {
+   "texto": "浦島はやっきとなって、",
+   "traduccion": "Urashima, becoming frantic,"
+  },
+  {
+   "texto": "「そんなはずはありません。たしかにこのへんに住んでいたのです」",
+   "traduccion": "\"That cannot be. (He) certainly lived around here\""
+  },
+  {
+   "texto": "といいました。",
+   "traduccion": "(he) said."
+  },
+  {
+   "texto": "そういわれて、おばあさんは、",
+   "traduccion": "Having been told (this), the old woman,"
+  },
+  {
+   "texto": "「はてね」と、首をかしげながら、つえでせいのびしてしばらくかんがえこんでいましたが、やがてぽんとひざをたたいて、",
+   "traduccion": "said \"Hmm, now\", and while tilting her head, stretched herself up with (the help of) her cane, and was lost in thought for a while, but before long slapped her knee with a pon (sound of a light slap), and,"
+  },
+  {
+   "texto": "「ああ、そうそう、浦島太郎さんというと、あれはもう三百年も前の人ですよ。なんでも、わたしが子どものじぶんきいた話に、むかし、むかし、この水の江の浜に、浦島太郎という人があって、ある日、舟にのってつりに出たまま、帰ってこなくなりました。たぶんりゅう宮へでも行ったのだろうということです。なにしろ大昔の話だからね」",
+   "traduccion": "\"Ah, yes, yes, speaking of Urashima Taro, that is a person from as long as three hundred years ago now. According to a story I heard back when I was a child, whatever the case, long, long ago, on this Mizunoe beach, there was a person called Urashima Taro, and one day, having gone out to fish by boat, (he) never came back. It is said that (he) probably went to the Dragon Palace or somewhere. After all, it is a story from a very long time ago\""
+  },
+  {
+   "texto": "こういって、また腰をかがめて、よぼよぼあるいて行ってしまいました。",
+   "traduccion": "Saying (this), (she) again bent her back, and walked off tottering feebly."
+  },
+  {
+   "texto": "浦島はびっくりしてしまいました。",
+   "traduccion": "Urashima was completely astonished."
+  },
+  {
+   "texto": "「はて、三百年、おかしなこともあるものだ。たった三年りゅう宮にいたつもりなのに、それが三百年とは。するとりゅう宮の三年は、人間の三百年にあたるのかしらん。それでは家もなくなるはずだし、おとうさんやおかあさんがいらっしゃらないのもふしぎはない」",
+   "traduccion": "\"Now then, three hundred years, what a strange thing this is. (I) only meant to be at the Dragon Palace for a mere three years, yet that (turned out to) be three hundred years. Then, I wonder if three years at the Dragon Palace corresponds to three hundred years for human beings. If that is so, it is only natural that the house too would be gone, and there is no wonder that father and mother are not there either\""
+  },
+  {
+   "texto": "こうおもうと、浦島はきゅうにかなしくなって、さびしくなって、目の前がくらくなりました。",
+   "traduccion": "Thinking (this), Urashima suddenly became sad, became lonely, and everything in front of his eyes grew dark."
+  },
+  {
+   "texto": "いまさらりゅう宮がこいしくてたまらなくなりました。",
+   "traduccion": "Only now, (he) came to long for the Dragon Palace unbearably."
+  },
+  {
+   "texto": "しおしおとまた浜べへ出てみましたが、海の水はまんまんとたたえていて、どこがはてともしれません。",
+   "traduccion": "(He) went out to the beach again dejectedly (shio-shio), but the sea water was brimming full, and where its edge was could not be known at all."
+  },
+  {
+   "texto": "もうかめも出てきませんから、どうしてりゅう宮へわたろう手だてもありませんでした。",
+   "traduccion": "Since the turtle no longer came out either, there was no means at all by which to cross over to the Dragon Palace."
+  },
+  {
+   "texto": "そのとき、浦島はふと、かかえていた玉手箱に気がつきました。",
+   "traduccion": "At that moment, Urashima suddenly noticed the tamatebako (he) was holding."
+  },
+  {
+   "texto": "「そうだ。この箱をあけてみたらば、わかるかもしれない」",
+   "traduccion": "\"That's right. If (I) try opening this box, (I) might understand\""
+  },
+  {
+   "texto": "こうおもうとうれしくなって、浦島は、うっかり乙姫さまにいわれたことはわすれて、箱のふたをとりました。",
+   "traduccion": "Thinking (this), (he) became glad, and Urashima, carelessly forgetting what Princess Otohime had told him, took off the lid of the box."
+  },
+  {
+   "texto": "するとむらさき色の雲が、なかからむくむく立ちのぼって、それが顔にかかったかとおもうと、すうっと消えて行って箱のなかにはなんにものこっていませんでした。",
+   "traduccion": "Then a purple-colored cloud billowed up from inside, and just as (he) thought it had settled on his face, it faded away smoothly, and nothing at all remained inside the box."
+  },
+  {
+   "texto": "その代り、いつのまにか顔じゅうしわになって、手も足もちぢかまって、きれいなみぎわの水にうつった影を見ると、髪もひげも、まっしろな、かわいいおじいさんになっていました。",
+   "traduccion": "Instead, before (he) knew it, his whole face had become wrinkled, and both his hands and feet had shriveled up, and when (he) looked at his reflection cast in the beautiful water's edge, both his hair and his beard had become pure white, and (he) had become a little old man."
+  },
+  {
+   "texto": "浦島はからになった箱のなかをのぞいて、",
+   "traduccion": "Urashima peeked into the inside of the box, (now) become empty, and,"
+  },
+  {
+   "texto": "「なるほど、乙姫さまが、人間のいちばんだいじなたからを入れておくとおっしゃったあれは、人間の寿命だったのだな」",
+   "traduccion": "\"I see, that which Princess Otohime said (she) had put in as the most important treasure of human beings, that was a human being's lifespan, wasn't it\""
+  },
+  {
+   "texto": "と、ざんねんそうにつぶやきました。",
+   "traduccion": "(he) muttered, sounding regretful."
+  },
+  {
+   "texto": "春の海はどこまでも遠くかすんでいました。",
+   "traduccion": "The spring sea was hazy far into the distance, endlessly."
+  },
+  {
+   "texto": "どこからかいい声で舟うたをうたうのが、またきこえてきました。",
+   "traduccion": "From somewhere, (someone) singing a boat song in a nice voice could be heard again."
+  },
+  {
+   "texto": "浦島は、ぼんやりとむかしのことをおもい出していました。",
+   "traduccion": "Urashima, vacantly, was recalling things from long ago."
+  }
+ ]
+}
