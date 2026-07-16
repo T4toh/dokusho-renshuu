@@ -18,6 +18,8 @@
 | 4b   | `app/` — import de texto propio                  | ✅ Completo ([PR #9](https://github.com/T4toh/dokusho-renshuu/pull/9))                                               |
 | 4c   | catalogo/ — tanda 2 de historias (6 obras)       | ✅ Completo ([PR #10](https://github.com/T4toh/dokusho-renshuu/pull/10))                                             |
 | fix  | app/ — UI export: grid adaptivo + autor · dificultad + botones en fila (FlowRow) | ✅ Completo ([PR #11](https://github.com/T4toh/dokusho-renshuu/pull/11))            |
+| A    | app/ — backlog feedback de uso: update de historias + nº de oración + selección/Search web | ✅ Completo ([PR #13](https://github.com/T4toh/dokusho-renshuu/pull/13); smoke en tablet pendiente) |
+| B    | historias/catalogo — traducciones literales en inglés por oración | ✅ Completo ([PR #14](https://github.com/T4toh/dokusho-renshuu/pull/14)) |
 | C    | app/ — tarjetas Anki: objetivo resaltado, traducción, kun primero, separadores ・ | ✅ Completo ([PR #15](https://github.com/T4toh/dokusho-renshuu/pull/15); smoke AnkiDroid pendiente) |
 
 ## Datos operativos
@@ -29,6 +31,7 @@
 - **Catálogo**: schema v2 (`titulo_lectura`, `titulo_en` nullable, `kanjis_unicos`, `oraciones`; sin encabezados de sección; urashima_taro ahora `media`). La app exige version==2. URL raw `https://raw.githubusercontent.com/T4toh/dokusho-renshuu/main/catalogo/catalogo.json`. **Tanda 2 (Plan 4c)**: +6 historias (10 en total, sin suplentes) — `hanasaka_jijii`, `shitakiri_suzume`, `kintaro` de 楠山正雄; `gongitsune`, `tebukuro_wo_kaini` de 新美南吉; `kumo_no_ito` de 芥川龍之介 (dificultad `facil` las 5 primeras, `media` kumo_no_ito). Invariante byte-idéntico de los 4 JSON de tanda 1 verificado. Gaiji de 3er/4to nivel (`犍` en 犍陀多, kumo_no_ito) resueltos vía tabla `_GAIJI_CONOCIDOS` en `historias/src/aozora.py`. Furigana completa desde 2026-07-13 (PR #12): huecos de ruby Aozora rellenados con janome/IPADIC en el pipeline (spec docs/superpowers/specs/2026-07-13-furigana-relleno-catalogo-design.md); el invariante byte-idéntico de tanda 1 dejó de valer. OJO: el catálogo actualizado NO llega a apps ya instaladas (historias bundleadas nunca se re-descargan, ver backlog) — beta.1 muestra furigana vieja; requiere APK nuevo.
 - **Entorno**: builds JVM (gradle/Android Studio, Planes 3-4) van en la PC secundaria — la principal tiene un bug de CPU que cuelga con Java. Python (Plan 2) anda en cualquiera.
 - **Contrato furigana**: `[inicio, fin, lectura]` con fin exclusivo sobre el texto de la oración; diálogo `「…」` = 1 oración (portar igual en Kotlin, Plan 3).
+- **Traducciones (PR B)**: `traduccion` por oración = inglés LITERAL (no funcional), fuentes versionadas en `historias/traducciones/<id>.json` (`{"texto","traduccion"}` en orden párrafo→oración); el emisor valida conteo + texto exacto (falla ruidoso), `verify_catalogo` exige null o string no vacío con all-or-nothing por historia. Textos/furigana intactos → el progreso guardado no se corre; solo cambian `traduccion` y `tamaño` (lo que dispara el Update del PR #13 en apps instaladas). Generadas one-off con LLM (1249 oraciones); parsers viejos ignoran el campo.
 - `historias/src/jlpt.py` es generado (regenerar con `genera_jlpt.py` solo si cambia KANJIDIC2).
 - **App (Plan 3)**: `app/` compila con JDK 17+ (probado JDK 21) + SDK 36 (PC secundaria); assets generados por gradle tasks (`descargarDiccionario` baja el db del release con escritura atómica tmp→rename; `copiarHistorias` empaqueta `catalogo/`). AGP 9.2 usa Kotlin built-in (sin plugin kotlin-android ni kotlinOptions). UI en inglés; tabla Room `kanjis_tocados` (kanji, dificultad nullable easy/medium/hard, timestamp — migración 1→2 no destructiva) — insumo Plan 4 junto con `palabras_tocadas`; tests con maxHeapSize 2g (OOM Kuromoji).
 - **Lector (3.7)**: toggle カナ (pref `katakana`, default ON) muestra hiragana sobre runs de katakana (precomputado en el VM); catálogo con spans de furigana disjuntos (check en verify_catalogo).
@@ -109,13 +112,13 @@
 
 ### App Dokusho
 
-- Poder seleccionar cualquier texto del lector (selección libre).
-- Poder buscar lo seleccionado — ¿búsqueda en Google? Definir alcance.
+- ~~Poder seleccionar cualquier texto del lector (selección libre).~~ Resuelto (PR A backlog-app): long-press ancla, tap extiende rango de tokens en la misma oración; resaltado + barra contextual.
+- ~~Poder buscar lo seleccionado — ¿búsqueda en Google? Definir alcance.~~ Resuelto (PR A): Search web (`ACTION_WEB_SEARCH`, fallback URL de Google) + Copy; texto sin furigana, partículas intermedias incluidas.
 - ~~Furigana faltante en momotaro: por alguna razón siempre falta antes de へ (catálogo → alineador `historias/src/aozora.py`, no Kuromoji).~~ Resuelto: la fuente Aozora trae ruby parcial (no era bug del alineador); relleno con janome en el pipeline.
 - ~~Faltan muchas más furiganas en general (auditar cobertura).~~ Resuelto: cobertura 11.5%–92.9% → 94.3%–100% con relleno janome/IPADIC (gap residual: 犍陀多 y ~13 kanji sueltos fuera de IPADIC).
 - ~~Algunas furiganas están mal: p. ej. 水 = "miizu" (¿みいず?) en vez de みず — revisar origen (ruby Aozora vs `GeneradorFurigana`/Kuromoji).~~ No es bug: `水《みいず》` es la canción del cuento (alarga vocales: かあらいぞ/ああまいぞ); fiel al original.
-- **La app nunca actualiza historias bundleadas** (descubierto en smoke de PR #12): `BibliotecaViewModel.refrescarCatalogo` filtra el catálogo remoto a `id !in idsLocales` y `HistoriasRepo.cargarHistoria` sirve el asset si no hay descargada — un catálogo regenerado NO llega a apps instaladas, solo con APK nuevo. Fix candidato: comparar `tamaño` (o hash) del catálogo remoto vs local y re-descargar/ofrecer update.
-- Mostrar número de oración en el lector (p. ej. atrás del piquito de navegación) para poder reportar casos puntuales (pedido de uso real, 2026-07-13).
+- ~~**La app nunca actualiza historias bundleadas**~~ Resuelto (PR A): `HistoriasRepo.tamanioLocal` + `BibliotecaViewModel.actualizables` comparan `tamaño` remoto vs local; botón Update por historia re-descarga (descargada pisa asset). Limitaciones aceptadas: cambio remoto de igual tamaño en bytes no se detecta; comparación ciega a dirección (un remoto MÁS VIEJO que el asset también ofrece Update y "downgradearía" — mitigable comparando `version` si alguna vez molesta); CDN desincronizado (catalogo.json nuevo + historia vieja) deja el flag hasta que sincroniza.
+- ~~Mostrar número de oración en el lector (p. ej. atrás del piquito de navegación) para poder reportar casos puntuales (pedido de uso real, 2026-07-13).~~ Resuelto (PR A): número 1-based junto al piquito ▸.
 
 ## Proceso de trabajo usado
 

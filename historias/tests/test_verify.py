@@ -43,6 +43,21 @@ class TestVerify(unittest.TestCase):
         with open(ruta, 'w', encoding='utf-8') as f:
             json.dump(catalogo, f, ensure_ascii=False)
 
+    def _sincronizar_tamanio(self):
+        """Re-sincroniza el tamaño de momotaro en el catálogo después de mutación."""
+        ruta_historia = os.path.join(self.tmp, 'historias', 'momotaro.json')
+        tamaño_real = os.path.getsize(ruta_historia)
+
+        ruta_catalogo = os.path.join(self.tmp, 'catalogo.json')
+        with open(ruta_catalogo, encoding='utf-8') as f:
+            catalogo = json.load(f)
+        for entrada in catalogo.get('historias', []):
+            if entrada['id'] == 'momotaro':
+                entrada['tamaño'] = tamaño_real
+                break
+        with open(ruta_catalogo, 'w', encoding='utf-8') as f:
+            json.dump(catalogo, f, ensure_ascii=False)
+
     def test_catalogo_valido_sin_errores(self):
         self.assertEqual(verify_catalogo.verificar(self.tmp), [])
 
@@ -117,6 +132,30 @@ class TestVerify(unittest.TestCase):
             lambda c: c['historias'][0].update(kanjis_unicos='124'))
         errores = verify_catalogo.verificar(self.tmp)
         self.assertTrue(any('kanjis_unicos' in e for e in errores))
+
+    def test_traduccion_string_no_vacio_es_valida(self):
+        self._corromper_historia(lambda h: [
+            o.update(traduccion=f'lit {i}')
+            for i, o in enumerate(
+                o for p in h['parrafos'] for o in p['oraciones'])])
+        self._sincronizar_tamanio()
+        self.assertEqual([], verify_catalogo.verificar(self.tmp))
+
+    def test_traduccion_vacia_es_error(self):
+        self._corromper_historia(lambda h: [
+            o.update(traduccion='')
+            for o in (o for p in h['parrafos'] for o in p['oraciones'])])
+        self._sincronizar_tamanio()
+        errores = verify_catalogo.verificar(self.tmp)
+        self.assertTrue(any('traduccion inválida' in e for e in errores), errores)
+
+    def test_mezcla_de_traduccion_y_null_es_error(self):
+        def solo_la_primera(h):
+            h['parrafos'][0]['oraciones'][0]['traduccion'] = 'lit 0'
+        self._corromper_historia(solo_la_primera)
+        self._sincronizar_tamanio()
+        errores = verify_catalogo.verificar(self.tmp)
+        self.assertTrue(any('cobertura parcial' in e for e in errores), errores)
 
 
 if __name__ == '__main__':

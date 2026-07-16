@@ -33,11 +33,15 @@ class BibliotecaViewModelTest {
     private val catalogoJson =
         javaClass.classLoader!!.getResourceAsStream("catalogo.json")!!.readBytes().decodeToString()
 
-    private fun repo(conRed: Boolean): HistoriasRepo = HistoriasRepo(
+    private fun repo(
+        conRed: Boolean,
+        catalogoAsset: String = catalogoJson,
+        catalogoRemoto: String = catalogoJson,
+    ): HistoriasRepo = HistoriasRepo(
         leerAsset = { n ->
             when (n) {
                 "historias/momotaro.json" -> momotaroJson
-                "catalogo.json" -> catalogoJson
+                "catalogo.json" -> catalogoAsset
                 else -> null
             }
         },
@@ -45,8 +49,12 @@ class BibliotecaViewModelTest {
         dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
         dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
         http = { url ->
-            if (conRed && url == HistoriasRepo.URL_CATALOGO) catalogoJson
-            else throw IOException("sin red")
+            when {
+                !conRed -> throw IOException("sin red")
+                url == HistoriasRepo.URL_CATALOGO -> catalogoRemoto
+                url == HistoriasRepo.urlHistoria("momotaro") -> momotaroJson
+                else -> throw IOException("sin red")
+            }
         },
         // mismo dispatcher que Dispatchers.Main (ver @Before): así todo el trabajo de
         // fondo cae en el scheduler virtual y advanceUntilIdle() es determinístico
@@ -56,6 +64,11 @@ class BibliotecaViewModelTest {
 
     private fun vm(conRed: Boolean, dao: ProgresoDaoFake = ProgresoDaoFake(), dic: DiccionarioFake = DiccionarioFake()) =
         BibliotecaViewModel(repo(conRed), dao, dic, ioDispatcher = dispatcher)
+
+    // catálogo con el tamaño de momotaro reemplazado — para simular que el remoto (o el
+    // asset local viejo) difiere. El fixture real trae "tamaño": 67083 para momotaro.
+    private fun catalogoConTamanioMomotaro(tamanio: Long): String =
+        catalogoJson.replace(Regex("\"tamaño\"\\s*:\\s*67083"), "\"tamaño\": $tamanio")
 
     @Test
     fun `carga locales con progreso y catalogo con disponibles`() = runTest {
@@ -145,5 +158,55 @@ class BibliotecaViewModelTest {
 
         val hard = vm.review.value.first { it.dificultad == "hard" } as TarjetaReview.ConKanji
         assertEquals("山", hard.kanji.kanji)  // 龘 se saltea (query defensiva)
+    }
+
+    // --- actualizables: fix "la app nunca actualiza historias bundleadas" (backlog
+    // feedback de uso 2026-07-13). refrescarCatalogo compara tamanio remoto vs local
+    // (HistoriasRepo.tamanioLocal) para cada historia local y publica los ids con
+    // update disponible; la UI muestra el botón Update que llama a descargar(id). ---
+
+    @Test
+    fun `catalogo remoto identico al local no marca updates`() = runTest {
+        val vm = vm(conRed = true)
+        vm.cargar(); advanceUntilIdle()
+        assertTrue(vm.actualizables.value.isEmpty())
+    }
+
+    @Test
+    fun `tamanio remoto distinto marca update para la historia local`() = runTest {
+        val repo = repo(conRed = true, catalogoRemoto = catalogoConTamanioMomotaro(1))
+        val vm = BibliotecaViewModel(repo, ProgresoDaoFake(), DiccionarioFake(), ioDispatcher = dispatcher)
+        vm.cargar(); advanceUntilIdle()
+        assertEquals(setOf("momotaro"), vm.actualizables.value)
+        // la historia local con update NO aparece además como descargable
+        val catalogo = vm.catalogo.value as EstadoCatalogo.Ok
+        assertTrue(catalogo.disponibles.none { it.id == "momotaro" })
+    }
+
+    @Test
+    fun `descargar re-descarga la historia y limpia el flag de update`() = runTest {
+        // asset local viejo (tamaño 1) vs remoto real: el remoto declara EXACTAMENTE los
+        // bytes del JSON que sirve el http fake, como en producción (tamaño = getsize).
+        val tamanioReal = momotaroJson.toByteArray(Charsets.UTF_8).size.toLong()
+        val repo = repo(
+            conRed = true,
+            catalogoAsset = catalogoConTamanioMomotaro(1),
+            catalogoRemoto = catalogoConTamanioMomotaro(tamanioReal),
+        )
+        val vm = BibliotecaViewModel(repo, ProgresoDaoFake(), DiccionarioFake(), ioDispatcher = dispatcher)
+        vm.cargar(); advanceUntilIdle()
+        assertEquals(setOf("momotaro"), vm.actualizables.value)
+
+        vm.descargar("momotaro"); advanceUntilIdle()
+        assertTrue(vm.actualizables.value.isEmpty())  // descargada.length() == tamanio remoto
+        assertEquals(1, vm.locales.value.count { it.historia.id == "momotaro" })  // sin duplicar
+    }
+
+    @Test
+    fun `sin red no hay flags de update y el error de catalogo se mantiene`() = runTest {
+        val vm = vm(conRed = false)
+        vm.cargar(); advanceUntilIdle()
+        assertTrue(vm.actualizables.value.isEmpty())
+        assertTrue(vm.catalogo.value is EstadoCatalogo.Error)
     }
 }

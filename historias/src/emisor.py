@@ -14,8 +14,15 @@ _CLAVES_HISTORIA_EN_DISCO = (
 
 
 def construir_historia(id_, titulo, autor, fuente, licencia,
-                       dificultad, parrafos) -> dict:
+                       dificultad, parrafos, traducciones=None) -> dict:
     """parrafos = [[(texto, furigana), ...] por párrafo] → dict del spec.
+
+    `traducciones` (opcional, backlog feedback de uso 2026-07-13): lista
+    plana de {'texto', 'traduccion'} en orden párrafo→oración — el mismo
+    recorrido de este constructor. Se valida conteo Y texto exacto por
+    posición (falla ruidoso ante cualquier drift de segmentación entre el
+    archivo de traducciones y la fuente); `traduccion` debe ser string no
+    vacío. Sin traducciones, `traduccion` queda null (comportamiento v1).
 
     Incluye `kanjis_unicos` y `oraciones` en el dict en memoria (insumo
     para el catálogo v2); no forman parte del schema del JSON de historia
@@ -23,6 +30,9 @@ def construir_historia(id_, titulo, autor, fuente, licencia,
     """
     texto_completo = ''.join(
         texto for oraciones in parrafos for texto, _ in oraciones)
+    planas = [texto for oraciones in parrafos for texto, _ in oraciones]
+    por_oracion = _validar_traducciones(id_, planas, traducciones)
+    contador = iter(range(len(planas)))
     return {
         'id': id_,
         'titulo': titulo,
@@ -35,12 +45,35 @@ def construir_historia(id_, titulo, autor, fuente, licencia,
         'oraciones': sum(len(oraciones) for oraciones in parrafos),
         'parrafos': [
             {'oraciones': [
-                {'texto': texto, 'furigana': furigana, 'traduccion': None}
+                {'texto': texto, 'furigana': furigana,
+                 'traduccion': por_oracion[next(contador)]}
                 for texto, furigana in oraciones
             ]}
             for oraciones in parrafos
         ],
     }
+
+
+def _validar_traducciones(id_, planas, traducciones):
+    """None → lista de None (v1). Con traducciones: conteo y texto exactos."""
+    if traducciones is None:
+        return [None] * len(planas)
+    if len(traducciones) != len(planas):
+        raise ValueError(
+            f'{id_}: {len(traducciones)} traducciones para '
+            f'{len(planas)} oraciones')
+    resultado = []
+    for i, (texto, entrada) in enumerate(zip(planas, traducciones)):
+        if entrada.get('texto') != texto:
+            raise ValueError(
+                f'{id_} oración {i}: texto de traducción no coincide '
+                f'({entrada.get("texto", "")[:20]!r} != {texto[:20]!r})')
+        traduccion = entrada.get('traduccion')
+        if not isinstance(traduccion, str) or not traduccion:
+            raise ValueError(
+                f'{id_} oración {i}: traduccion inválida {traduccion!r}')
+        resultado.append(traduccion)
+    return resultado
 
 
 def _escribir_json(ruta: str, datos) -> None:

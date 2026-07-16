@@ -1,6 +1,8 @@
 package com.tatoh.dokushorenshu.ui.lector
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -46,12 +48,19 @@ fun TextoConFurigana(
     // trabajo nuevo. Independiente de furiganaActiva: cualquier combinación es válida.
     katakanaActiva: Boolean,
     onTapPalabra: ((PalabraToken) -> Unit)?,
+    // Selección de rango (backlog feedback de uso 2026-07-13): long-press ancla la
+    // selección (lo maneja el VM); acá solo se reporta el gesto y se pinta el fondo
+    // de los tokens cuyo span cae dentro de rangoSeleccion (chars de la oración,
+    // construido `inicio until fin` — IntRange con last INCLUSIVO). Defaults null:
+    // los callsites sin selección (p.ej. previews de import) no cambian.
+    onLongPressPalabra: ((PalabraToken) -> Unit)? = null,
+    rangoSeleccion: IntRange? = null,
 ) {
     val estiloBase = MaterialTheme.typography.headlineMedium
     FlowRow {
         if (furiganaActiva) {
             for (grupo in gruposFurigana) {
-                FilaGrupo(grupo.segmentos, estiloBase, katakanaActiva, onTapPalabra)
+                FilaGrupo(grupo.segmentos, estiloBase, katakanaActiva, onTapPalabra, onLongPressPalabra, rangoSeleccion)
             }
         } else {
             // Con la furigana apagada cada token es su propio "grupo" (sin cruzar
@@ -60,7 +69,7 @@ fun TextoConFurigana(
             // ya lo era construir el Segmento acá mismo: no hace falta precomputarla.
             for (token in tokens) {
                 val segmentos = particionarPorKatakana(listOf(Segmento(token.superficie, null, token)))
-                FilaGrupo(segmentos, estiloBase, katakanaActiva, onTapPalabra)
+                FilaGrupo(segmentos, estiloBase, katakanaActiva, onTapPalabra, onLongPressPalabra, rangoSeleccion)
             }
         }
     }
@@ -134,20 +143,40 @@ private fun particionarTexto(texto: String, token: PalabraToken): List<Segmento>
  *  individual). El tap target es POR SEGMENTO, no por grupo: cada segmento sabe a
  *  qué token pertenece (ver [Segmento.token]) así que un cluster de varios tokens
  *  conserva un área tappeable por token. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FilaGrupo(
     segmentos: List<Segmento>,
     estiloBase: TextStyle,
     katakanaActiva: Boolean,
     onTapPalabra: ((PalabraToken) -> Unit)?,
+    onLongPressPalabra: ((PalabraToken) -> Unit)?,
+    rangoSeleccion: IntRange?,
 ) {
     Row {
         for (segmento in segmentos) {
+            // token seleccionado si su span [inicio, fin) pisa el rango de selección
+            // (last es inclusivo: rango construido como `inicio until fin`).
+            val seleccionado = rangoSeleccion != null &&
+                segmento.token.inicio <= rangoSeleccion.last && segmento.token.fin > rangoSeleccion.first
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = if (segmento.token.esContenido && onTapPalabra != null) {
-                    Modifier.clickable { onTapPalabra(segmento.token) }
-                } else Modifier,
+                modifier = Modifier
+                    .then(
+                        if (seleccionado) {
+                            Modifier.background(MaterialTheme.colorScheme.primaryContainer)
+                        } else Modifier,
+                    )
+                    .then(
+                        if (segmento.token.esContenido && onTapPalabra != null) {
+                            Modifier.combinedClickable(
+                                onClick = { onTapPalabra(segmento.token) },
+                                onLongClick = onLongPressPalabra?.let { alMantener ->
+                                    { alMantener(segmento.token) }
+                                },
+                            )
+                        } else Modifier,
+                    ),
             ) {
                 // Furigana de kanji manda; si no hay, se dibuja lecturaKana SOLO
                 // si el toggle de katakana está activo (Plan 3.7) — el dato ya

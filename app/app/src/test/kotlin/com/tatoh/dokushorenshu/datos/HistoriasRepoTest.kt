@@ -145,4 +145,51 @@ class HistoriasRepoTest {
         repo.guardarImportada(ParserHistoria.parsear(momotaroJson).copy(id = "extra"))
         assertEquals(setOf("momotaro", "extra"), repo.idsLocales())
     }
+
+    // --- tamanioLocal: fix "la app nunca actualiza historias bundleadas" (backlog
+    // feedback de uso 2026-07-13). Fuente de verdad del tamaño local para comparar
+    // contra EntradaCatalogo.tamanio remoto: descargada = bytes del archivo (idénticos
+    // al raw remoto al momento de bajarlo, tamaño = os.path.getsize en emisor.py);
+    // bundleada = tamaño registrado en el catálogo asset (misma generación que el
+    // asset); importada o desconocida = null (no existen en el catálogo remoto). ---
+
+    private fun repoConAssets(http: ClienteHttp = HttpFake()) = HistoriasRepo(
+        leerAsset = { n ->
+            when (n) {
+                "historias/momotaro.json" -> momotaroJson
+                "catalogo.json" -> catalogoJson
+                else -> null
+            }
+        },
+        listarAssetsHistorias = { listOf("momotaro.json") },
+        dirDescargas = File.createTempFile("desc", "").let { it.delete(); it.mkdirs(); it },
+        dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
+        http = http,
+    )
+
+    @Test
+    fun `tamanioLocal de historia bundleada devuelve el tamanio del catalogo asset`() {
+        val repo = repoConAssets()  // momotaro como asset + catalogo.json asset
+        assertEquals(67083L, repo.tamanioLocal("momotaro"))
+    }
+
+    @Test
+    fun `tamanioLocal de historia descargada devuelve los bytes del archivo`() = runTest {
+        val repo = repoConAssets(http = object : ClienteHttp {
+            override fun get(url: String): String =
+                if (url == HistoriasRepo.urlHistoria("momotaro")) momotaroJson
+                else throw IOException("sin red")
+        })
+        repo.descargarHistoria("momotaro").getOrThrow()
+        // la descargada pisa el asset: el tamaño pasa a ser el del archivo bajado
+        assertEquals(momotaroJson.toByteArray(Charsets.UTF_8).size.toLong(), repo.tamanioLocal("momotaro"))
+    }
+
+    @Test
+    fun `tamanioLocal de importada o inexistente es null`() {
+        val repo = repoConAssets()
+        repo.guardarImportada(ParserHistoria.parsear(momotaroJson).copy(id = "propia", titulo = "自作"))
+        assertNull(repo.tamanioLocal("propia"))    // importada: jamás es actualizable
+        assertNull(repo.tamanioLocal("no-existe"))
+    }
 }
