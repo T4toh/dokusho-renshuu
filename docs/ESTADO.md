@@ -20,6 +20,7 @@
 | fix  | app/ — UI export: grid adaptivo + autor · dificultad + botones en fila (FlowRow) | ✅ Completo ([PR #11](https://github.com/T4toh/dokusho-renshuu/pull/11))            |
 | A    | app/ — backlog feedback de uso: update de historias + nº de oración + selección/Search web | ✅ Completo ([PR #13](https://github.com/T4toh/dokusho-renshuu/pull/13); smoke en tablet pendiente) |
 | B    | historias/catalogo — traducciones literales en inglés por oración | ✅ Completo ([PR #14](https://github.com/T4toh/dokusho-renshuu/pull/14)) |
+| C    | app/ — tarjetas Anki: objetivo resaltado, traducción, kun primero, separadores ・ | ✅ Completo ([PR #15](https://github.com/T4toh/dokusho-renshuu/pull/15); smoke AnkiDroid pendiente) |
 
 ## Datos operativos
 
@@ -103,11 +104,11 @@
 
 ### Mazos Anki (`dominio/anki/`)
 
-- Marcar (resaltar) el kanji objetivo dentro de la oración de la tarjeta.
-- Agregar traducción literal al inglés de la oración.
-- Separar un poco más las pronunciaciones entre sí (espaciado visual).
-- Poner siempre primero la pronunciación en hiragana (uso más común, también en doblajes).
-- Mejorar los separadores entre pronunciaciones.
+- ~~Marcar (resaltar) el kanji objetivo dentro de la oración de la tarjeta.~~ Resuelto (PR C): `<b class="objetivo">` por rangos (funciona aunque el objetivo cruce spans de ruby); color de acento con override de modo claro.
+- ~~Agregar traducción literal al inglés de la oración.~~ Resuelto (PR B fuente + PR C tarjeta): historias vía `Oracion.traduccion` (inglés literal del catálogo), Tatoeba con su inglés propio; ambas en `<span class="traduccion">`. Limitación: importadas sin traducción.
+- ~~Separar un poco más las pronunciaciones entre sí (espaciado visual).~~ Resuelto (PR C): dos líneas etiquetadas (`kun`/`on`).
+- ~~Poner siempre primero la pronunciación en hiragana (uso más común, también en doblajes).~~ Resuelto (PR C): kun arriba, on abajo; línea vacía se oculta (condicionales Anki).
+- ~~Mejorar los separadores entre pronunciaciones.~~ Resuelto (PR C): `、` → `・` con espacios. Pendiente menor: `DetalleKanjiScreen` (UI) sigue con `、` — unificar si molesta.
 
 ### App Dokusho
 

@@ -188,6 +188,21 @@ object ModeloNotas {
             color: #a0a0a0;
             margin-top: 4px;
         }
+        #oracion .objetivo {
+            color: #ffb74d;
+            font-weight: bold;
+        }
+        .linea-lectura {
+            margin: 2px 0;
+        }
+        .etiqueta-lectura {
+            display: inline-block;
+            font-size: 12px;
+            color: #888888;
+            min-width: 34px;
+            text-align: right;
+            margin-right: 8px;
+        }
         /* Anki desktop en modo claro NO agrega clase al body (el modo oscuro sí
            agrega `.night_mode`) — por eso el override es ":not(.night_mode)" y no al
            revés. AnkiDroid respeta la misma convención de clase. */
@@ -207,6 +222,12 @@ object ModeloNotas {
         }
         .card:not(.night_mode) #oracion ruby rt, .card:not(.night_mode) #oracion .traduccion {
             color: #777777;
+        }
+        .card:not(.night_mode) #oracion .objetivo {
+            color: #e65100;
+        }
+        .card:not(.night_mode) .etiqueta-lectura {
+            color: #999999;
         }
     """.trimIndent()
 
@@ -256,7 +277,11 @@ object ModeloNotas {
     val AFMT_KANJI: String = """
         {{FrontSide}}
         <hr id="answer">
-        <div class="lecturas"><span class="on">{{OnYomi}}</span> <span class="kun">{{KunYomi}}</span></div>
+        <!-- kun/hiragana primero — feedback de uso 2026-07-13: es la lectura de uso más común, también en doblajes. -->
+        <div class="lecturas">
+            {{#KunYomi}}<div class="linea-lectura"><span class="etiqueta-lectura">kun</span><span class="kun">{{KunYomi}}</span></div>{{/KunYomi}}
+            {{#OnYomi}}<div class="linea-lectura"><span class="etiqueta-lectura">on</span><span class="on">{{OnYomi}}</span></div>{{/OnYomi}}
+        </div>
         <div class="significados">{{Significados}}</div>
         {{#Dificultad}}<div class="dificultad">[{{Dificultad}}]</div>{{/Dificultad}}
         <div id="oracion">{{Oracion1}}</div>

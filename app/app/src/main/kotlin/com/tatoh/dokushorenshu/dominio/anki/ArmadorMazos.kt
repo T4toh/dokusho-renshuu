@@ -110,8 +110,8 @@ class ArmadorMazos(
                 } else {
                     NotaKanji(
                         kanji = kanji,
-                        onYomi = info.onYomi.joinToString("、"),
-                        kunYomi = info.kunYomi.joinToString("、"),
+                        onYomi = info.onYomi.joinToString(" ・ "),
+                        kunYomi = info.kunYomi.joinToString(" ・ "),
                         significados = info.significados.joinToString("; "),
                         dificultad = tagPorKanji[kanji] ?: "",
                         oraciones = oracionesDeLaHistoria(historia, kanji),
@@ -141,7 +141,7 @@ class ArmadorMazos(
         historia.parrafos.asSequence()
             .flatMap { it.oraciones.asSequence() }
             .filter { it.texto.contains(kanji) }
-            .map { oracionARubyHtml(it) }
+            .map { oracionDeTarjeta(it, kanji) }
             .take(CAP_ORACIONES)
             .toList()
 
@@ -170,8 +170,8 @@ class ArmadorMazos(
         NotaKanji(
             kanji = tocado.kanji,
             // ModeloNotas espera strings ya formateados (contrato de Task 1)
-            onYomi = info.onYomi.joinToString("、"),
-            kunYomi = info.kunYomi.joinToString("、"),
+            onYomi = info.onYomi.joinToString(" ・ "),
+            kunYomi = info.kunYomi.joinToString(" ・ "),
             significados = info.significados.joinToString("; "),
             dificultad = requireNotNull(tocado.dificultad) {
                 "kanjisTaggeados() no debería traer dificultad null"
@@ -181,9 +181,12 @@ class ArmadorMazos(
             },
         )
 
-    /** Prioridad historias > Tatoeba, cap 5. Las oraciones de historias no
-     *  llevan traducción (las historias no traducen); las de Tatoeba sí,
-     *  formato `"oración<br>traducción"`. */
+    /** Prioridad historias > Tatoeba, cap 5. Las oraciones de historias AHORA
+     *  pueden llevar traducción (PR B): si la trae, va en un
+     *  `<span class="traduccion">` junto al ruby (ver `oracionDeTarjeta`). Las
+     *  de Tatoeba siempre traen traducción (inglés provisto por Tatoeba),
+     *  mismo formato de span — sin el `<br>` viejo, la clase ya es
+     *  `display:block` en el CSS del template. */
     private fun armarOraciones(
         historias: List<Historia>,
         termino: String,
@@ -193,12 +196,14 @@ class ArmadorMazos(
             .flatMap { it.parrafos.asSequence() }
             .flatMap { it.oraciones.asSequence() }
             .filter { it.texto.contains(termino) }
-            .map { oracionARubyHtml(it) }
+            .map { oracionDeTarjeta(it, termino) }
             .take(CAP_ORACIONES)
             .toList()
         if (deHistorias.size >= CAP_ORACIONES) return deHistorias
-        val relleno = tatoeba(CAP_ORACIONES - deHistorias.size)
-            .map { "${escapeHtml(it.japones)}<br>${escapeHtml(it.ingles)}" }
+        val relleno = tatoeba(CAP_ORACIONES - deHistorias.size).map {
+            val japones = oracionARubyHtml(Oracion(it.japones, emptyList()), objetivo = termino)
+            """$japones<span class="traduccion">${escapeHtml(it.ingles)}</span>"""
+        }
         return deHistorias + relleno
     }
 }
@@ -206,9 +211,17 @@ class ArmadorMazos(
 /** Convierte una oración con spans de furigana fin-exclusivo a HTML con
  *  `<ruby>` (formato que Anki/AnkiDroid renderiza en cualquier cliente, a
  *  diferencia del filtro `{{furigana:}}` que depende del parsing de
- *  corchetes). Pura, sin dependencias de Android — testeable en JVM plano. */
-internal fun oracionARubyHtml(oracion: Oracion): String {
+ *  corchetes). Pura, sin dependencias de Android — testeable en JVM plano.
+ *
+ *  [objetivo] (backlog feedback de uso 2026-07-13): ocurrencias del
+ *  término/kanji objetivo envueltas en `<b class="objetivo">`. El resalte se
+ *  calcula por RANGOS sobre el texto original, así un objetivo que cruza el
+ *  límite de un span de ruby se resalta por fragmentos (la lectura `rt`
+ *  nunca se resalta). */
+internal fun oracionARubyHtml(oracion: Oracion, objetivo: String? = null): String {
     val texto = oracion.texto
+    val resaltes = rangosDeObjetivo(texto, objetivo)
+    fun tramo(desde: Int, hasta: Int) = emitirConResalte(texto, desde, hasta, resaltes)
     val sb = StringBuilder()
     var cursor = 0
     for (f in oracion.furigana.sortedBy { it.inicio }) {
@@ -216,12 +229,52 @@ internal fun oracionARubyHtml(oracion: Oracion): String {
         // 3.6 — momotaro.json llegó a traer furigana solapada); se ignora el
         // segundo span en vez de lanzar con un rango de substring inválido.
         if (f.inicio < cursor) continue
-        if (f.inicio > cursor) sb.append(escapeHtml(texto.substring(cursor, f.inicio)))
-        sb.append("<ruby>").append(escapeHtml(texto.substring(f.inicio, f.fin)))
+        if (f.inicio > cursor) sb.append(tramo(cursor, f.inicio))
+        sb.append("<ruby>").append(tramo(f.inicio, f.fin))
             .append("<rt>").append(escapeHtml(f.lectura)).append("</rt></ruby>")
         cursor = f.fin
     }
-    if (cursor < texto.length) sb.append(escapeHtml(texto.substring(cursor)))
+    if (cursor < texto.length) sb.append(tramo(cursor, texto.length))
+    return sb.toString()
+}
+
+/** Oración de historia lista para el campo de la tarjeta: ruby + objetivo
+ *  resaltado + traducción (si la historia la trae — PR B) en un span con la
+ *  clase `.traduccion` ya definida en el CSS del template. */
+internal fun oracionDeTarjeta(oracion: Oracion, objetivo: String): String {
+    val ruby = oracionARubyHtml(oracion, objetivo)
+    val traduccion = oracion.traduccion
+        ?.let { """<span class="traduccion">${escapeHtml(it)}</span>""" } ?: ""
+    return ruby + traduccion
+}
+
+/** Rangos [inicio, fin) de cada ocurrencia (no solapada) del objetivo. */
+private fun rangosDeObjetivo(texto: String, objetivo: String?): List<IntRange> {
+    if (objetivo.isNullOrEmpty()) return emptyList()
+    val rangos = mutableListOf<IntRange>()
+    var i = texto.indexOf(objetivo)
+    while (i >= 0) {
+        rangos.add(i until i + objetivo.length)
+        i = texto.indexOf(objetivo, i + objetivo.length)
+    }
+    return rangos
+}
+
+/** Emite texto[desde, hasta) escapado, envolviendo en `<b class="objetivo">`
+ *  las intersecciones con [resaltes]. */
+private fun emitirConResalte(texto: String, desde: Int, hasta: Int, resaltes: List<IntRange>): String {
+    if (resaltes.isEmpty()) return escapeHtml(texto.substring(desde, hasta))
+    val sb = StringBuilder()
+    var cursor = desde
+    for (r in resaltes) {
+        val ini = maxOf(r.first, cursor)
+        val fin = minOf(r.last + 1, hasta)
+        if (fin <= ini) continue
+        if (ini > cursor) sb.append(escapeHtml(texto.substring(cursor, ini)))
+        sb.append("""<b class="objetivo">""").append(escapeHtml(texto.substring(ini, fin))).append("</b>")
+        cursor = fin
+    }
+    if (cursor < hasta) sb.append(escapeHtml(texto.substring(cursor, hasta)))
     return sb.toString()
 }
 
