@@ -22,7 +22,7 @@
 | B    | historias/catalogo — traducciones literales en inglés por oración | ✅ Completo ([PR #14](https://github.com/T4toh/dokusho-renshuu/pull/14)) |
 | C    | app/ — tarjetas Anki: objetivo resaltado, traducción, kun primero, separadores ・ | ✅ Completo ([PR #15](https://github.com/T4toh/dokusho-renshuu/pull/15)) |
 | fix  | app/ — selección: extender con auxiliares/partículas + Search web en browser default | ✅ Completo ([PR #16](https://github.com/T4toh/dokusho-renshuu/pull/16)) |
-| D    | app/ — feedback 2026-08-18: forma de diccionario (Words + tarjeta de kanji), ejemplos con kanjis simples, toggle EN sin JS | ✅ Completo ([PR #17](https://github.com/T4toh/dokusho-renshuu/pull/17); smoke del .apkg en AnkiDroid pendiente) |
+| D    | app/ — feedback 2026-08-18: forma de diccionario (Words + tarjeta de kanji), ejemplos con kanjis simples, toggle EN sin JS | ✅ Completo ([PR #17](https://github.com/T4toh/dokusho-renshuu/pull/17); smoke del .apkg en AnkiDroid OK) |
 
 ## Datos operativos
 
