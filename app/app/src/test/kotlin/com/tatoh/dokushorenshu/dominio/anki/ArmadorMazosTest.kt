@@ -384,6 +384,51 @@ class ArmadorMazosTest {
         assertTrue(nota.oraciones.single().contains("""<b class="objetivo">刈</b>"""))
     }
 
+    @Test
+    fun `kanji que es verbo Y sustantivo muestra las dos palabras`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("食", "medium", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["食"] = KanjiInfo("食", listOf("eat"), listOf("ショク"), listOf("た.べる"), null, null)
+            palabras["食べる"] = listOf(Palabra("食べる", "たべる", listOf("to eat", "to live on"), emptyList(), 200))
+            palabras["食"] = listOf(Palabra("食", "しょく", listOf("food", "foodstuff"), emptyList(), 200))
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single()
+        assertEquals("""食べる<div class="forma-alt">食〈しょく〉</div>""", nota.kanji)
+        assertEquals(
+            """to eat; to live on<div class="sig-alt">食〈しょく〉 food; foodstuff</div>""",
+            nota.significados,
+        )
+        assertEquals("kanji:食", nota.claveGuid)  // el guid no se entera del cambio de frente
+    }
+
+    @Test
+    fun `entrada suelta rara del kanji no se muestra como sustantivo`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("刈", "hard", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["刈"] = KanjiInfo("刈", listOf("reap"), listOf("ガイ"), listOf("か.る"), null, null)
+            palabras["刈る"] = listOf(Palabra("刈る", "かる", listOf("to cut (grass)"), emptyList(), 200))
+            palabras["刈"] = listOf(Palabra("刈", "かり", listOf("cut", "clip"), emptyList(), 0))  // como en el db real
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single()
+        assertEquals("刈る", nota.kanji)
+        assertEquals("to cut (grass)", nota.significados)
+    }
+
+    @Test
+    fun `sustantivo sin verbo queda como estaba, sin repetir la palabra`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("山", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["山"] = KanjiInfo("山", listOf("mountain"), listOf("サン"), listOf("やま"), null, null)
+            palabras["山"] = listOf(Palabra("山", "やま", listOf("mountain", "hill"), emptyList(), 200))
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single()
+        assertEquals("山", nota.kanji)
+        assertEquals("mountain", nota.significados)
+    }
+
     // --- feedback de uso 2026-08-18: preferir ejemplos con kanjis simples y pocos ---
 
     @Test

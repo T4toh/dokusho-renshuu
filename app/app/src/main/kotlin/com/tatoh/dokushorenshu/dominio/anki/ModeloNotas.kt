@@ -148,6 +148,22 @@ object ModeloNotas {
             font-weight: bold;
             margin: 24px 0 8px 0;
         }
+        /* Segunda forma de la palabra (feedback de uso 2026-08-18): el sustantivo
+           suelto debajo del verbo en el frente, y su significado en el reverso.
+           `.forma-alt` vive dentro de `.kanji` (64px), así que fija su propio
+           tamaño; `.sig-alt` cuelga de `.significados`, que el toggle EN ya
+           oculta. */
+        .forma-alt {
+            font-size: 24px;
+            font-weight: normal;
+            color: #b0b0b0;
+            margin-top: 10px;
+        }
+        .sig-alt {
+            font-size: 17px;
+            color: #b0b0b0;
+            margin-top: 6px;
+        }
         .lectura, .lecturas {
             font-size: 22px;
             color: #b0b0b0;
@@ -252,6 +268,9 @@ object ModeloNotas {
         }
         .card:not(.night_mode) .etiqueta-lectura {
             color: #999999;
+        }
+        .card:not(.night_mode) .forma-alt, .card:not(.night_mode) .sig-alt {
+            color: #555555;
         }
         .card:not(.night_mode) .en-toggle {
             border-color: #cccccc;

@@ -118,11 +118,12 @@ class ArmadorMazos(
                     null
                 } else {
                     val forma = formaDiccionario(info)
+                    val sustantivo = sustantivo(kanji, forma)
                     NotaKanji(
-                        kanji = forma?.termino ?: kanji,
+                        kanji = frenteDeTarjeta(kanji, forma, sustantivo),
                         onYomi = info.onYomi.joinToString(" ・ "),
                         kunYomi = kunDeTarjeta(info, forma),
-                        significados = significadosDeTarjeta(info, forma),
+                        significados = significadosDeTarjeta(info, forma, sustantivo),
                         dificultad = tagPorKanji[kanji] ?: "",
                         oraciones = oracionesDeLaHistoria(historia, kanji),
                         claveGuidPropia = "story:${historia.id}:$kanji",
@@ -202,12 +203,13 @@ class ArmadorMazos(
 
     private fun armarNotaKanji(tocado: KanjiTocado, info: KanjiInfo, historias: List<Historia>): NotaKanji {
         val forma = formaDiccionario(info)
+        val sustantivo = sustantivo(tocado.kanji, forma)
         return NotaKanji(
-            kanji = forma?.termino ?: tocado.kanji,
+            kanji = frenteDeTarjeta(tocado.kanji, forma, sustantivo),
             // ModeloNotas espera strings ya formateados (contrato de Task 1)
             onYomi = info.onYomi.joinToString(" ・ "),
             kunYomi = kunDeTarjeta(info, forma),
-            significados = significadosDeTarjeta(info, forma),
+            significados = significadosDeTarjeta(info, forma, sustantivo),
             dificultad = requireNotNull(tocado.dificultad) {
                 "kanjisTaggeados() no debería traer dificultad null"
             },
@@ -252,8 +254,40 @@ class ArmadorMazos(
 
     /** Idem significados: los de la palabra ("to cut (grass, hair, etc.)") le ganan a
      *  los del kanji suelto ("reap, cut, clip") cuando el frente es la palabra. */
-    private fun significadosDeTarjeta(info: KanjiInfo, forma: Palabra?): String =
-        (forma?.significados?.take(GLOSAS_EN_TARJETA) ?: info.significados).joinToString("; ")
+    private fun significadosDeTarjeta(info: KanjiInfo, forma: Palabra?, sustantivo: Palabra?): String {
+        val propios = (forma?.significados?.take(GLOSAS_EN_TARJETA) ?: info.significados).joinToString("; ")
+        val extra = sustantivo?.let {
+            val glosas = it.significados.take(GLOSAS_EN_TARJETA).joinToString("; ")
+            """<div class="sig-alt">${palabraConLectura(it)} ${escapeHtml(glosas)}</div>"""
+        } ?: ""
+        return propios + extra
+    }
+
+    /** El kanji como palabra suelta: 食 → 食〈しょく〉 "food". Solo se busca cuando el
+     *  kanji ADEMÁS tiene forma verbal (feedback de uso 2026-08-18: "que la tarjeta
+     *  tenga los dos"); un sustantivo sin verbo, como 山, ya se muestra pelado y
+     *  agregarle 山〈やま〉 al lado no aporta nada.
+     *
+     *  Se exige popularidad > 0 (el score de Jitendex marca las entradas frecuentes)
+     *  porque casi todo kanji tiene ALGUNA entrada suelta rarísima: 見〈み〉, 切〈せつ〉
+     *  y 刈〈かり〉 puntúan 0 y quedan afuera, mientras 食〈しょく〉 y 山〈やま〉 puntúan 200. */
+    private fun sustantivo(kanji: String, forma: Palabra?): Palabra? {
+        if (forma == null) return null
+        return diccionario.buscarPalabra(kanji).filter { it.popularidad > 0 }.maxByOrNull { it.popularidad }
+    }
+
+    /** Frente de la tarjeta: la forma de diccionario grande y, si el kanji también
+     *  funciona como sustantivo suelto, esa palabra debajo en chico. */
+    private fun frenteDeTarjeta(kanji: String, forma: Palabra?, sustantivo: Palabra?): String = when {
+        forma == null -> kanji
+        sustantivo == null -> forma.termino
+        else -> forma.termino + """<div class="forma-alt">${palabraConLectura(sustantivo)}</div>"""
+    }
+
+    private fun palabraConLectura(palabra: Palabra): String {
+        val termino = escapeHtml(palabra.termino)
+        return palabra.lectura?.let { "$termino〈${escapeHtml(it)}〉" } ?: termino
+    }
 
     /** Prioridad historias > Tatoeba, cap 5. Las oraciones de historias AHORA
      *  pueden llevar traducción (PR B): si la trae, va en un
