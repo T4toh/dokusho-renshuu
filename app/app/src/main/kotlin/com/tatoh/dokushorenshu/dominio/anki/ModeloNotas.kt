@@ -148,6 +148,22 @@ object ModeloNotas {
             font-weight: bold;
             margin: 24px 0 8px 0;
         }
+        /* Segunda forma de la palabra (feedback de uso 2026-08-18): el sustantivo
+           suelto debajo del verbo en el frente, y su significado en el reverso.
+           `.forma-alt` vive dentro de `.kanji` (64px), así que fija su propio
+           tamaño; `.sig-alt` cuelga de `.significados`, que el toggle EN ya
+           oculta. */
+        .forma-alt {
+            font-size: 24px;
+            font-weight: normal;
+            color: #b0b0b0;
+            margin-top: 10px;
+        }
+        .sig-alt {
+            font-size: 17px;
+            color: #b0b0b0;
+            margin-top: 6px;
+        }
         .lectura, .lecturas {
             font-size: 22px;
             color: #b0b0b0;
@@ -192,6 +208,40 @@ object ModeloNotas {
             color: #ffb74d;
             font-weight: bold;
         }
+        /* Toggle de inglés (feedback de uso 2026-08-18): la traducción y los
+           significados arrancan ocultos — leerlos de una no ayuda a estudiar.
+           SIN JAVASCRIPT: un checkbox oculto al principio del reverso y un
+           <label> que hace de botón; el CSS revela con `:checked ~`. La versión
+           con script no andaba en AnkiDroid (el tap no cambiaba nada), y encima
+           dependía de mantener una clase en <body>, que es de la app, no
+           nuestra. Así el estado vive en el propio DOM de la tarjeta y se
+           reinicia solo en cada carta, porque AnkiDroid recarga la página
+           entera por lado (`loadDataWithBaseURL`).
+           `visibility` en vez de `display` para que el texto no salte. */
+        .en-toggle {
+            display: inline-block;
+            font-size: 13px;
+            padding: 3px 14px;
+            border-radius: 10px;
+            border: 1px solid #444444;
+            color: #999999;
+            cursor: pointer;
+            user-select: none;
+            margin: 4px 0;
+        }
+        .en-check {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .significados, .traduccion {
+            visibility: hidden;
+        }
+        .en-check:checked ~ .significados,
+        .en-check:checked ~ #oracion .traduccion {
+            visibility: visible;
+        }
         .linea-lectura {
             margin: 2px 0;
         }
@@ -229,6 +279,13 @@ object ModeloNotas {
         .card:not(.night_mode) .etiqueta-lectura {
             color: #999999;
         }
+        .card:not(.night_mode) .forma-alt, .card:not(.night_mode) .sig-alt {
+            color: #555555;
+        }
+        .card:not(.night_mode) .en-toggle {
+            border-color: #cccccc;
+            color: #666666;
+        }
     """.trimIndent()
 
     // --- Mecanismo de rotación (spec Plan 4a): Oracion1 se renderiza SIEMPRE en
@@ -260,15 +317,27 @@ object ModeloNotas {
         </script>
     """.trimIndent()
 
+    // --- Toggle de inglés (feedback de uso 2026-08-18), sin JavaScript. El
+    // checkbox va PRIMERO en el reverso porque el CSS lo alcanza con el
+    // combinador de hermano posterior (`:checked ~`); el <label> que hace de
+    // botón puede ir donde sea, `for` no necesita parentesco. Se usa un control
+    // propio y NO el tap sobre la carta entera: en AnkiDroid ese tap ya está
+    // tomado por los gestos de respuesta. ---
+    private const val CHECKBOX_INGLES: String = """<input type="checkbox" id="en-check" class="en-check">"""
+
+    private const val BOTON_INGLES: String = """<label for="en-check" class="en-toggle">EN</label>"""
+
     val QFMT_WORDS: String = """<div class="palabra">{{Palabra}}</div>"""
 
     val AFMT_WORDS: String = """
         {{FrontSide}}
         <hr id="answer">
+        $CHECKBOX_INGLES
         <div class="lectura">{{Lectura}}</div>
         <div class="significados">{{Significados}}</div>
         {{#Tag}}<div class="tag">{{Tag}}</div>{{/Tag}}
         <div id="oracion">{{Oracion1}}</div>
+        $BOTON_INGLES
         ${scriptRotacion()}
     """.trimIndent()
 
@@ -277,6 +346,7 @@ object ModeloNotas {
     val AFMT_KANJI: String = """
         {{FrontSide}}
         <hr id="answer">
+        $CHECKBOX_INGLES
         <!-- kun/hiragana primero — feedback de uso 2026-07-13: es la lectura de uso más común, también en doblajes. -->
         <div class="lecturas">
             {{#KunYomi}}<div class="linea-lectura"><span class="etiqueta-lectura">kun</span><span class="kun">{{KunYomi}}</span></div>{{/KunYomi}}
@@ -285,6 +355,7 @@ object ModeloNotas {
         <div class="significados">{{Significados}}</div>
         {{#Dificultad}}<div class="dificultad">[{{Dificultad}}]</div>{{/Dificultad}}
         <div id="oracion">{{Oracion1}}</div>
+        $BOTON_INGLES
         ${scriptRotacion()}
     """.trimIndent()
 }

@@ -6,6 +6,7 @@ import com.tatoh.dokushorenshu.datos.HistoriasRepo
 import com.tatoh.dokushorenshu.datos.KanjiInfo
 import com.tatoh.dokushorenshu.datos.Oracion
 import com.tatoh.dokushorenshu.datos.OracionEjemplo
+import com.tatoh.dokushorenshu.datos.Palabra
 import com.tatoh.dokushorenshu.datos.progreso.KanjiTocado
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
 
@@ -14,6 +15,14 @@ import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
  *  (armarHistorias): cap duro sin relleno — solo oraciones de esa historia
  *  (spec 4a.1). */
 private const val CAP_ORACIONES = 5
+
+/** Cuántas candidatas de Tatoeba se piden por cada oración que entra en la nota,
+ *  para tener de dónde elegir las más simples (ver `masSimples`). */
+private const val FACTOR_CANDIDATAS = 4
+
+/** Cuántas glosas de la palabra entran en la tarjeta de kanji: la entrada de
+ *  Jitendex de un verbo común trae 10+ y tapan la tarjeta. */
+private const val GLOSAS_EN_TARJETA = 3
 
 /** Resultado combinado de armar los dos mazos. `kanjisOmitidos` cuenta kanjis
  *  taggeados que ya no están en el diccionario (release nuevo, entrada
@@ -108,11 +117,13 @@ class ArmadorMazos(
                     omitidos++
                     null
                 } else {
+                    val forma = formaDiccionario(info)
+                    val sustantivo = sustantivo(kanji, forma)
                     NotaKanji(
-                        kanji = kanji,
+                        kanji = frenteDeTarjeta(kanji, forma, sustantivo),
                         onYomi = info.onYomi.joinToString(" ・ "),
-                        kunYomi = info.kunYomi.joinToString(" ・ "),
-                        significados = info.significados.joinToString("; "),
+                        kunYomi = kunDeTarjeta(info, forma),
+                        significados = significadosDeTarjeta(info, forma, sustantivo),
                         dificultad = tagPorKanji[kanji] ?: "",
                         oraciones = oracionesDeLaHistoria(historia, kanji),
                         claveGuidPropia = "story:${historia.id}:$kanji",
@@ -137,17 +148,41 @@ class ArmadorMazos(
 
     /** Oraciones de ESA historia solamente (spec 4a.1: sin relleno Tatoeba — el
      *  punto del mazo es prepararse para ese texto). */
-    private fun oracionesDeLaHistoria(historia: Historia, kanji: String): List<String> =
-        historia.parrafos.asSequence()
+    private fun oracionesDeLaHistoria(historia: Historia, kanji: String): List<String> {
+        val candidatas = historia.parrafos.asSequence()
             .flatMap { it.oraciones.asSequence() }
             .filter { it.texto.contains(kanji) }
-            .map { oracionDeTarjeta(it, kanji) }
-            .take(CAP_ORACIONES)
             .toList()
+        return masSimples(candidatas, kanji) { it.texto }.map { oracionDeTarjeta(it, kanji) }
+    }
 
-    // Mismo rango que BuscadorPalabras.esKanji (helper privado de 1 línea,
-    // duplicado a propósito para no acoplar dominio/anki con dominio/).
-    private fun esKanji(c: Char): Boolean = c in '一'..'鿿'
+    /** Las [cap] candidatas más simples: primero las que traen menos kanjis ajenos
+     *  al objetivo (y más fáciles según JLPT), desempatando por oración más corta.
+     *  Feedback de uso 2026-08-18: "no usar ejemplos con kanjis complejos o
+     *  múltiples". Nunca EXCLUYE: si todas son complejas igual salen las mejores
+     *  del lote — un kanji sin ejemplos simples es peor que uno con ejemplos
+     *  difíciles. El orden es estable, así que a igual puntaje se respeta el orden
+     *  de lectura / el de Tatoeba. */
+    private fun <T> masSimples(
+        candidatas: List<T>,
+        objetivo: String,
+        cap: Int = CAP_ORACIONES,
+        texto: (T) -> String,
+    ): List<T> =
+        candidatas.sortedWith(
+            compareBy({ puntajeSimplicidad(texto(it), objetivo, ::jlptDe) }, { texto(it).length }),
+        ).take(cap)
+
+    /** JLPT del kanji, memoizado: el puntaje consulta el mismo kanji una vez por
+     *  oración candidata y `buscarKanji` pega al SQLite. El export es one-shot, el
+     *  contenido del db no cambia mientras corre. */
+    private val jlptPorKanji = mutableMapOf<String, Int?>()
+
+    private fun jlptDe(kanji: String): Int? =
+        if (jlptPorKanji.containsKey(kanji)) jlptPorKanji[kanji]
+        else diccionario.buscarKanji(kanji)?.jlpt.also { jlptPorKanji[kanji] = it }
+
+    private fun esKanji(c: Char): Boolean = esKanjiChar(c)
 
     private fun armarNotaWords(termino: String, historias: List<Historia>): NotaWords {
         // buscarPalabra por superficie; tokens en kana puro sin entrada propia
@@ -166,20 +201,93 @@ class ArmadorMazos(
         )
     }
 
-    private fun armarNotaKanji(tocado: KanjiTocado, info: KanjiInfo, historias: List<Historia>): NotaKanji =
-        NotaKanji(
-            kanji = tocado.kanji,
+    private fun armarNotaKanji(tocado: KanjiTocado, info: KanjiInfo, historias: List<Historia>): NotaKanji {
+        val forma = formaDiccionario(info)
+        val sustantivo = sustantivo(tocado.kanji, forma)
+        return NotaKanji(
+            kanji = frenteDeTarjeta(tocado.kanji, forma, sustantivo),
             // ModeloNotas espera strings ya formateados (contrato de Task 1)
             onYomi = info.onYomi.joinToString(" ・ "),
-            kunYomi = info.kunYomi.joinToString(" ・ "),
-            significados = info.significados.joinToString("; "),
+            kunYomi = kunDeTarjeta(info, forma),
+            significados = significadosDeTarjeta(info, forma, sustantivo),
             dificultad = requireNotNull(tocado.dificultad) {
                 "kanjisTaggeados() no debería traer dificultad null"
             },
+            // Las oraciones se buscan y resaltan por el KANJI, no por la forma de
+            // diccionario: así una oración con 刈り sigue marcando 刈.
             oraciones = armarOraciones(historias, tocado.kanji) { limite ->
                 diccionario.oracionesDeKanji(tocado.kanji, limite)
             },
+            // El guid sigue atado al kanji pelado: si colgara de la forma de
+            // diccionario, el primer export tras este cambio duplicaría cada nota
+            // en vez de actualizarla.
+            claveGuidPropia = "kanji:${tocado.kanji}",
         )
+    }
+
+    /** Forma de diccionario del kanji (feedback de uso 2026-08-18, criterio Kaishi):
+     *  un verbo/adjetivo va como 刈る, no como 刈 pelado; un sustantivo sin okurigana
+     *  (山, 水) se queda como está. Los candidatos salen de las lecturas kun de
+     *  KANJIDIC que marcan okurigana con punto (`か.る` → 刈 + る); las marcadas con
+     *  guion (`-ゆ.き`, `おお-`) son sufijos/prefijos, no formas de diccionario.
+     *
+     *  Cuando el kanji da varias (食 → 食う y 食べる) gana la que más oraciones de
+     *  ejemplo tiene en el db, que es el mejor proxy de frecuencia disponible:
+     *  `popularidad` satura en 200 y empata (食う y 食べる, 分かる y 分かつ). A igual
+     *  cantidad manda el orden de KANJIDIC (見る antes que 見える). */
+    private fun formaDiccionario(info: KanjiInfo): Palabra? =
+        formaPorKanji.getOrPut(info.kanji) {
+            info.kunYomi
+                .filter { '.' in it && '-' !in it }
+                .map { info.kanji + it.substringAfter('.') }
+                .distinct()
+                .mapNotNull { candidato -> diccionario.buscarPalabra(candidato).maxByOrNull { it.popularidad } }
+                .maxByOrNull { diccionario.oracionesDePalabra(it.termino).size }
+        }
+
+    private val formaPorKanji = mutableMapOf<String, Palabra?>()
+
+    /** Con forma de diccionario en el frente, la línea kun pasa a ser la lectura de
+     *  ESA palabra (刈る → かる): repetir `か.る` al lado de 刈る no agrega nada. */
+    private fun kunDeTarjeta(info: KanjiInfo, forma: Palabra?): String =
+        forma?.lectura ?: info.kunYomi.joinToString(" ・ ")
+
+    /** Idem significados: los de la palabra ("to cut (grass, hair, etc.)") le ganan a
+     *  los del kanji suelto ("reap, cut, clip") cuando el frente es la palabra. */
+    private fun significadosDeTarjeta(info: KanjiInfo, forma: Palabra?, sustantivo: Palabra?): String {
+        val propios = (forma?.significados?.take(GLOSAS_EN_TARJETA) ?: info.significados).joinToString("; ")
+        val extra = sustantivo?.let {
+            val glosas = it.significados.take(GLOSAS_EN_TARJETA).joinToString("; ")
+            """<div class="sig-alt">${palabraConLectura(it)} ${escapeHtml(glosas)}</div>"""
+        } ?: ""
+        return propios + extra
+    }
+
+    /** El kanji como palabra suelta: 食 → 食〈しょく〉 "food". Solo se busca cuando el
+     *  kanji ADEMÁS tiene forma verbal (feedback de uso 2026-08-18: "que la tarjeta
+     *  tenga los dos"); un sustantivo sin verbo, como 山, ya se muestra pelado y
+     *  agregarle 山〈やま〉 al lado no aporta nada.
+     *
+     *  Se exige popularidad > 0 (el score de Jitendex marca las entradas frecuentes)
+     *  porque casi todo kanji tiene ALGUNA entrada suelta rarísima: 見〈み〉, 切〈せつ〉
+     *  y 刈〈かり〉 puntúan 0 y quedan afuera, mientras 食〈しょく〉 y 山〈やま〉 puntúan 200. */
+    private fun sustantivo(kanji: String, forma: Palabra?): Palabra? {
+        if (forma == null) return null
+        return diccionario.buscarPalabra(kanji).filter { it.popularidad > 0 }.maxByOrNull { it.popularidad }
+    }
+
+    /** Frente de la tarjeta: la forma de diccionario grande y, si el kanji también
+     *  funciona como sustantivo suelto, esa palabra debajo en chico. */
+    private fun frenteDeTarjeta(kanji: String, forma: Palabra?, sustantivo: Palabra?): String = when {
+        forma == null -> kanji
+        sustantivo == null -> forma.termino
+        else -> forma.termino + """<div class="forma-alt">${palabraConLectura(sustantivo)}</div>"""
+    }
+
+    private fun palabraConLectura(palabra: Palabra): String {
+        val termino = escapeHtml(palabra.termino)
+        return palabra.lectura?.let { "$termino〈${escapeHtml(it)}〉" } ?: termino
+    }
 
     /** Prioridad historias > Tatoeba, cap 5. Las oraciones de historias AHORA
      *  pueden llevar traducción (PR B): si la trae, va en un
@@ -192,15 +300,17 @@ class ArmadorMazos(
         termino: String,
         tatoeba: (limite: Int) -> List<OracionEjemplo>,
     ): List<String> {
-        val deHistorias = historias.asSequence()
+        val candidatas = historias.asSequence()
             .flatMap { it.parrafos.asSequence() }
             .flatMap { it.oraciones.asSequence() }
             .filter { it.texto.contains(termino) }
-            .map { oracionDeTarjeta(it, termino) }
-            .take(CAP_ORACIONES)
             .toList()
+        val deHistorias = masSimples(candidatas, termino) { it.texto }.map { oracionDeTarjeta(it, termino) }
         if (deHistorias.size >= CAP_ORACIONES) return deHistorias
-        val relleno = tatoeba(CAP_ORACIONES - deHistorias.size).map {
+        val faltan = CAP_ORACIONES - deHistorias.size
+        // Se piden más candidatas de las que entran para poder elegir las simples
+        // (el LIMIT del db no sabe de complejidad); si el db trae menos, no pasa nada.
+        val relleno = masSimples(tatoeba(faltan * FACTOR_CANDIDATAS), termino, faltan) { it.japones }.map {
             val japones = oracionARubyHtml(Oracion(it.japones, emptyList()), objetivo = termino)
             """$japones<span class="traduccion">${escapeHtml(it.ingles)}</span>"""
         }
@@ -280,3 +390,24 @@ private fun emitirConResalte(texto: String, desde: Int, hasta: Int, resaltes: Li
 
 private fun escapeHtml(texto: String): String =
     texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+/** Cuánto "cuesta" leer [texto] a quien está estudiando [objetivo]: cada kanji
+ *  distinto ajeno al objetivo suma 1 (son los "múltiples") más su complejidad
+ *  según el nivel JLPT de KANJIDIC (4 = el más fácil, 1 = el más difícil; un
+ *  kanji sin nivel sale del set JLPT y se cobra como el más difícil). Menor es
+ *  mejor. Pura: el acceso al diccionario entra por [jlptDe]. */
+internal fun puntajeSimplicidad(texto: String, objetivo: String, jlptDe: (String) -> Int?): Int =
+    texto.filter(::esKanjiChar).toSet()
+        .filterNot { objetivo.contains(it) }
+        .sumOf { kanji ->
+            1 + when (jlptDe(kanji.toString())) {
+                4 -> 0
+                3 -> 1
+                2 -> 2
+                else -> 3  // nivel 1 o fuera del set JLPT
+            }
+        }
+
+// Mismo rango que BuscadorPalabras.esKanji (helper de 1 línea, duplicado a
+// propósito para no acoplar dominio/anki con dominio/).
+private fun esKanjiChar(c: Char): Boolean = c in '一'..'鿿'

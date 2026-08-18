@@ -22,6 +22,7 @@
 | B    | historias/catalogo — traducciones literales en inglés por oración | ✅ Completo ([PR #14](https://github.com/T4toh/dokusho-renshuu/pull/14)) |
 | C    | app/ — tarjetas Anki: objetivo resaltado, traducción, kun primero, separadores ・ | ✅ Completo ([PR #15](https://github.com/T4toh/dokusho-renshuu/pull/15)) |
 | fix  | app/ — selección: extender con auxiliares/partículas + Search web en browser default | ✅ Completo ([PR #16](https://github.com/T4toh/dokusho-renshuu/pull/16)) |
+| D    | app/ — feedback 2026-08-18: forma de diccionario (Words + tarjeta de kanji), ejemplos con kanjis simples, toggle EN sin JS | ✅ Completo ([PR #17](https://github.com/T4toh/dokusho-renshuu/pull/17); smoke del .apkg en AnkiDroid pendiente) |
 
 ## Datos operativos
 
@@ -80,6 +81,30 @@
 - MigrationTestHelper no usado (exportSchema=false); ProgresoDaoFake overridea registrarAperturaKanji (primitivas dead-code en fake).
 - Review section: kanjisPorDificultad consultado 2x por dificultad.
 - lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
+
+## Backlog feedback de uso (2026-08-18 — PR D)
+
+### Resuelto
+
+- ~~Los mazos ponen el kanji suelto/conjugado; debería ir en forma de diccionario (食べ → 食べる).~~ `LectorViewModel.tocarPalabra` guarda `token.formaBase ?: token.superficie` en `palabras_tocadas`. A propósito NO usa el término que resuelve el diccionario: el fallback por lectura puede devolver otra ortografía (おじいさん → 御爺さん) que el usuario nunca vio.
+- ~~No usar ejemplos con kanjis complejos o múltiples.~~ `puntajeSimplicidad(texto, objetivo, jlptDe)` en `ArmadorMazos.kt`: cada kanji distinto ajeno al objetivo suma 1 + complejidad por JLPT de KANJIDIC (4 = 0 … 1 o sin nivel = 3); desempate por oración más corta; orden estable. Se aplica antes del cap de 5 en los tres caminos (historias en Words/Kanji, relleno Tatoeba —se piden `faltan * 4` candidatas—, y mazos por historia). PREFIERE, nunca excluye: si todas son complejas igual salen las 5 mejores.
+- ~~Toggle para el inglés en las tarjetas (que no aparezca de una).~~ SIN JavaScript: `<input type="checkbox" id="en-check">` al principio del reverso + `<label for="en-check">EN</label>` como botón, y el CSS revela con `.en-check:checked ~ .significados` / `~ #oracion .traduccion` (por eso el checkbox va ANTES: `~` solo alcanza hermanos posteriores). Default oculto por CSS, `visibility` para no mover el layout. El estado se reinicia solo en cada carta porque AnkiDroid recarga la página entera por lado (`loadDataWithBaseURL`). La primera versión usaba JS (clase en `.card`/`<body>`) y en AnkiDroid el tap no cambiaba nada; ver ledger.
+- ~~En el mazo Kanji el frente es el kanji pelado; un verbo debería ir en forma de diccionario (刈 → 刈る "cortar plantas"), criterio Kaishi.~~ `ArmadorMazos.formaDiccionario`: los candidatos salen de las lecturas kun de KANJIDIC con punto de okurigana (`か.る` → 刈る); las marcadas con guion (`-ゆ.き`, `おお-`) son prefijos/sufijos y se descartan. Con forma encontrada, el frente pasa a ser la palabra, la línea kun a su lectura (かる) y los significados a los de la palabra (3 glosas). Sin okurigana (山, 水) la tarjeta queda igual que antes. Aplica también a los mazos por historia.
+- ~~Cuando el kanji es verbo Y sustantivo (食 → 食べる y 食〈しょく〉 "food"), la tarjeta debería tener los dos.~~ El frente lleva la forma verbal grande y el sustantivo debajo en chico (`.forma-alt`); el reverso agrega la glosa del sustantivo en `.sig-alt`, dentro de `.significados`, así el toggle EN también la tapa. Solo se busca el sustantivo si el kanji ADEMÁS tiene forma verbal (山 sin verbo queda pelado, sin repetir 山〈やま〉 al lado) y se exige `popularidad > 0`: casi todo kanji tiene alguna entrada suelta rarísima (見〈み〉, 切〈せつ〉, 刈〈かり〉 puntúan 0; 食〈しょく〉 y 山〈やま〉 puntúan 200).
+
+### Ledger
+
+- El toggle EN por JavaScript NO funcionó en AnkiDroid (botón visible, tap sin efecto) y la causa exacta quedó sin confirmar: el mazo se borró antes de poder inspeccionar el notetype instalado. Lo verificado: el `.apkg` exportado llevaba el CSS y el template nuevos (pull por `run-as` desde `cache/export`, notetype 1720000000002), y el mismo CSS+template render izado en Chrome headless dentro del wrapper real de AnkiDroid (`card_template.html` + `flashcard.css`) togglea bien. Se eliminó la dependencia de JS en vez de seguir persiguiéndola: el checkbox nativo no depende de que corra un script ni de mantener una clase en `<body>`, que es de la app y no nuestra.
+- AnkiDroid carga cada lado con `loadDataWithBaseURL` (página nueva completa), así que el checkbox arranca destildado en cada carta sin necesidad de resetearlo.
+
+- Las palabras tocadas ANTES de este cambio quedaron guardadas con la superficie conjugada (食べ). `armarWords` hace `distinct()`, así que a lo sumo aparece una carta duplicada 食べ / 食べる por palabra ya tocada. No se migra: implicaría lematizar en SQL o borrar progreso del usuario.
+- Los mazos por historia dejaron de tomar las 5 primeras oraciones en orden de lectura: ahora toman las 5 más simples (el orden de lectura sobrevive solo como desempate estable).
+- `jlptPorKanji` memoiza `buscarKanji` durante el armado; si el db cambiara en caliente, el puntaje usaría el valor viejo (imposible hoy: el export es one-shot).
+- La forma de diccionario NO es única por kanji (食 → 食う y 食べる; 見 → 見る, 見える, 見せる) y `popularidad` no desempata: satura en 200 para todas. Se elige la que más oraciones de ejemplo tiene en el db (mejor proxy de frecuencia disponible: 食べる 10 vs 食う 7, 行く 10 vs 行う 5) y, a igual cantidad, la primera en el orden de KANJIDIC (見る antes que 見える). Verificado a mano contra `diccionario-v2.db` para 刈/食/行/見/切/分/大/高/山/水.
+- El guid de la nota Kanji queda fijado a mano en `kanji:<kanji pelado>` (`claveGuidPropia`): si colgara del campo Kanji, que ahora puede traer 刈る, el primer export tras el cambio duplicaría cada nota en vez de actualizarla.
+- El campo se sigue llamando `Kanji` aunque a veces trae una palabra: agregar un campo al notetype cambiaría el esquema y el re-import sobre una colección existente puede no mergear (duplicados / scheduling perdido).
+- `puntajeSimplicidad` trata "sin nivel JLPT" igual que nivel 1 — un kanji común fuera del set JLPT (p. ej. nombres propios) penaliza de más.
+- Pendiente menor de PR C que sigue abierto: `DetalleKanjiScreen` (UI) todavía separa lecturas con `、` en vez de `・`.
 
 ## Backlog diferido (Plan 4b — no bloqueante)
 
