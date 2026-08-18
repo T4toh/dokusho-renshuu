@@ -22,6 +22,7 @@
 | B    | historias/catalogo — traducciones literales en inglés por oración | ✅ Completo ([PR #14](https://github.com/T4toh/dokusho-renshuu/pull/14)) |
 | C    | app/ — tarjetas Anki: objetivo resaltado, traducción, kun primero, separadores ・ | ✅ Completo ([PR #15](https://github.com/T4toh/dokusho-renshuu/pull/15)) |
 | fix  | app/ — selección: extender con auxiliares/partículas + Search web en browser default | ✅ Completo ([PR #16](https://github.com/T4toh/dokusho-renshuu/pull/16)) |
+| D    | app/ — feedback 2026-08-18: forma de diccionario en Words, ejemplos con kanjis simples, toggle EN en las tarjetas | ✅ Completo (PR pendiente — actualizar con #N al abrir) |
 
 ## Datos operativos
 
@@ -80,6 +81,22 @@
 - MigrationTestHelper no usado (exportSchema=false); ProgresoDaoFake overridea registrarAperturaKanji (primitivas dead-code en fake).
 - Review section: kanjisPorDificultad consultado 2x por dificultad.
 - lookup por lectura sin guard de kana (palabra kanji fuera del db puede resolver a homófono); DIFICULTADES duplicado en VM y Screen.
+
+## Backlog feedback de uso (2026-08-18 — PR D)
+
+### Resuelto
+
+- ~~Los mazos ponen el kanji suelto/conjugado; debería ir en forma de diccionario (食べ → 食べる).~~ `LectorViewModel.tocarPalabra` guarda `token.formaBase ?: token.superficie` en `palabras_tocadas`. A propósito NO usa el término que resuelve el diccionario: el fallback por lectura puede devolver otra ortografía (おじいさん → 御爺さん) que el usuario nunca vio.
+- ~~No usar ejemplos con kanjis complejos o múltiples.~~ `puntajeSimplicidad(texto, objetivo, jlptDe)` en `ArmadorMazos.kt`: cada kanji distinto ajeno al objetivo suma 1 + complejidad por JLPT de KANJIDIC (4 = 0 … 1 o sin nivel = 3); desempate por oración más corta; orden estable. Se aplica antes del cap de 5 en los tres caminos (historias en Words/Kanji, relleno Tatoeba —se piden `faltan * 4` candidatas—, y mazos por historia). PREFIERE, nunca excluye: si todas son complejas igual salen las 5 mejores.
+- ~~Toggle para el inglés en las tarjetas (que no aparezca de una).~~ Botón `EN` en el reverso: el script agrega `en-off` al cargar y el tap la alterna; `visibility: hidden` sobre `.significados` y `.traduccion` (no salta el layout). Botón propio y no tap sobre la carta entera porque en AnkiDroid ese gesto ya está tomado. Sin JS la carta sale con el inglés visible.
+
+### Ledger
+
+- Las palabras tocadas ANTES de este cambio quedaron guardadas con la superficie conjugada (食べ). `armarWords` hace `distinct()`, así que a lo sumo aparece una carta duplicada 食べ / 食べる por palabra ya tocada. No se migra: implicaría lematizar en SQL o borrar progreso del usuario.
+- Los mazos por historia dejaron de tomar las 5 primeras oraciones en orden de lectura: ahora toman las 5 más simples (el orden de lectura sobrevive solo como desempate estable).
+- `jlptPorKanji` memoiza `buscarKanji` durante el armado; si el db cambiara en caliente, el puntaje usaría el valor viejo (imposible hoy: el export es one-shot).
+- `puntajeSimplicidad` trata "sin nivel JLPT" igual que nivel 1 — un kanji común fuera del set JLPT (p. ej. nombres propios) penaliza de más.
+- Pendiente menor de PR C que sigue abierto: `DetalleKanjiScreen` (UI) todavía separa lecturas con `、` en vez de `・`.
 
 ## Backlog diferido (Plan 4b — no bloqueante)
 

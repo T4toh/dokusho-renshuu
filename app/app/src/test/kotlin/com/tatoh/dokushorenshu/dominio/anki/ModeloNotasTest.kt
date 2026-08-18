@@ -119,6 +119,24 @@ class ModeloNotasTest {
         assertTrue(ModeloNotas.CSS.contains(".card:not(.night_mode) #oracion .objetivo"))
     }
 
+    // --- feedback de uso 2026-08-18: el inglés no aparece solo; se revela a pedido ---
+
+    @Test
+    fun `ambos templates arrancan con el ingles oculto y traen el boton EN`() {
+        for (afmt in listOf(ModeloNotas.AFMT_WORDS, ModeloNotas.AFMT_KANJI)) {
+            assertTrue(afmt.contains("id=\"en-toggle\""))
+            assertTrue(afmt.contains("en-off"))  // el script la agrega al cargar
+        }
+    }
+
+    @Test
+    fun `el css oculta significados y traduccion bajo en-off sin mover el layout`() {
+        assertTrue(ModeloNotas.CSS.contains(".en-off .significados"))
+        assertTrue(ModeloNotas.CSS.contains(".en-off .traduccion"))
+        assertTrue(ModeloNotas.CSS.contains("visibility: hidden"))
+        assertTrue(ModeloNotas.CSS.contains(".en-toggle"))
+    }
+
     @Test
     fun `IDs de modelo y mazo son distintos entre si (nunca colisionan)`() {
         val ids = setOf(

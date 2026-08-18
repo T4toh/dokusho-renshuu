@@ -192,6 +192,25 @@ object ModeloNotas {
             color: #ffb74d;
             font-weight: bold;
         }
+        /* Toggle de inglés (feedback de uso 2026-08-18): la traducción y los
+           significados arrancan ocultos — leerlos de una no ayuda a estudiar. El
+           script agrega `en-off` al cargar; sin JS la carta sale con el inglés
+           visible. `visibility` en vez de `display` para que el texto no salte
+           cuando aparece. */
+        .en-toggle {
+            display: inline-block;
+            font-size: 13px;
+            padding: 3px 14px;
+            border-radius: 10px;
+            border: 1px solid #444444;
+            color: #999999;
+            cursor: pointer;
+            user-select: none;
+            margin: 4px 0;
+        }
+        .en-off .significados, .en-off .traduccion {
+            visibility: hidden;
+        }
         .linea-lectura {
             margin: 2px 0;
         }
@@ -229,6 +248,10 @@ object ModeloNotas {
         .card:not(.night_mode) .etiqueta-lectura {
             color: #999999;
         }
+        .card:not(.night_mode) .en-toggle {
+            border-color: #cccccc;
+            color: #666666;
+        }
     """.trimIndent()
 
     // --- Mecanismo de rotación (spec Plan 4a): Oracion1 se renderiza SIEMPRE en
@@ -260,6 +283,25 @@ object ModeloNotas {
         </script>
     """.trimIndent()
 
+    // --- Toggle de inglés (feedback de uso 2026-08-18). El botón vive en el
+    // reverso; el script oculta el inglés al cargar y lo alterna con cada tap. Se
+    // usa un botón propio y NO el tap sobre la carta entera: en AnkiDroid ese tap
+    // ya está tomado por los gestos de respuesta. La clase va en el contenedor
+    // `.card` (Anki/AnkiDroid) con fallback a <body>. ---
+    private fun botonIngles(): String = """
+        <div id="en-toggle" class="en-toggle">EN</div>
+        <script>
+        (function() {
+            var raiz = document.querySelector('.card') || document.body;
+            raiz.classList.add('en-off');
+            var boton = document.getElementById('en-toggle');
+            if (boton) boton.addEventListener('click', function() {
+                raiz.classList.toggle('en-off');
+            });
+        })();
+        </script>
+    """.trimIndent()
+
     val QFMT_WORDS: String = """<div class="palabra">{{Palabra}}</div>"""
 
     val AFMT_WORDS: String = """
@@ -269,6 +311,7 @@ object ModeloNotas {
         <div class="significados">{{Significados}}</div>
         {{#Tag}}<div class="tag">{{Tag}}</div>{{/Tag}}
         <div id="oracion">{{Oracion1}}</div>
+        ${botonIngles()}
         ${scriptRotacion()}
     """.trimIndent()
 
@@ -285,6 +328,7 @@ object ModeloNotas {
         <div class="significados">{{Significados}}</div>
         {{#Dificultad}}<div class="dificultad">[{{Dificultad}}]</div>{{/Dificultad}}
         <div id="oracion">{{Oracion1}}</div>
+        ${botonIngles()}
         ${scriptRotacion()}
     """.trimIndent()
 }

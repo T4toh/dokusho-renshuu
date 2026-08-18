@@ -279,6 +279,75 @@ class ArmadorMazosTest {
         assertEquals("スイ", nota.onYomi)
     }
 
+    // --- feedback de uso 2026-08-18: preferir ejemplos con kanjis simples y pocos ---
+
+    @Test
+    fun `puntajeSimplicidad ignora los kanjis del objetivo y penaliza los ajenos`() {
+        val jlpt = mapOf("犬" to 4, "憂" to 1)
+        val de: (String) -> Int? = { jlpt[it] }
+        assertEquals(0, puntajeSimplicidad("洗濯をする。", "洗濯", de))
+        assertEquals(1, puntajeSimplicidad("洗濯と犬。", "洗濯", de))   // jlpt 4 (el más fácil): 1 + 0
+        assertEquals(4, puntajeSimplicidad("洗濯と憂。", "洗濯", de))   // jlpt 1 (el más difícil): 1 + 3
+        assertEquals(4, puntajeSimplicidad("洗濯と鬱。", "洗濯", de))   // fuera del db = tan caro como el difícil
+    }
+
+    @Test
+    fun `puntajeSimplicidad cuenta cada kanji ajeno una sola vez`() {
+        assertEquals(1, puntajeSimplicidad("犬と犬と犬。", "猫") { 4 })
+    }
+
+    @Test
+    fun `las oraciones de la historia salen de mas simple a mas compleja`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("川", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["川"] = KanjiInfo("川", listOf("river"), listOf("セン"), listOf("かわ"), 4, null)
+            kanjis["行"] = KanjiInfo("行", listOf("go"), listOf("コウ"), listOf("い"), 4, null)
+        }
+        val historias = listOf(
+            Historia(
+                id = "t", titulo = "t", autor = "a", fuente = "f", licencia = "l",
+                dificultad = "facil", version = 1,
+                parrafos = listOf(
+                    Parrafo(
+                        listOf(
+                            Oracion("川の周辺環境。", emptyList()),  // 周辺環境: 4 kanjis fuera del db
+                            Oracion("川へ行った。", emptyList()),     // 行: jlpt 4
+                            Oracion("川。", emptyList()),             // sin kanjis ajenos
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val oraciones = armador(dao, diccionario).armarKanji(historias)
+            .first.single { it.kanji == "川" }.oraciones
+        assertEquals(3, oraciones.size)
+        assertTrue(oraciones[0].endsWith("</b>。"))          // 川。
+        assertTrue(oraciones[1].contains("行"))
+        assertTrue(oraciones[2].contains("環"))
+    }
+
+    @Test
+    fun `el relleno Tatoeba descarta las candidatas mas complejas al recortar al cap`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("川", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["川"] = KanjiInfo("川", listOf("river"), listOf("セン"), listOf("かわ"), 4, null)
+            ejemplosKanji["川"] = listOf(
+                OracionEjemplo("川で泳ぐ。", "1"),
+                OracionEjemplo("川はきれい。", "2"),
+                OracionEjemplo("川を見た。", "3"),
+                OracionEjemplo("川の水。", "4"),
+                OracionEjemplo("川へ行く。", "5"),
+                OracionEjemplo("川の周辺環境の憂鬱。", "6"),  // la más cargada de kanjis
+            )
+        }
+        val oraciones = armador(dao, diccionario).armarKanji(emptyList())
+            .first.single { it.kanji == "川" }.oraciones
+        assertEquals(5, oraciones.size)
+        assertTrue(oraciones.none { it.contains("環") })
+    }
+
     // --- armar(): combina ambos mazos ---
 
     @Test

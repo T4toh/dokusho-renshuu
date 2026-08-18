@@ -212,8 +212,15 @@ class LectorViewModel(
     fun tocarPalabra(token: PalabraToken) {
         viewModelScope.launch {
             val consulta = withContext(ioDispatcher) {
+                // Se guarda la FORMA DE DICCIONARIO de Kuromoji, no la superficie
+                // conjugada (feedback de uso 2026-08-18: la carta del mazo Words
+                // mostraba 食べ en vez de 食べる). A propósito NO se usa el término
+                // que resuelve el diccionario: su fallback por lectura puede
+                // devolver otra ortografía (おじいさん → 御爺さん) que el usuario
+                // nunca vio. Techo conocido: baseForm de IPADIC erra en nombres
+                // propios y conjugaciones raras.
                 progresoDao.registrarPalabra(
-                    PalabraTocada(idHistoria, token.superficie, System.currentTimeMillis()),
+                    PalabraTocada(idHistoria, token.formaBase ?: token.superficie, System.currentTimeMillis()),
                 )
                 buscador.consultar(token)
             }

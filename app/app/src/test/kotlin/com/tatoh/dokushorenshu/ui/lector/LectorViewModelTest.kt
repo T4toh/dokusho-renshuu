@@ -138,6 +138,28 @@ class LectorViewModelTest {
         assertEquals(1, dao.palabrasDe("momotaro").size)
     }
 
+    /** Feedback de uso 2026-08-18: la carta del mazo Words mostraba el kanji suelto
+     *  tal cual se tocó (食べ); debe guardarse la forma de diccionario de Kuromoji. */
+    @Test
+    fun `tocar palabra registra la forma de diccionario, no la superficie conjugada`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        val token = PalabraToken("食べ", "たべ", "食べる", inicio = 0, fin = 2, esContenido = true)
+        vm.tocarPalabra(token); advanceUntilIdle()
+        assertEquals(listOf("食べる"), dao.palabrasDe("momotaro").map { it.termino })
+    }
+
+    @Test
+    fun `token sin forma base registra la superficie`() = runTest {
+        val dao = ProgresoDaoFake()
+        val vm = vmMomotaro(dao)
+        vm.cargar(); advanceUntilIdle()
+        val token = PalabraToken("桃太郎", null, null, inicio = 0, fin = 3, esContenido = true)
+        vm.tocarPalabra(token); advanceUntilIdle()
+        assertEquals(listOf("桃太郎"), dao.palabrasDe("momotaro").map { it.termino })
+    }
+
     @Test
     fun `alternar furigana persiste`() = runTest {
         val dao = ProgresoDaoFake()

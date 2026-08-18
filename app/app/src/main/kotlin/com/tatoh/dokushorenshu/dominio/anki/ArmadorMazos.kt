@@ -15,6 +15,10 @@ import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
  *  (spec 4a.1). */
 private const val CAP_ORACIONES = 5
 
+/** Cuántas candidatas de Tatoeba se piden por cada oración que entra en la nota,
+ *  para tener de dónde elegir las más simples (ver `masSimples`). */
+private const val FACTOR_CANDIDATAS = 4
+
 /** Resultado combinado de armar los dos mazos. `kanjisOmitidos` cuenta kanjis
  *  taggeados que ya no están en el diccionario (release nuevo, entrada
  *  movida/borrada) — el export nunca aborta por esto, solo informa (spec
@@ -137,17 +141,41 @@ class ArmadorMazos(
 
     /** Oraciones de ESA historia solamente (spec 4a.1: sin relleno Tatoeba — el
      *  punto del mazo es prepararse para ese texto). */
-    private fun oracionesDeLaHistoria(historia: Historia, kanji: String): List<String> =
-        historia.parrafos.asSequence()
+    private fun oracionesDeLaHistoria(historia: Historia, kanji: String): List<String> {
+        val candidatas = historia.parrafos.asSequence()
             .flatMap { it.oraciones.asSequence() }
             .filter { it.texto.contains(kanji) }
-            .map { oracionDeTarjeta(it, kanji) }
-            .take(CAP_ORACIONES)
             .toList()
+        return masSimples(candidatas, kanji) { it.texto }.map { oracionDeTarjeta(it, kanji) }
+    }
 
-    // Mismo rango que BuscadorPalabras.esKanji (helper privado de 1 línea,
-    // duplicado a propósito para no acoplar dominio/anki con dominio/).
-    private fun esKanji(c: Char): Boolean = c in '一'..'鿿'
+    /** Las [cap] candidatas más simples: primero las que traen menos kanjis ajenos
+     *  al objetivo (y más fáciles según JLPT), desempatando por oración más corta.
+     *  Feedback de uso 2026-08-18: "no usar ejemplos con kanjis complejos o
+     *  múltiples". Nunca EXCLUYE: si todas son complejas igual salen las mejores
+     *  del lote — un kanji sin ejemplos simples es peor que uno con ejemplos
+     *  difíciles. El orden es estable, así que a igual puntaje se respeta el orden
+     *  de lectura / el de Tatoeba. */
+    private fun <T> masSimples(
+        candidatas: List<T>,
+        objetivo: String,
+        cap: Int = CAP_ORACIONES,
+        texto: (T) -> String,
+    ): List<T> =
+        candidatas.sortedWith(
+            compareBy({ puntajeSimplicidad(texto(it), objetivo, ::jlptDe) }, { texto(it).length }),
+        ).take(cap)
+
+    /** JLPT del kanji, memoizado: el puntaje consulta el mismo kanji una vez por
+     *  oración candidata y `buscarKanji` pega al SQLite. El export es one-shot, el
+     *  contenido del db no cambia mientras corre. */
+    private val jlptPorKanji = mutableMapOf<String, Int?>()
+
+    private fun jlptDe(kanji: String): Int? =
+        if (jlptPorKanji.containsKey(kanji)) jlptPorKanji[kanji]
+        else diccionario.buscarKanji(kanji)?.jlpt.also { jlptPorKanji[kanji] = it }
+
+    private fun esKanji(c: Char): Boolean = esKanjiChar(c)
 
     private fun armarNotaWords(termino: String, historias: List<Historia>): NotaWords {
         // buscarPalabra por superficie; tokens en kana puro sin entrada propia
@@ -192,15 +220,17 @@ class ArmadorMazos(
         termino: String,
         tatoeba: (limite: Int) -> List<OracionEjemplo>,
     ): List<String> {
-        val deHistorias = historias.asSequence()
+        val candidatas = historias.asSequence()
             .flatMap { it.parrafos.asSequence() }
             .flatMap { it.oraciones.asSequence() }
             .filter { it.texto.contains(termino) }
-            .map { oracionDeTarjeta(it, termino) }
-            .take(CAP_ORACIONES)
             .toList()
+        val deHistorias = masSimples(candidatas, termino) { it.texto }.map { oracionDeTarjeta(it, termino) }
         if (deHistorias.size >= CAP_ORACIONES) return deHistorias
-        val relleno = tatoeba(CAP_ORACIONES - deHistorias.size).map {
+        val faltan = CAP_ORACIONES - deHistorias.size
+        // Se piden más candidatas de las que entran para poder elegir las simples
+        // (el LIMIT del db no sabe de complejidad); si el db trae menos, no pasa nada.
+        val relleno = masSimples(tatoeba(faltan * FACTOR_CANDIDATAS), termino, faltan) { it.japones }.map {
             val japones = oracionARubyHtml(Oracion(it.japones, emptyList()), objetivo = termino)
             """$japones<span class="traduccion">${escapeHtml(it.ingles)}</span>"""
         }
@@ -280,3 +310,24 @@ private fun emitirConResalte(texto: String, desde: Int, hasta: Int, resaltes: Li
 
 private fun escapeHtml(texto: String): String =
     texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+/** Cuánto "cuesta" leer [texto] a quien está estudiando [objetivo]: cada kanji
+ *  distinto ajeno al objetivo suma 1 (son los "múltiples") más su complejidad
+ *  según el nivel JLPT de KANJIDIC (4 = el más fácil, 1 = el más difícil; un
+ *  kanji sin nivel sale del set JLPT y se cobra como el más difícil). Menor es
+ *  mejor. Pura: el acceso al diccionario entra por [jlptDe]. */
+internal fun puntajeSimplicidad(texto: String, objetivo: String, jlptDe: (String) -> Int?): Int =
+    texto.filter(::esKanjiChar).toSet()
+        .filterNot { objetivo.contains(it) }
+        .sumOf { kanji ->
+            1 + when (jlptDe(kanji.toString())) {
+                4 -> 0
+                3 -> 1
+                2 -> 2
+                else -> 3  // nivel 1 o fuera del set JLPT
+            }
+        }
+
+// Mismo rango que BuscadorPalabras.esKanji (helper de 1 línea, duplicado a
+// propósito para no acoplar dominio/anki con dominio/).
+private fun esKanjiChar(c: Char): Boolean = c in '一'..'鿿'
