@@ -6,6 +6,7 @@ import com.tatoh.dokushorenshu.datos.HistoriasRepo
 import com.tatoh.dokushorenshu.datos.KanjiInfo
 import com.tatoh.dokushorenshu.datos.Oracion
 import com.tatoh.dokushorenshu.datos.OracionEjemplo
+import com.tatoh.dokushorenshu.datos.Palabra
 import com.tatoh.dokushorenshu.datos.progreso.KanjiTocado
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
 
@@ -18,6 +19,10 @@ private const val CAP_ORACIONES = 5
 /** Cuántas candidatas de Tatoeba se piden por cada oración que entra en la nota,
  *  para tener de dónde elegir las más simples (ver `masSimples`). */
 private const val FACTOR_CANDIDATAS = 4
+
+/** Cuántas glosas de la palabra entran en la tarjeta de kanji: la entrada de
+ *  Jitendex de un verbo común trae 10+ y tapan la tarjeta. */
+private const val GLOSAS_EN_TARJETA = 3
 
 /** Resultado combinado de armar los dos mazos. `kanjisOmitidos` cuenta kanjis
  *  taggeados que ya no están en el diccionario (release nuevo, entrada
@@ -112,11 +117,12 @@ class ArmadorMazos(
                     omitidos++
                     null
                 } else {
+                    val forma = formaDiccionario(info)
                     NotaKanji(
-                        kanji = kanji,
+                        kanji = forma?.termino ?: kanji,
                         onYomi = info.onYomi.joinToString(" ・ "),
-                        kunYomi = info.kunYomi.joinToString(" ・ "),
-                        significados = info.significados.joinToString("; "),
+                        kunYomi = kunDeTarjeta(info, forma),
+                        significados = significadosDeTarjeta(info, forma),
                         dificultad = tagPorKanji[kanji] ?: "",
                         oraciones = oracionesDeLaHistoria(historia, kanji),
                         claveGuidPropia = "story:${historia.id}:$kanji",
@@ -194,20 +200,60 @@ class ArmadorMazos(
         )
     }
 
-    private fun armarNotaKanji(tocado: KanjiTocado, info: KanjiInfo, historias: List<Historia>): NotaKanji =
-        NotaKanji(
-            kanji = tocado.kanji,
+    private fun armarNotaKanji(tocado: KanjiTocado, info: KanjiInfo, historias: List<Historia>): NotaKanji {
+        val forma = formaDiccionario(info)
+        return NotaKanji(
+            kanji = forma?.termino ?: tocado.kanji,
             // ModeloNotas espera strings ya formateados (contrato de Task 1)
             onYomi = info.onYomi.joinToString(" ・ "),
-            kunYomi = info.kunYomi.joinToString(" ・ "),
-            significados = info.significados.joinToString("; "),
+            kunYomi = kunDeTarjeta(info, forma),
+            significados = significadosDeTarjeta(info, forma),
             dificultad = requireNotNull(tocado.dificultad) {
                 "kanjisTaggeados() no debería traer dificultad null"
             },
+            // Las oraciones se buscan y resaltan por el KANJI, no por la forma de
+            // diccionario: así una oración con 刈り sigue marcando 刈.
             oraciones = armarOraciones(historias, tocado.kanji) { limite ->
                 diccionario.oracionesDeKanji(tocado.kanji, limite)
             },
+            // El guid sigue atado al kanji pelado: si colgara de la forma de
+            // diccionario, el primer export tras este cambio duplicaría cada nota
+            // en vez de actualizarla.
+            claveGuidPropia = "kanji:${tocado.kanji}",
         )
+    }
+
+    /** Forma de diccionario del kanji (feedback de uso 2026-08-18, criterio Kaishi):
+     *  un verbo/adjetivo va como 刈る, no como 刈 pelado; un sustantivo sin okurigana
+     *  (山, 水) se queda como está. Los candidatos salen de las lecturas kun de
+     *  KANJIDIC que marcan okurigana con punto (`か.る` → 刈 + る); las marcadas con
+     *  guion (`-ゆ.き`, `おお-`) son sufijos/prefijos, no formas de diccionario.
+     *
+     *  Cuando el kanji da varias (食 → 食う y 食べる) gana la que más oraciones de
+     *  ejemplo tiene en el db, que es el mejor proxy de frecuencia disponible:
+     *  `popularidad` satura en 200 y empata (食う y 食べる, 分かる y 分かつ). A igual
+     *  cantidad manda el orden de KANJIDIC (見る antes que 見える). */
+    private fun formaDiccionario(info: KanjiInfo): Palabra? =
+        formaPorKanji.getOrPut(info.kanji) {
+            info.kunYomi
+                .filter { '.' in it && '-' !in it }
+                .map { info.kanji + it.substringAfter('.') }
+                .distinct()
+                .mapNotNull { candidato -> diccionario.buscarPalabra(candidato).maxByOrNull { it.popularidad } }
+                .maxByOrNull { diccionario.oracionesDePalabra(it.termino).size }
+        }
+
+    private val formaPorKanji = mutableMapOf<String, Palabra?>()
+
+    /** Con forma de diccionario en el frente, la línea kun pasa a ser la lectura de
+     *  ESA palabra (刈る → かる): repetir `か.る` al lado de 刈る no agrega nada. */
+    private fun kunDeTarjeta(info: KanjiInfo, forma: Palabra?): String =
+        forma?.lectura ?: info.kunYomi.joinToString(" ・ ")
+
+    /** Idem significados: los de la palabra ("to cut (grass, hair, etc.)") le ganan a
+     *  los del kanji suelto ("reap, cut, clip") cuando el frente es la palabra. */
+    private fun significadosDeTarjeta(info: KanjiInfo, forma: Palabra?): String =
+        (forma?.significados?.take(GLOSAS_EN_TARJETA) ?: info.significados).joinToString("; ")
 
     /** Prioridad historias > Tatoeba, cap 5. Las oraciones de historias AHORA
      *  pueden llevar traducción (PR B): si la trae, va en un

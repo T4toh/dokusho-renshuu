@@ -125,15 +125,16 @@ class ModeloNotasTest {
     fun `ambos templates arrancan con el ingles oculto y traen el boton EN`() {
         for (afmt in listOf(ModeloNotas.AFMT_WORDS, ModeloNotas.AFMT_KANJI)) {
             assertTrue(afmt.contains("id=\"en-toggle\""))
-            assertTrue(afmt.contains("en-off"))  // el script la agrega al cargar
+            assertTrue(afmt.contains("en-on"))  // el tap la agrega; el default es oculto
         }
     }
 
     @Test
     fun `el css oculta significados y traduccion bajo en-off sin mover el layout`() {
-        assertTrue(ModeloNotas.CSS.contains(".en-off .significados"))
-        assertTrue(ModeloNotas.CSS.contains(".en-off .traduccion"))
+        assertTrue(ModeloNotas.CSS.contains(".significados, .traduccion"))
         assertTrue(ModeloNotas.CSS.contains("visibility: hidden"))
+        assertTrue(ModeloNotas.CSS.contains(".en-on .significados, .en-on .traduccion"))
+        assertTrue(ModeloNotas.CSS.contains("visibility: visible"))
         assertTrue(ModeloNotas.CSS.contains(".en-toggle"))
     }
 

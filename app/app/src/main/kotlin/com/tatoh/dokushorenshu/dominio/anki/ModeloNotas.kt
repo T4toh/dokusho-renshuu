@@ -194,9 +194,11 @@ object ModeloNotas {
         }
         /* Toggle de inglés (feedback de uso 2026-08-18): la traducción y los
            significados arrancan ocultos — leerlos de una no ayuda a estudiar. El
-           script agrega `en-off` al cargar; sin JS la carta sale con el inglés
-           visible. `visibility` en vez de `display` para que el texto no salte
-           cuando aparece. */
+           default es OCULTO EN EL CSS (no por JS): si lo escondiera el script se
+           vería un parpadeo del inglés antes de que corra. El botón agrega
+           `en-on` para revelarlo. Contrapartida asumida: sin JS el inglés queda
+           inalcanzable. `visibility` en vez de `display` para que el texto no
+           salte cuando aparece. */
         .en-toggle {
             display: inline-block;
             font-size: 13px;
@@ -208,8 +210,11 @@ object ModeloNotas {
             user-select: none;
             margin: 4px 0;
         }
-        .en-off .significados, .en-off .traduccion {
+        .significados, .traduccion {
             visibility: hidden;
+        }
+        .en-on .significados, .en-on .traduccion {
+            visibility: visible;
         }
         .linea-lectura {
             margin: 2px 0;
@@ -284,7 +289,7 @@ object ModeloNotas {
     """.trimIndent()
 
     // --- Toggle de inglés (feedback de uso 2026-08-18). El botón vive en el
-    // reverso; el script oculta el inglés al cargar y lo alterna con cada tap. Se
+    // reverso; el inglés arranca oculto por CSS y cada tap lo alterna. Se
     // usa un botón propio y NO el tap sobre la carta entera: en AnkiDroid ese tap
     // ya está tomado por los gestos de respuesta. La clase va en el contenedor
     // `.card` (Anki/AnkiDroid) con fallback a <body>. ---
@@ -293,10 +298,9 @@ object ModeloNotas {
         <script>
         (function() {
             var raiz = document.querySelector('.card') || document.body;
-            raiz.classList.add('en-off');
             var boton = document.getElementById('en-toggle');
             if (boton) boton.addEventListener('click', function() {
-                raiz.classList.toggle('en-off');
+                raiz.classList.toggle('en-on');
             });
         })();
         </script>

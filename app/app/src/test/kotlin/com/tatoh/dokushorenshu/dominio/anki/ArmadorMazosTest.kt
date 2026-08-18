@@ -279,6 +279,111 @@ class ArmadorMazosTest {
         assertEquals("スイ", nota.onYomi)
     }
 
+    // --- feedback de uso 2026-08-18: forma de diccionario en la tarjeta de kanji ---
+
+    @Test
+    fun `kanji con okurigana sale en forma de diccionario, con la lectura y las glosas de la palabra`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("刈", "hard", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["刈"] = KanjiInfo("刈", listOf("reap", "cut"), listOf("ガイ"), listOf("か.る"), null, null)
+            palabras["刈る"] = listOf(Palabra("刈る", "かる", listOf("to cut (grass)", "to mow"), emptyList(), 200))
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single()
+        assertEquals("刈る", nota.kanji)
+        assertEquals("かる", nota.kunYomi)
+        assertEquals("to cut (grass); to mow", nota.significados)
+        assertEquals("ガイ", nota.onYomi)  // el on del kanji se mantiene
+    }
+
+    @Test
+    fun `kanji sin okurigana (sustantivo) queda pelado con las lecturas del kanji`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("山", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["山"] = KanjiInfo("山", listOf("mountain"), listOf("サン"), listOf("やま"), null, null)
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single()
+        assertEquals("山", nota.kanji)
+        assertEquals("やま", nota.kunYomi)
+        assertEquals("mountain", nota.significados)
+    }
+
+    @Test
+    fun `las lecturas kun de prefijo o sufijo no generan forma de diccionario`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("行", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["行"] = KanjiInfo("行", listOf("going"), listOf("コウ"), listOf("-ゆ.き", "-い.き"), null, null)
+            palabras["行き"] = listOf(Palabra("行き", "ゆき", listOf("bound for"), emptyList(), 200))
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single()
+        assertEquals("行", nota.kanji)
+    }
+
+    @Test
+    fun `entre varias formas gana la que mas oraciones de ejemplo tiene en el db`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("食", "medium", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["食"] = KanjiInfo("食", listOf("eat"), listOf("ショク"), listOf("く.う", "た.べる"), null, null)
+            // popularidad empatada, igual que en el db real (satura en 200)
+            palabras["食う"] = listOf(Palabra("食う", "くう", listOf("to eat (rough)"), emptyList(), 200))
+            palabras["食べる"] = listOf(Palabra("食べる", "たべる", listOf("to eat"), emptyList(), 200))
+            ejemplosPalabra["食う"] = List(2) { OracionEjemplo("食う$it", "eat $it") }
+            ejemplosPalabra["食べる"] = List(5) { OracionEjemplo("食べる$it", "eat $it") }
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single()
+        assertEquals("食べる", nota.kanji)
+    }
+
+    @Test
+    fun `a igual cantidad de ejemplos manda el orden de KANJIDIC`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("見", "easy", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["見"] = KanjiInfo("見", listOf("see"), listOf("ケン"), listOf("み.る", "み.える"), null, null)
+            palabras["見る"] = listOf(Palabra("見る", "みる", listOf("to see"), emptyList(), 200))
+            palabras["見える"] = listOf(Palabra("見える", "みえる", listOf("to be visible"), emptyList(), 200))
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single()
+        assertEquals("見る", nota.kanji)
+    }
+
+    @Test
+    fun `el guid de la nota Kanji sigue colgando del kanji pelado`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.insertarKanjiSiNoExiste(KanjiTocado("刈", "hard", 1L))
+        val diccionario = DiccionarioFake().apply {
+            kanjis["刈"] = KanjiInfo("刈", listOf("reap"), listOf("ガイ"), listOf("か.る"), null, null)
+            palabras["刈る"] = listOf(Palabra("刈る", "かる", listOf("to cut (grass)"), emptyList(), 200))
+        }
+        val nota = armador(dao, diccionario).armarKanji(emptyList()).first.single()
+        assertEquals("kanji:刈", nota.claveGuid)  // re-export actualiza, no duplica
+    }
+
+    @Test
+    fun `los mazos por historia tambien usan la forma de diccionario`() = runTest {
+        val dao = ProgresoDaoFake()
+        val diccionario = DiccionarioFake().apply {
+            todosLosKanjisConocidos = true
+            kanjis["刈"] = KanjiInfo("刈", listOf("reap"), listOf("ガイ"), listOf("か.る"), null, null)
+            palabras["刈る"] = listOf(Palabra("刈る", "かる", listOf("to cut (grass)"), emptyList(), 200))
+        }
+        val historias = listOf(
+            Historia(
+                id = "t", titulo = "t", autor = "a", fuente = "f", licencia = "l",
+                dificultad = "facil", version = 1,
+                parrafos = listOf(Parrafo(listOf(Oracion("草を刈り取る。", emptyList())))),
+            ),
+        )
+        val mazo = armador(dao, diccionario).armarHistorias(historias).mazos.single()
+        val nota = mazo.notas.single { it.claveGuid == "story:t:刈" }
+        assertEquals("刈る", nota.kanji)
+        // la oración se sigue eligiendo y resaltando por el kanji, no por la forma
+        assertTrue(nota.oraciones.single().contains("""<b class="objetivo">刈</b>"""))
+    }
+
     // --- feedback de uso 2026-08-18: preferir ejemplos con kanjis simples y pocos ---
 
     @Test
