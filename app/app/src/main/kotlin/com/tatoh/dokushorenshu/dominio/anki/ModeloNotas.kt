@@ -209,12 +209,15 @@ object ModeloNotas {
             font-weight: bold;
         }
         /* Toggle de inglés (feedback de uso 2026-08-18): la traducción y los
-           significados arrancan ocultos — leerlos de una no ayuda a estudiar. El
-           default es OCULTO EN EL CSS (no por JS): si lo escondiera el script se
-           vería un parpadeo del inglés antes de que corra. El botón agrega
-           `en-on` para revelarlo. Contrapartida asumida: sin JS el inglés queda
-           inalcanzable. `visibility` en vez de `display` para que el texto no
-           salte cuando aparece. */
+           significados arrancan ocultos — leerlos de una no ayuda a estudiar.
+           SIN JAVASCRIPT: un checkbox oculto al principio del reverso y un
+           <label> que hace de botón; el CSS revela con `:checked ~`. La versión
+           con script no andaba en AnkiDroid (el tap no cambiaba nada), y encima
+           dependía de mantener una clase en <body>, que es de la app, no
+           nuestra. Así el estado vive en el propio DOM de la tarjeta y se
+           reinicia solo en cada carta, porque AnkiDroid recarga la página
+           entera por lado (`loadDataWithBaseURL`).
+           `visibility` en vez de `display` para que el texto no salte. */
         .en-toggle {
             display: inline-block;
             font-size: 13px;
@@ -226,10 +229,17 @@ object ModeloNotas {
             user-select: none;
             margin: 4px 0;
         }
+        .en-check {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
         .significados, .traduccion {
             visibility: hidden;
         }
-        .en-on .significados, .en-on .traduccion {
+        .en-check:checked ~ .significados,
+        .en-check:checked ~ #oracion .traduccion {
             visibility: visible;
         }
         .linea-lectura {
@@ -307,34 +317,27 @@ object ModeloNotas {
         </script>
     """.trimIndent()
 
-    // --- Toggle de inglés (feedback de uso 2026-08-18). El botón vive en el
-    // reverso; el inglés arranca oculto por CSS y cada tap lo alterna. Se
-    // usa un botón propio y NO el tap sobre la carta entera: en AnkiDroid ese tap
-    // ya está tomado por los gestos de respuesta. La clase va en el contenedor
-    // `.card` (Anki/AnkiDroid) con fallback a <body>. ---
-    private fun botonIngles(): String = """
-        <div id="en-toggle" class="en-toggle">EN</div>
-        <script>
-        (function() {
-            var raiz = document.querySelector('.card') || document.body;
-            var boton = document.getElementById('en-toggle');
-            if (boton) boton.addEventListener('click', function() {
-                raiz.classList.toggle('en-on');
-            });
-        })();
-        </script>
-    """.trimIndent()
+    // --- Toggle de inglés (feedback de uso 2026-08-18), sin JavaScript. El
+    // checkbox va PRIMERO en el reverso porque el CSS lo alcanza con el
+    // combinador de hermano posterior (`:checked ~`); el <label> que hace de
+    // botón puede ir donde sea, `for` no necesita parentesco. Se usa un control
+    // propio y NO el tap sobre la carta entera: en AnkiDroid ese tap ya está
+    // tomado por los gestos de respuesta. ---
+    private const val CHECKBOX_INGLES: String = """<input type="checkbox" id="en-check" class="en-check">"""
+
+    private const val BOTON_INGLES: String = """<label for="en-check" class="en-toggle">EN</label>"""
 
     val QFMT_WORDS: String = """<div class="palabra">{{Palabra}}</div>"""
 
     val AFMT_WORDS: String = """
         {{FrontSide}}
         <hr id="answer">
+        $CHECKBOX_INGLES
         <div class="lectura">{{Lectura}}</div>
         <div class="significados">{{Significados}}</div>
         {{#Tag}}<div class="tag">{{Tag}}</div>{{/Tag}}
         <div id="oracion">{{Oracion1}}</div>
-        ${botonIngles()}
+        $BOTON_INGLES
         ${scriptRotacion()}
     """.trimIndent()
 
@@ -343,6 +346,7 @@ object ModeloNotas {
     val AFMT_KANJI: String = """
         {{FrontSide}}
         <hr id="answer">
+        $CHECKBOX_INGLES
         <!-- kun/hiragana primero — feedback de uso 2026-07-13: es la lectura de uso más común, también en doblajes. -->
         <div class="lecturas">
             {{#KunYomi}}<div class="linea-lectura"><span class="etiqueta-lectura">kun</span><span class="kun">{{KunYomi}}</span></div>{{/KunYomi}}
@@ -351,7 +355,7 @@ object ModeloNotas {
         <div class="significados">{{Significados}}</div>
         {{#Dificultad}}<div class="dificultad">[{{Dificultad}}]</div>{{/Dificultad}}
         <div id="oracion">{{Oracion1}}</div>
-        ${botonIngles()}
+        $BOTON_INGLES
         ${scriptRotacion()}
     """.trimIndent()
 }

@@ -122,18 +122,34 @@ class ModeloNotasTest {
     // --- feedback de uso 2026-08-18: el inglés no aparece solo; se revela a pedido ---
 
     @Test
-    fun `ambos templates arrancan con el ingles oculto y traen el boton EN`() {
+    fun `ambos templates traen el checkbox del ingles antes del contenido y el boton despues`() {
         for (afmt in listOf(ModeloNotas.AFMT_WORDS, ModeloNotas.AFMT_KANJI)) {
-            assertTrue(afmt.contains("id=\"en-toggle\""))
-            assertTrue(afmt.contains("en-on"))  // el tap la agrega; el default es oculto
+            val checkbox = afmt.indexOf("id=\"en-check\"")
+            val significados = afmt.indexOf("{{Significados}}")
+            val oracion = afmt.indexOf("id=\"oracion\"")
+            assertTrue("falta el checkbox", checkbox >= 0)
+            assertTrue("falta el boton EN", afmt.contains("for=\"en-check\""))
+            // el selector `:checked ~` solo alcanza hermanos POSTERIORES
+            assertTrue("el checkbox va antes de los significados", checkbox < significados)
+            assertTrue("el checkbox va antes de la oracion", checkbox < oracion)
         }
     }
 
     @Test
-    fun `el css oculta significados y traduccion bajo en-off sin mover el layout`() {
+    fun `el toggle del ingles no depende de javascript`() {
+        for (afmt in listOf(ModeloNotas.AFMT_WORDS, ModeloNotas.AFMT_KANJI)) {
+            // el unico script que queda es el de rotacion de oraciones
+            assertEquals(1, afmt.split("<script>").size - 1)
+            assertFalse(afmt.contains("classList"))
+        }
+    }
+
+    @Test
+    fun `el css oculta significados y traduccion hasta tildar el checkbox, sin mover el layout`() {
         assertTrue(ModeloNotas.CSS.contains(".significados, .traduccion"))
         assertTrue(ModeloNotas.CSS.contains("visibility: hidden"))
-        assertTrue(ModeloNotas.CSS.contains(".en-on .significados, .en-on .traduccion"))
+        assertTrue(ModeloNotas.CSS.contains(".en-check:checked ~ .significados"))
+        assertTrue(ModeloNotas.CSS.contains(".en-check:checked ~ #oracion .traduccion"))
         assertTrue(ModeloNotas.CSS.contains("visibility: visible"))
         assertTrue(ModeloNotas.CSS.contains(".en-toggle"))
     }
