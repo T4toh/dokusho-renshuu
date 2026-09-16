@@ -33,6 +33,7 @@ import com.tatoh.dokushorenshu.ui.lector.LectorViewModel
 import com.tatoh.dokushorenshu.ui.tema.TemaDokusho
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -186,6 +187,8 @@ class MainActivity : ComponentActivity() {
 }
 
 /** Título por defecto de una captura. Con fecha y hora porque se generan muchas
- *  seguidas y el id de la historia sale del título (colisión → sufijo -2, -3…). */
-private fun tituloDeCaptura(): String =
-    "Scan " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+ *  seguidas y el id de la historia sale del título (colisión → sufijo -2, -3…).
+ *  Locale.ROOT porque ofPattern hereda el DecimalStyle del locale del sistema y en
+ *  ar-EG (por ejemplo) los dígitos saldrían en árabe: la UI va en inglés. */
+private fun tituloDeCaptura(): String = "Scan " + LocalDateTime.now()
+    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withLocale(Locale.ROOT))

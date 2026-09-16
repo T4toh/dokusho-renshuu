@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -97,9 +98,17 @@ fun CapturaScreen(pedirPermisoAlEntrar: Boolean, onCerrar: () -> Unit) {
     }
 
     // Llegada desde el tap del bubble sin credenciales vigentes: disparar el
-    // diálogo directo, sin obligar a un tap más.
+    // diálogo directo, sin obligar a un tap más. El flag existe porque el argumento
+    // de navegación vive en la entrada del backstack y sobrevive a la composición:
+    // sin él, el diálogo del sistema vuelve a saltar al rotar y al volver acá con
+    // popBackStack desde el import. rememberSaveable para que aguante rotación y
+    // muerte de proceso, no remember.
+    var yaPedido by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(pedirPermisoAlEntrar) {
-        if (pedirPermisoAlEntrar && SOPORTADO && permisos.overlay) pedirProyeccion()
+        if (pedirPermisoAlEntrar && !yaPedido && SOPORTADO && permisos.overlay) {
+            yaPedido = true
+            pedirProyeccion()
+        }
     }
 
     Scaffold(topBar = {
