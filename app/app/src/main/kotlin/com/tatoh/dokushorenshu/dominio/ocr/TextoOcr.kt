@@ -11,8 +11,12 @@ data class BloqueOcr(val lineas: List<String>)
 /** Lleva la selección hecha sobre el overlay a las coordenadas del bitmap capturado.
  *  Los dos tamaños difieren: el overlay no cubre las barras de sistema y el bitmap
  *  sí. Sin este escalado el recorte sale corrido.
- *  Devuelve null si el resultado no es un rectángulo usable (fuera del bitmap,
- *  degenerado, o con un overlay de tamaño cero) — el llamador usa el bitmap entero. */
+ *  Lo que se sale del bitmap se recorta contra sus bordes en vez de descartarse: antes
+ *  un desborde de un píxel devolvía null y el llamador terminaba haciendo OCR de la
+ *  pantalla entera, tirando a la basura la selección del usuario.
+ *  Devuelve null sólo si la entrada no sirve para nada: overlay de tamaño cero, o una
+ *  selección que después del clamp queda degenerada (ancho o alto ≤ 0) — el llamador
+ *  usa el bitmap entero. */
 fun escalarRecorte(
     seleccion: Recorte,
     anchoOverlay: Int,
@@ -23,11 +27,10 @@ fun escalarRecorte(
     if (anchoOverlay <= 0 || altoOverlay <= 0) return null
     val escalaX = anchoBitmap.toDouble() / anchoOverlay
     val escalaY = altoBitmap.toDouble() / altoOverlay
-    val left = (seleccion.left * escalaX).toInt()
-    val top = (seleccion.top * escalaY).toInt()
-    val right = ((seleccion.left + seleccion.ancho) * escalaX).toInt()
-    val bottom = ((seleccion.top + seleccion.alto) * escalaY).toInt()
-    if (left < 0 || top < 0 || right > anchoBitmap || bottom > altoBitmap) return null
+    val left = (seleccion.left * escalaX).toInt().coerceIn(0, anchoBitmap)
+    val top = (seleccion.top * escalaY).toInt().coerceIn(0, altoBitmap)
+    val right = ((seleccion.left + seleccion.ancho) * escalaX).toInt().coerceIn(0, anchoBitmap)
+    val bottom = ((seleccion.top + seleccion.alto) * escalaY).toInt().coerceIn(0, altoBitmap)
     if (right - left <= 0 || bottom - top <= 0) return null
     return Recorte(left, top, right - left, bottom - top)
 }

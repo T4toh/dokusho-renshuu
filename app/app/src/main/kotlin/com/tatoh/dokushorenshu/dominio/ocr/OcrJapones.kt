@@ -28,6 +28,4 @@ class OcrJapones(
             resultado.textBlocks.map { bloque -> BloqueOcr(bloque.lines.map { it.text }) }
         )
     }
-
-    fun cerrar() = reconocedor.close()
 }

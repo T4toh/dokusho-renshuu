@@ -20,8 +20,24 @@ class EscalarRecorteTest {
     }
 
     @Test
-    fun `seleccion que se sale del bitmap devuelve null`() {
-        assertNull(escalarRecorte(Recorte(1000, 0, 200, 50), 1080, 2400, 1080, 2400))
+    fun `seleccion que se pasa por derecha y abajo se recorta contra el borde`() {
+        // antes esto devolvía null y el llamador hacía OCR de la pantalla entera,
+        // descartando en silencio lo que el usuario había seleccionado.
+        val r = escalarRecorte(Recorte(1000, 2380, 200, 100), 1080, 2400, 1080, 2400)
+        assertEquals(Recorte(1000, 2380, 80, 20), r)
+    }
+
+    @Test
+    fun `seleccion con origen negativo se recorta contra el cero`() {
+        val r = escalarRecorte(Recorte(-30, -10, 100, 50), 1080, 2400, 1080, 2400)
+        assertEquals(Recorte(0, 0, 70, 40), r)
+    }
+
+    @Test
+    fun `seleccion entera fuera del bitmap devuelve null`() {
+        // clampea a ancho cero: no queda nada usable que recortar.
+        assertNull(escalarRecorte(Recorte(1200, 0, 200, 50), 1080, 2400, 1080, 2400))
+        assertNull(escalarRecorte(Recorte(-300, 0, 200, 50), 1080, 2400, 1080, 2400))
     }
 
     @Test
