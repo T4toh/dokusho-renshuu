@@ -113,6 +113,11 @@ ML Kit `text-recognition-japanese` 16.0.1 trae el modelo embebido en el APK
 (funciona offline, sin Play Services). Suma peso: el APK release hoy pesa 42.7 MB
 y se espera que quede en el orden de 55-60 MB. Medirlo es parte del plan.
 
+> **Corrección post-implementación:** la estimación de arriba quedó corta. Medido:
+> **86.915.901 bytes (~82,9 MiB)** — contaba una sola ABI y la `.so` del pipeline de OCR
+> se empaqueta una vez por cada una de las cuatro. Causa raíz y decisión de no recortar
+> ABIs en `docs/ESTADO.md` (Plan E).
+
 ## Riesgos
 
 | Riesgo | Mitigación |

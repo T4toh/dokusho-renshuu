@@ -281,11 +281,23 @@ class ScreenCaptureService : Service() {
      *  deja al usuario encerrado.
      *  El inset real sólo se puede leer sin vista adjunta desde API 30; en 26-29 se usa
      *  el piso fijo de 48dp, que es el alto estándar de la barra de 3 botones (puede
-     *  sobrar algún dp, nunca faltar). */
+     *  sobrar algún dp, nunca faltar).
+     *  La lectura del inset va atrapada: esto corre ANTES del try/catch del addView y
+     *  DESPUÉS de haber ocultado el bubble, o sea que una excepción acá sería exactamente
+     *  el crash-con-el-bubble-oculto que el try/catch del addView existe para evitar. Y
+     *  currentWindowMetrics sobre un WindowManager de un Service sin UI es justo el tipo
+     *  de cosa que una ROM OEM (MIUI, el objetivo declarado de este archivo) puede romper.
+     *  Si falla se cae al mismo piso de 48dp que usa API 26-29, que es un valor sano: la
+     *  captura sigue andando con los botones alcanzables en vez de abortarse. */
     private fun margenInferiorBotones(): Int {
         val insetNavegacion = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            windowManager?.currentWindowMetrics?.windowInsets
-                ?.getInsets(WindowInsets.Type.navigationBars())?.bottom ?: 0
+            try {
+                windowManager?.currentWindowMetrics?.windowInsets
+                    ?.getInsets(WindowInsets.Type.navigationBars())?.bottom ?: 0
+            } catch (e: Throwable) {
+                android.util.Log.e("ScreenCapture", "No se pudo leer el inset de navegación", e)
+                0
+            }
         } else {
             0
         }
@@ -310,6 +322,17 @@ class ScreenCaptureService : Service() {
         
         // Delay para que el overlay se oculte completamente
         Handler(Looper.getMainLooper()).postDelayed({
+            // Este trabajo ya estaba encolado cuando el usuario pudo haber cancelado: el
+            // overlay queda INVISIBLE pero adjunto y con el foco, así que Back durante esta
+            // ventana de ~300 ms dispara stopOverlay() y el Service se da de baja. Sin esta
+            // guarda el runnable seguía adelante, rearmaba MediaProjection sobre un Service
+            // ya parado (el campo resultData nunca se anula, sólo los estáticos) y terminaba
+            // abriendo la app con el texto que el usuario acababa de cancelar.
+            if (!isCapturing) {
+                android.util.Log.d("ScreenCapture", "Captura cancelada antes del delay: no se arma MediaProjection")
+                return@postDelayed
+            }
+
             android.util.Log.d("ScreenCapture", "Iniciando creación de MediaProjection...")
             
             val metrics = DisplayMetrics()
@@ -357,6 +380,17 @@ class ScreenCaptureService : Service() {
                 // Esperar un poco más para que la captura se complete
                 android.util.Log.d("ScreenCapture", "Esperando 200ms antes de procesar captura...")
                 Handler(Looper.getMainLooper()).postDelayed({
+                    // Misma historia: si cancelaron entre medio, esto ya estaba encolado.
+                    // Acá además hay que soltar lo que el runnable anterior alcanzó a crear
+                    // —VirtualDisplay, ImageReader y el MediaProjection— porque se armaron
+                    // DESPUÉS del cleanup() de la baja y si no quedarían vivos con el
+                    // Service muerto (indicador de grabación incluido).
+                    if (!isCapturing) {
+                        android.util.Log.d("ScreenCapture", "Captura cancelada antes de procesar: se libera y se sale")
+                        cleanup()
+                        return@postDelayed
+                    }
+
                     android.util.Log.d("ScreenCapture", "Llamando a processCapture()...")
                     processCapture()
                 }, 200)
