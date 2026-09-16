@@ -24,6 +24,10 @@ Requiere JDK 17+ (probado con JDK 21) y Android SDK 36. Los assets NO se commite
   `oracion_palabra` 2-6 chars, fallback `oracion_kanji`). JVM puro.
 - `ui/` — Compose M3: Biblioteca, Lector (furigana pre-alineada del JSON,
   fin exclusivo), Detalle kanji, Acerca de (atribuciones).
+- `captura/` — overlay flotante (bubble) + captura con MediaProjection, portado de
+  Kanji-no-Ryoushi. El Service hace el OCR (ML Kit japonés, modelo embebido) y le
+  pasa a MainActivity solo el texto por Intent, que precarga el import. Android 10+;
+  por debajo la pantalla Scan avisa y no ofrece nada.
 
 ## Actualizar datos
 
