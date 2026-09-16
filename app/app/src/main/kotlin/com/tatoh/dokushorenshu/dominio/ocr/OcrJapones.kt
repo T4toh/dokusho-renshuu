@@ -17,7 +17,10 @@ class OcrJapones(
     /** Bloquea hasta tener el texto. ML Kit devuelve un Task asíncrono y Tasks.await()
      *  LANZA si se llama desde el main thread — el llamador (ScreenCaptureService)
      *  tiene que invocarlo desde un hilo de fondo.
-     *  Timeout de 15 s: si el modelo se traba, preferimos texto vacío a un hilo colgado. */
+     *  Timeout de 15 s: Tasks.await() lanza TimeoutException si el modelo se traba, o
+     *  ExecutionException si el reconocimiento falla — esta función no las atrapa a
+     *  propósito; el llamador (que corre en un hilo de fondo) decide si sustituye por
+     *  texto vacío. */
     fun reconocer(bitmap: Bitmap): String {
         val entrada = InputImage.fromBitmap(bitmap, 0)
         val resultado = Tasks.await(reconocedor.process(entrada), 15, TimeUnit.SECONDS)

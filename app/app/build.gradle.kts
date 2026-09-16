@@ -64,7 +64,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kuromoji.ipadic)
     // OCR japonés on-device. El artefacto trae el modelo embebido: funciona offline
-    // y sin Play Services, a cambio de ~15 MB de APK.
+    // y sin Play Services, a cambio de ~40 MB de APK — el .so nativo del modelo se
+    // empaqueta una vez por cada una de las 4 ABIs soportadas (medido en release).
     implementation(libs.mlkit.text.recognition.japanese)
     implementation(libs.androidx.core.ktx)
 
