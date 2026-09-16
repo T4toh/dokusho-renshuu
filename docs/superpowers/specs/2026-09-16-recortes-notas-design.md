@@ -29,6 +29,7 @@ data class Recorte(
     val texto: String,            // crudo: la fuente de verdad
     val parrafos: List<Parrafo>,  // derivado: furigana ya generada
     val timestamp: Long,
+    val tieneImagen: Boolean,     // el archivo es <id>.jpg junto al JSON
 )
 ```
 
@@ -48,6 +49,26 @@ el de historias arrastra el schema v2 del catálogo, que acá no aplica.
 **Repo nuevo**: `RecortesRepo` con `listar()`, `cargar(id)`, `guardar(recorte)`,
 `borrar(id)`. No va dentro de `HistoriasRepo`: ese archivo ya maneja assets, descargas,
 catálogo remoto e importadas, y un quinto origen lo empuja a hacer demasiado.
+
+### Imagen de la captura
+
+Cada recorte guarda la imagen original en `filesDir/recortes/<id>.jpg`, para cuando
+el OCR quedó ilegible y hay que ver el original.
+
+**JPEG calidad 90, no PNG.** El Service ya comprime a PNG para pasarle el bitmap a
+ML Kit, y un PNG de captura de pantalla pesa 2-5 MB: guardarlo por nota convertiría
+"no pesan nada" en decenas de GB. En JPEG 90 un panel recortado (~1000x600) queda en
+150-300 KB y una pantalla entera (1220x2712) en ~700 KB — cien notas, 20-40 MB.
+
+WebP comprime ~30% mejor, pero al minSdk 26 el enum sin deprecar exige API 30 y por
+lo tanto una rama por versión. No vale 10 MB en el peor caso; queda como upgrade
+obvio si el volumen crece.
+
+`tieneImagen` es derivable de si el archivo existe, pero se guarda para no hacer un
+`File.exists()` por fila al pintar la lista.
+
+Una nota sin imagen —borrada a mano, o porque falló el guardado— es un **estado
+normal**, no un error: la miniatura simplemente no aparece.
 
 **Volumen**: se guardan todos, sin límite ni TTL. Son texto plano; la app vieja
 guardaba historial y nunca fue un problema de espacio. Si algún día molesta, se agrega
@@ -69,8 +90,21 @@ progreso: `SegmentadorTexto` + Kuromoji tardan en textos largos, igual que en
 |---|---|
 | Service → `Intent` → `MainActivity` → `ImportScreen` precargada → `Historia` | Service → `Intent` → `MainActivity` → crea `Recorte` → abre la nota |
 
-**El contrato del Service no cambia**: `ACTION_TEXTO_OCR` con el texto como extra,
-igual que hoy. Cambia solo qué hace `MainActivity` con él.
+**El contrato del Service se amplía** en un punto: además del texto, manda la ruta de
+la imagen. La imagen no puede viajar dentro del `Intent` —el límite de una transacción
+binder es ~500 KB y una captura lo excede—, así que el Service la escribe a disco y
+pasa la ruta.
+
+**Slot fijo, no temporal único**: el Service escribe siempre a
+`filesDir/captura-pendiente.jpg`, y `RecortesRepo.guardar()` lo mueve a
+`recortes/<id>.jpg`. Un solo archivo, sobrescrito en cada captura, porque el flag
+`isCapturing` ya garantiza que hay una sola captura en vuelo. La alternativa —un
+temporal con nombre único por captura— deja huérfanos cada vez que el usuario cancela
+a mitad de camino, y obligaría a barrerlos al listar. Con slot fijo el huérfano se
+pisa solo.
+
+El resto del contrato no cambia: `ACTION_TEXTO_OCR` con el texto como extra, igual
+que hoy.
 
 Se conserva intacta toda la máquina de consumo-única del Plan E (limpiar el `Intent`
 al consumirlo, `launchSingleTop`, el guard `rememberSaveable` del diálogo de permiso).
@@ -99,6 +133,13 @@ Borrado con long-press → confirmación.
 
 Bloque continuo, sin paginar, sin portada y sin número de oración: nada de eso
 significa algo en tres líneas.
+
+**Miniatura de la imagen**: arriba del texto, **colapsada por defecto** — el punto de
+la nota es el texto; la imagen es la válvula para cuando el OCR quedó ilegible. Tap
+para expandir.
+
+**Botón `Remove image`** en el top bar: borra el `.jpg`, pone `tieneImagen` en false y
+deja la nota andando con su texto. Irreversible, con confirmación.
 
 Reusa `TextoConFurigana`, `ItemOracion`, `BarraSeleccion` y `PalabraSheet`, así que
 tap-a-palabra, selección libre, Search web y copiar funcionan igual que en el lector
@@ -164,17 +205,23 @@ sería inventar un problema.
   que `historiasLocales()`.
 - Fallo al guardar: aviso visible y el texto queda en pantalla. Nunca se pierde en
   silencio.
+- Fallo al guardar la imagen (disco lleno, permisos): el recorte se crea igual con
+  `tieneImagen = false`. Perder la imagen nunca puede costar el texto.
+- `<id>.jpg` ausente con `tieneImagen = true` (borrado externo): la miniatura no se
+  muestra. No es un error.
 
 ## Testing
 
 **JVM puro, sin dispositivo:**
 
-- Serialización round-trip de `Recorte`.
+- Serialización round-trip de `Recorte`, incluido `tieneImagen`.
 - Pipeline texto → párrafos con furigana.
 - Generación de ids sin colisión.
 - **Separación de mazos**: palabras tocadas en historias y en recortes, verificando que
   cada mazo contenga solo las suyas.
 - Listado salteando un archivo corrupto.
+- `borrar(id)` elimina el JSON **y** el `.jpg`; `quitarImagen(id)` borra solo el `.jpg`
+  y conserva el recorte.
 
 **Requiere dispositivo** (va al checklist de smoke): las pestañas, la vista de nota,
 el modo edición y el flujo captura → nota.
@@ -186,7 +233,8 @@ de la captura, pestañas en Biblioteca, lista de notas, vista de nota con edici�
 promoción de `ItemOracion` a componente compartido, mazo "Dokusho — Scans".
 
 **No entra**: título editable (la primera línea alcanza para identificar la nota),
-tags, búsqueda, carpetas, límite o TTL de notas, guardar la imagen de la captura.
+tags, búsqueda, carpetas, límite o TTL de notas, un "borrar todas las imágenes" global
+(con veinte notas, de a una alcanza), cuota de disco.
 Con veinte notas ninguna hace falta; si llegan a doscientas, se agrega búsqueda y
 recién ahí se sabrá qué hay que buscar.
 
@@ -197,4 +245,6 @@ recién ahí se sabrá qué hay que buscar.
 | Palabras de recortes filtrándose al mazo Words | Test que fija la separación en ambas direcciones; es la única garantía, el prefijo no está tipado |
 | El refactor de `ItemOracion` rompe el lector | Refactor acotado a promover visibilidad, sin cambiar comportamiento; el lector tiene tests y va al smoke |
 | Una nota editada pierde la furigana original | `texto` es la fuente de verdad y los párrafos se regeneran; no hay estado que se desincronice |
+| Las imágenes llenan el disco | JPEG 90 en vez de PNG (10x menos); botón de borrado por nota; el volumen se revisa si aparece el problema |
+| `tieneImagen` se desincroniza del archivo | La vista trata "flag true, archivo ausente" como estado normal, no como error |
 | La captura deja de pasar por `ImportScreen` y se pierde el paso de corrección | El modo edición de la nota cubre el mismo caso, con un paso menos |
