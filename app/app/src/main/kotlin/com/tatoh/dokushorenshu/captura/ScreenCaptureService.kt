@@ -335,9 +335,14 @@ class ScreenCaptureService : Service() {
         // ventana del overlay pegada a pantalla completa, o sea el teléfono inusable.
         // El finally cierra la Image pase lo que pase (el original tenía el mismo
         // try/finally alrededor de todo este tramo).
+        // Throwable y no Exception a propósito: la falla realista acá es un
+        // OutOfMemoryError al pedir el ARGB_8888 de pantalla completa, y OOM es Error,
+        // no Exception — con catch (e: Exception) se escapaba justo el caso para el que
+        // existe este try. No se relanza: perder una captura es mucho mejor que dejar
+        // el overlay clavado a pantalla completa encima de todo.
         val bitmaps = try {
             prepararBitmaps(image)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             android.util.Log.e("ScreenCapture", "Error preparando el bitmap de la captura", e)
             null
         } finally {
