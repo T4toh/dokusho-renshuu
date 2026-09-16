@@ -63,6 +63,9 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kuromoji.ipadic)
+    // OCR japonés on-device. El artefacto trae el modelo embebido: funciona offline
+    // y sin Play Services, a cambio de ~15 MB de APK.
+    implementation(libs.mlkit.text.recognition.japanese)
     implementation(libs.androidx.core.ktx)
 
     testImplementation(libs.junit)
