@@ -2,7 +2,7 @@
 
 > **NO EJECUTADA.** No hubo dispositivo ni emulador disponible durante la Task 5 ni la
 > Task 6 (`adb devices` vacío en ambos entornos). Todo lo demás de la feature está
-> verificado por compilación y 246 tests unitarios (0 failures), pero **nada probó
+> verificado por compilación y 248 tests unitarios (0 failures), pero **nada probó
 > todavía que la captura funcione en un teléfono real**. Copiado desde
 > `task-5-report.md` (directorio `.superpowers/sdd/` git-ignoreado) para que sobreviva.
 > Queda para el humano — ver enlace desde `docs/ESTADO.md`.
@@ -73,3 +73,49 @@ cd app && ./gradlew installDebug
     original y la marca de consumido es in-process (`ImportViewModel` no tiene
     `SavedStateHandle`, el borrador ya estaba perdido). **No reportarlo.** Lo que sí sería
     un bug es que el texto aparezca **duplicado** o que la app abra la biblioteca vacía.
+
+## Caminos de falla (agregados en la ola de fixes del review final)
+
+Los pasos 1-15 recorren el camino feliz. Estos cinco son los que el review marcó como
+"silenciosos": cada uno tiene que producir algo **visible**, y si no lo produce, es bug.
+
+16. **Salir del overlay de selección — en un teléfono con navegación por gestos.** Tocar la
+    burbuja, esperar el overlay oscuro, y probar las dos salidas por separado:
+    - **(a) Botón/gesto Atrás.** Esperado: el overlay se cierra y la burbuja vuelve, igual
+      que con Cancel. Si Atrás no hace **nada**, es la regresión que arregló este fix (la
+      ventana se queda con el foco de teclas y antes nadie manejaba `KEYCODE_BACK`, o sea
+      el botón atrás quedaba muerto en todo el sistema mientras el overlay estuviera
+      arriba).
+    - **(b) Botón `Cancel`.** Esperado: se ve **entero y por encima** de la franja de
+      gestos / barra de navegación, y se puede tocar. Si queda tapado o el toque se lo
+      lleva el sistema, el margen inferior calculado (`margenInferiorBotones()`) se está
+      quedando corto en este dispositivo — anotar modelo y versión de Android: es el único
+      número que no se pudo validar sin hardware.
+    - En ambos casos, después del cierre la app **no** debe abrirse y la burbuja tiene que
+      responder a un tap nuevo.
+17. **Capturar un área SIN texto** (un fondo liso, una foto). Esperado: un aviso corto
+    `No text found in the selected area` y **nada más**: la app **no** pasa al frente y
+    **no** se abre la pantalla Import. Contraprueba importante: capturar primero un texto,
+    quedarse en el Import editándolo a mano, volver a la otra app, capturar un área vacía →
+    el texto editado tiene que **seguir intacto** (antes se entregaba el string vacío y
+    pisaba la edición).
+18. **Captura en frío / teléfono lento:** reiniciar el teléfono, y **en cuanto** se pueda
+    arrancar la burbuja y capturar (sin esperar a que el sistema se asiente). Esperado: o
+    bien la captura sale normal, o bien aparece el aviso `Screen capture failed. Please try
+    again`. Lo que **no** puede pasar es que el overlay desaparezca en silencio sin aviso
+    ni Import. Si el aviso sale seguido, anotar cuántas veces de cuántas: es la evidencia
+    que justificaría cambiar el `postDelayed` fijo de 200 ms por un
+    `setOnImageAvailableListener` (hoy no se toca: es código portado y probado en
+    dispositivo, y cambiar timings a ciegas es peor).
+19. **Segundo tap mientras el OCR corre:** capturar un texto largo y, apenas vuelve la
+    burbuja, tocarla otra vez enseguida. Esperado: aparece el aviso `Recognizing text...` y
+    el segundo tap **no hace nada** — es a propósito, una captura en curso descarta las
+    demás. Lo que sería bug: que se abran dos overlays, que la app abra dos Imports, o que
+    la burbuja quede muerta después (tras terminar la primera captura tiene que volver a
+    responder).
+20. **Revocar el permiso de overlay con la burbuja corriendo:** con la burbuja activa, ir a
+    Ajustes → Apps → Dokusho → "Mostrar sobre otras apps" y **quitarlo**; volver y tocar la
+    burbuja (si sigue en pantalla) o relanzarla. Esperado: **ningún crash**. Lo aceptable
+    es un aviso `Could not show the capture overlay`, o que la burbuja desaparezca sola, o
+    que la app abra la pantalla Scan pidiendo el permiso de nuevo. Lo que sería bug es un
+    "Dokusho se detuvo" / cierre del proceso.

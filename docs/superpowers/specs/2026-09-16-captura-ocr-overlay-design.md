@@ -37,7 +37,7 @@ bubble flotante  →  overlay de selección  →  MediaProjection captura
                                                      ↓
                             ImportScreen precargada (texto + título)
                                                      ↓
-                    ImportadorHistoria → Historia → LectorScreen
+                 ImportadorHistoria → Historia → vuelta a Biblioteca
 ```
 
 La clave del diseño es la última mitad: **la captura termina en el pipeline de
