@@ -329,8 +329,73 @@ class ScreenCaptureService : Service() {
             return
         }
 
+        // Preparar el bitmap puede fallar: un ARGB_8888 de pantalla completa son
+        // decenas de MB y el OOM es realista. Si la excepción se escapa, corre por el
+        // main thread, crashea la app, deja la Image sin cerrar y sobre todo deja la
+        // ventana del overlay pegada a pantalla completa, o sea el teléfono inusable.
+        // El finally cierra la Image pase lo que pase (el original tenía el mismo
+        // try/finally alrededor de todo este tramo).
+        val bitmaps = try {
+            prepararBitmaps(image)
+        } catch (e: Exception) {
+            android.util.Log.e("ScreenCapture", "Error preparando el bitmap de la captura", e)
+            null
+        } finally {
+            image.close()
+        }
+
+        if (bitmaps == null) {
+            cerrarConDemora()
+            return
+        }
+        val (bitmap, recortado) = bitmaps
+
+        // Soltar la ventana del overlay ANTES de arrancar el OCR. Estar INVISIBLE no
+        // alcanza: la ventana sigue adjunta, ocupa la pantalla entera y el workaround
+        // de MIUI le saca FLAG_NOT_FOCUSABLE a propósito, así que se come los toques y
+        // el botón atrás mientras dure el reconocimiento — cientos de ms lo normal,
+        // hasta 15 s si el OCR agota el timeout. También devuelve el bubble.
+        // El Service NO se cierra acá: lo necesitamos vivo para correr el reconocedor
+        // y después abrir la app con el texto.
+        liberarVentanaOverlay()
+
+        // Tasks.await() de ML Kit lanza si corre en el main thread, y processCapture()
+        // llega acá desde un Handler del main looper. De paso, el OCR de una captura
+        // grande tarda cientos de ms y no debe bloquear la UI del overlay.
+        Thread {
+            var ocrOk = false
+            val texto = try {
+                val t = (application as App).contenedor.ocr.reconocer(recortado)
+                ocrOk = true
+                t
+            } catch (e: Exception) {
+                android.util.Log.e("ScreenCapture", "OCR falló", e)
+                ""
+            }
+            android.util.Log.d("ScreenCapture", "OCR devolvió ${texto.length} chars")
+
+            // `bitmap` nunca se le pasó a ML Kit, así que reciclarlo siempre es seguro
+            // (identidad, no equals: si no hubo recorte son el mismo objeto).
+            if (recortado !== bitmap) bitmap.recycle()
+            // `recortado` SÓLO se recicla si el OCR terminó bien. En el camino de error
+            // —sobre todo el TimeoutException— Tasks.await() deja de esperar pero NO
+            // cancela la tarea: el reconocedor sigue corriendo y su InputImage todavía
+            // apunta a estos píxeles. Reciclarlo acá es liberarle la memoria de abajo a
+            // un worker nativo vivo: crash. No reciclarlo no filtra nada, el GC lo
+            // levanta cuando ML Kit suelta la referencia.
+            if (ocrOk) recortado.recycle()
+
+            entregarTexto(texto)
+            Handler(Looper.getMainLooper()).post { terminarServicio() }
+        }.start()
+    }
+
+    /** Pasa la Image a Bitmap y le aplica el recorte de la selección. Devuelve
+     *  (completo, recortado); sin selección usable ambos son el MISMO objeto, que es
+     *  lo que después distingue el reciclado. No cierra la Image: de eso se encarga
+     *  el finally de quien llama. */
+    private fun prepararBitmaps(image: Image): Pair<Bitmap, Bitmap> {
         val bitmap = imageToBitmap(image)
-        image.close()
         android.util.Log.d("ScreenCapture", "Bitmap creado: ${bitmap.width}x${bitmap.height}")
 
         val seleccion = selectionView?.getSelectionRect()
@@ -353,23 +418,7 @@ class ScreenCaptureService : Service() {
         } else {
             bitmap
         }
-
-        // Tasks.await() de ML Kit lanza si corre en el main thread, y processCapture()
-        // llega acá desde un Handler del main looper. De paso, el OCR de una captura
-        // grande tarda cientos de ms y no debe bloquear la UI del overlay.
-        Thread {
-            val texto = try {
-                (application as App).contenedor.ocr.reconocer(recortado)
-            } catch (e: Exception) {
-                android.util.Log.e("ScreenCapture", "OCR falló", e)
-                ""
-            }
-            android.util.Log.d("ScreenCapture", "OCR devolvió ${texto.length} chars")
-            recortado.recycle()
-            if (recortado != bitmap) bitmap.recycle()
-            entregarTexto(texto)
-            Handler(Looper.getMainLooper()).post { stopOverlay() }
-        }.start()
+        return bitmap to recortado
     }
 
     /** Abre la app con el texto reconocido. Arrancar una Activity desde background
@@ -424,39 +473,51 @@ class ScreenCaptureService : Service() {
         return finalBitmap
     }
     
-    private fun stopOverlay() {
-        android.util.Log.d("ScreenCapture", "=== stopOverlay() INICIADO ===")
-        
+    /** Desmonta la ventana del overlay y devuelve el bubble, sin tocar el Service.
+     *  Idempotente: processCapture() la llama antes del OCR y después el stopOverlay()
+     *  final vuelve a pasar por acá, así que la baja de la vista va guardada. */
+    private fun liberarVentanaOverlay() {
         // Mostrar el bubble de nuevo
         FloatingBubbleService.showBubble()
-        
+
+        val vista = overlayView ?: return
         try {
-            overlayView?.let {
-                windowManager?.removeView(it)
-                android.util.Log.d("ScreenCapture", "Overlay removido de WindowManager")
-            }
+            windowManager?.removeView(vista)
+            android.util.Log.d("ScreenCapture", "Overlay removido de WindowManager")
         } catch (e: Exception) {
             android.util.Log.e("ScreenCapture", "Error removiendo overlay", e)
             e.printStackTrace()
         }
-        
+
         overlayView = null
         selectionView = null
-        
+    }
+
+    /** Cierra el Service. Va aparte de liberarVentanaOverlay() porque mientras corre
+     *  el OCR la ventana ya está desmontada pero el Service tiene que seguir vivo:
+     *  todavía le falta reconocer el texto y abrir la app con el resultado. */
+    private fun terminarServicio() {
         cleanup()
-        
+
         // cleanup() (arriba) ya borró las credenciales de MediaProjection: Android 14+
         // invalida el token después de cada sesión, así que reusarlo no es opción y
         // guardarlo sólo lograría que la próxima captura falle con SecurityException.
         // El próximo tap del bubble vuelve a pedir el permiso, y eso es lo esperado.
-        
+
         isCapturing = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
-        
+    }
+
+    private fun stopOverlay() {
+        android.util.Log.d("ScreenCapture", "=== stopOverlay() INICIADO ===")
+
+        liberarVentanaOverlay()
+        terminarServicio()
+
         android.util.Log.d("ScreenCapture", "=== stopOverlay() FINALIZADO ===")
     }
-    
+
     private fun cleanup() {
         virtualDisplay?.release()
         imageReader?.close()
