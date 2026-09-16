@@ -107,10 +107,10 @@ class ScreenCaptureService : Service() {
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Captura de Pantalla",
+            "Screen capture",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Servicio de captura de pantalla activo"
+            description = "Screen capture service is running"
         }
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
@@ -118,8 +118,8 @@ class ScreenCaptureService : Service() {
     
     private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Captura de Pantalla Activa")
-            .setContentText("Selecciona el área a capturar")
+            .setContentTitle("Screen capture active")
+            .setContentText("Select the area to capture")
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
@@ -172,7 +172,7 @@ class ScreenCaptureService : Service() {
         }
         
         val captureButton = Button(this).apply {
-            text = "Capturar"
+            text = "Capture"
             textSize = 16f
             isAllCaps = false
             setPadding(48, 24, 48, 24)
@@ -203,7 +203,7 @@ class ScreenCaptureService : Service() {
         }
         
         val cancelButton = Button(this).apply {
-            text = "Cancelar"
+            text = "Cancel"
             textSize = 16f
             isAllCaps = false
             setPadding(48, 24, 48, 24)
@@ -445,8 +445,10 @@ class ScreenCaptureService : Service() {
         
         cleanup()
         
-        // NO invalidar las credenciales - se pueden reutilizar
-        // Solo limpiamos el MediaProjection instance usado
+        // cleanup() (arriba) ya borró las credenciales de MediaProjection: Android 14+
+        // invalida el token después de cada sesión, así que reusarlo no es opción y
+        // guardarlo sólo lograría que la próxima captura falle con SecurityException.
+        // El próximo tap del bubble vuelve a pedir el permiso, y eso es lo esperado.
         
         isCapturing = false
         stopForeground(STOP_FOREGROUND_REMOVE)

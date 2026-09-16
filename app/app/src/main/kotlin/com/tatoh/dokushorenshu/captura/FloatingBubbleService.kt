@@ -39,8 +39,6 @@ class FloatingBubbleService : Service() {
         const val CHANNEL_ID = "floating_bubble_channel"
         const val ACTION_START_BUBBLE = "com.tatoh.dokushorenshu.captura.START_BUBBLE"
         const val ACTION_STOP_BUBBLE = "com.tatoh.dokushorenshu.captura.STOP_BUBBLE"
-        const val ACTION_HIDE_BUBBLE = "com.tatoh.dokushorenshu.captura.HIDE_BUBBLE"
-        const val ACTION_SHOW_BUBBLE = "com.tatoh.dokushorenshu.captura.SHOW_BUBBLE"
 
         /** Contrato con MainActivity: el bubble se tocó sin credenciales de
          *  MediaProjection vigentes; hay que pedirlas. */
@@ -101,10 +99,10 @@ class FloatingBubbleService : Service() {
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Overlay Flotante",
+            "Floating button",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Botón flotante de captura siempre visible"
+            description = "Always-visible floating capture button"
             setShowBadge(false)
         }
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -123,14 +121,14 @@ class FloatingBubbleService : Service() {
         )
         
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Captura Rápida Activa")
-            .setContentText("Toca el ícono flotante para capturar")
+            .setContentTitle("Quick capture active")
+            .setContentText("Tap the floating button to capture")
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
-                "Cerrar",
+                "Stop",
                 stopPendingIntent
             )
             .build()
