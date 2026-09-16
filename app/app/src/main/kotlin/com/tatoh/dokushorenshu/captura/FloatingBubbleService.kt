@@ -51,14 +51,14 @@ class FloatingBubbleService : Service() {
         // Referencia estática para poder ocultar/mostrar el bubble desde otros servicios
         private var instance: FloatingBubbleService? = null
         
-        fun hideBubble() {
-            instance?.bubbleView?.visibility = View.GONE
-            android.util.Log.d("FloatingBubble", "Bubble ocultado temporalmente")
-        }
-        
-        fun showBubble() {
-            instance?.bubbleView?.visibility = View.VISIBLE
-            android.util.Log.d("FloatingBubble", "Bubble mostrado de nuevo")
+        /** Oculta o devuelve el bubble ya creado (lo usa ScreenCaptureService mientras
+         *  el overlay de selección está arriba). NO se llama setBubbleVisible por gusto:
+         *  el nombre showBubble ya lo usa el método de instancia que CREA la vista, y
+         *  tener los dos colisionando era una trampa esperando a que alguien llame al
+         *  equivocado. */
+        fun setBubbleVisible(visible: Boolean) {
+            instance?.bubbleView?.visibility = if (visible) View.VISIBLE else View.GONE
+            android.util.Log.d("FloatingBubble", "Bubble visible=$visible")
         }
     }
     
@@ -91,7 +91,10 @@ class FloatingBubbleService : Service() {
                 stopBubble()
             }
         }
-        return START_STICKY
+        // START_NOT_STICKY y no START_STICKY: en un reinicio el sistema reentrega un
+        // intent null, que no cae en ninguna de las dos ramas — o sea el Service revivía
+        // sin foreground y sin bubble, un fantasma. Mejor no revivir.
+        return START_NOT_STICKY
     }
     
     override fun onBind(intent: Intent?): IBinder? = null

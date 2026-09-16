@@ -19,6 +19,7 @@ import android.util.DisplayMetrics
 import android.view.*
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.tatoh.dokushorenshu.App
 import com.tatoh.dokushorenshu.MainActivity
@@ -129,7 +130,7 @@ class ScreenCaptureService : Service() {
         android.util.Log.d("ScreenCapture", "=== showOverlay() INICIADO ===")
         
         // IMPORTANTE: Ocultar el bubble flotante mientras se muestra el overlay de captura
-        FloatingBubbleService.hideBubble()
+        FloatingBubbleService.setBubbleVisible(false)
         
         // Primero obtener las métricas reales de la pantalla
         val metrics = DisplayMetrics()
@@ -158,8 +159,26 @@ class ScreenCaptureService : Service() {
             }
         }
         
-        val container = FrameLayout(this)
-        
+        val container = FrameLayout(this).apply {
+            // La ventana va SIN FLAG_NOT_FOCUSABLE a propósito (workaround de MIUI, ver
+            // arriba), así que se queda con el foco de teclas: si este contenedor no
+            // maneja KEYCODE_BACK, el botón atrás queda MUERTO en todo el sistema
+            // mientras el overlay esté arriba, y la única salida es el botón Cancel.
+            // Para que lleguen los eventos de tecla hace falta foco en modo táctil:
+            // de ahí el isFocusableInTouchMode + el requestFocus() de más abajo.
+            isFocusable = true
+            isFocusableInTouchMode = true
+            setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                    android.util.Log.d("ScreenCapture", "Back en el overlay: se trata como Cancel")
+                    stopOverlay()
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+
         // Vista de selección (área transparente con bordes)
         selectionView = SelectionOverlayView(this)
         container.addView(selectionView)
@@ -175,7 +194,7 @@ class ScreenCaptureService : Service() {
             text = "Capture"
             textSize = 16f
             isAllCaps = false
-            setPadding(48, 24, 48, 24)
+            setPadding(dp(16), dp(8), dp(16), dp(8))
             background = captureButtonDrawable
             setTextColor(Color.WHITE)
             elevation = 8f
@@ -191,7 +210,7 @@ class ScreenCaptureService : Service() {
             FrameLayout.LayoutParams.WRAP_CONTENT
         ).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            bottomMargin = 50
+            bottomMargin = margenInferiorBotones()
         }
         container.addView(captureButton, captureParams)
         
@@ -206,7 +225,7 @@ class ScreenCaptureService : Service() {
             text = "Cancel"
             textSize = 16f
             isAllCaps = false
-            setPadding(48, 24, 48, 24)
+            setPadding(dp(16), dp(8), dp(16), dp(8))
             background = cancelButtonDrawable
             setTextColor(Color.WHITE)
             elevation = 8f
@@ -222,15 +241,64 @@ class ScreenCaptureService : Service() {
             FrameLayout.LayoutParams.WRAP_CONTENT
         ).apply {
             gravity = Gravity.BOTTOM or Gravity.END
-            bottomMargin = 50
-            marginEnd = 20
+            bottomMargin = margenInferiorBotones()
+            marginEnd = dp(8)
         }
         container.addView(cancelButton, cancelParams)
         
         overlayView = container
-        windowManager?.addView(overlayView, layoutParams)
+        // addView puede lanzar BadTokenException: permiso de overlay revocado a mitad de
+        // sesión, o MIUI negando un popup desde background — justo los teléfonos para los
+        // que existen los workarounds de acá arriba. Sin atrapar, la excepción sale por
+        // onStartCommand y mata el proceso DESPUÉS del hideBubble() de más arriba, o sea
+        // se lleva puesto el bubble también. El hermano de FloatingBubbleService ya lo
+        // envuelve por esta misma razón.
+        try {
+            windowManager?.addView(overlayView, layoutParams)
+        } catch (e: Exception) {
+            android.util.Log.e("ScreenCapture", "Error añadiendo el overlay a WindowManager", e)
+            overlayView = null
+            selectionView = null
+            FloatingBubbleService.setBubbleVisible(true)
+            avisar("Could not show the capture overlay")
+            terminarServicio()
+            return
+        }
+        // Después de addView: sólo una vista adjunta puede tomar el foco de teclas, que es
+        // lo que hace que llegue el KEYCODE_BACK del listener de arriba.
+        container.requestFocus()
         android.util.Log.d("ScreenCapture", "Overlay añadido a WindowManager")
         android.util.Log.d("ScreenCapture", "=== showOverlay() FINALIZADO ===")
+    }
+
+    private fun dp(valor: Int): Int = (valor * resources.displayMetrics.density).toInt()
+
+    /** Margen inferior seguro para los botones del overlay. La ventana usa
+     *  FLAG_LAYOUT_NO_LIMITS + LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES, así que se
+     *  dibuja POR DEBAJO de la barra de navegación / franja de gestos: con el margen
+     *  crudo de 50 px que había antes, Cancel podía quedar tapado y sin forma de tocarlo
+     *  — y con un overlay a pantalla completa, oscuro y con KEEP_SCREEN_ON encima, eso
+     *  deja al usuario encerrado.
+     *  El inset real sólo se puede leer sin vista adjunta desde API 30; en 26-29 se usa
+     *  el piso fijo de 48dp, que es el alto estándar de la barra de 3 botones (puede
+     *  sobrar algún dp, nunca faltar). */
+    private fun margenInferiorBotones(): Int {
+        val insetNavegacion = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            windowManager?.currentWindowMetrics?.windowInsets
+                ?.getInsets(WindowInsets.Type.navigationBars())?.bottom ?: 0
+        } else {
+            0
+        }
+        return maxOf(insetNavegacion, dp(48)) + dp(8)
+    }
+
+    /** Aviso visible al usuario desde el Service. Toast exige main thread y acá se llama
+     *  tanto desde el hilo del OCR como desde handlers, así que siempre se postea.
+     *  Los strings de UI van en inglés, como el resto de la app. */
+    private fun avisar(mensaje: String) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show()
+        }
     }
     
     private fun captureScreen() {
@@ -324,7 +392,13 @@ class ScreenCaptureService : Service() {
         }
 
         if (image == null) {
+            // Camino real: el postDelayed fijo de 200 ms de captureScreen() se queda corto
+            // en un teléfono frío o lento y el VirtualDisplay todavía no produjo un frame.
+            // La timing NO se cambia acá (es código portado y probado en dispositivo, y no
+            // hay hardware para validar un cambio), pero la falla sí se hace ruidosa: antes
+            // el overlay se desvanecía a los 500 ms sin decir nada y parecía un cuelgue.
             android.util.Log.e("ScreenCapture", "No se pudo obtener imagen del ImageReader")
+            avisar("Screen capture failed. Please try again")
             cerrarConDemora()
             return
         }
@@ -350,6 +424,7 @@ class ScreenCaptureService : Service() {
         }
 
         if (bitmaps == null) {
+            avisar("Screen capture failed. Please try again")
             cerrarConDemora()
             return
         }
@@ -367,31 +442,53 @@ class ScreenCaptureService : Service() {
         // Tasks.await() de ML Kit lanza si corre en el main thread, y processCapture()
         // llega acá desde un Handler del main looper. De paso, el OCR de una captura
         // grande tarda cientos de ms y no debe bloquear la UI del overlay.
+        // El bubble ya volvió y parece vivo, pero los taps se descartan mientras haya una
+        // captura en curso (isCapturing). Sin este aviso, el OCR se ve como "no pasó nada".
+        avisar("Recognizing text...")
+
         Thread {
-            var ocrOk = false
-            val texto = try {
-                val t = (application as App).contenedor.ocr.reconocer(recortado)
-                ocrOk = true
-                t
-            } catch (e: Exception) {
-                android.util.Log.e("ScreenCapture", "OCR falló", e)
-                ""
+            try {
+                var ocrOk = false
+                val texto = try {
+                    val t = (application as App).contenedor.ocr.reconocer(recortado)
+                    ocrOk = true
+                    t
+                } catch (e: Exception) {
+                    android.util.Log.e("ScreenCapture", "OCR falló", e)
+                    ""
+                }
+                android.util.Log.d("ScreenCapture", "OCR devolvió ${texto.length} chars")
+
+                // `bitmap` nunca se le pasó a ML Kit, así que reciclarlo siempre es seguro
+                // (identidad, no equals: si no hubo recorte son el mismo objeto).
+                if (recortado !== bitmap) bitmap.recycle()
+                // `recortado` SÓLO se recicla si el OCR terminó bien. En el camino de error
+                // —sobre todo el TimeoutException— Tasks.await() deja de esperar pero NO
+                // cancela la tarea: el reconocedor sigue corriendo y su InputImage todavía
+                // apunta a estos píxeles. Reciclarlo acá es liberarle la memoria de abajo a
+                // un worker nativo vivo: crash. No reciclarlo no filtra nada, el GC lo
+                // levanta cuando ML Kit suelta la referencia.
+                if (ocrOk) recortado.recycle()
+
+                // Un texto vacío NO se entrega: entregarTexto() trae la app al frente y abre
+                // Import con el campo en blanco, pisando lo que el usuario estuviera editando
+                // de una captura anterior. Avisar y desarmar es lo correcto.
+                if (texto.isBlank()) {
+                    android.util.Log.w("ScreenCapture", "OCR sin texto: no se abre la app")
+                    avisar("No text found in the selected area")
+                } else {
+                    entregarTexto(texto)
+                }
+            } catch (e: Throwable) {
+                // Sin este catch, cualquier excepción acá adentro mata el proceso: corre en un
+                // hilo propio, nadie la atrapa, y terminarServicio() nunca se ejecuta (Service
+                // en foreground colgado + credenciales sin limpiar). El caso concreto es
+                // startActivity() lanzando si revocaron SYSTEM_ALERT_WINDOW mientras tanto.
+                android.util.Log.e("ScreenCapture", "Fallo no controlado en el hilo de OCR", e)
+                avisar("Capture failed")
+            } finally {
+                Handler(Looper.getMainLooper()).post { terminarServicio() }
             }
-            android.util.Log.d("ScreenCapture", "OCR devolvió ${texto.length} chars")
-
-            // `bitmap` nunca se le pasó a ML Kit, así que reciclarlo siempre es seguro
-            // (identidad, no equals: si no hubo recorte son el mismo objeto).
-            if (recortado !== bitmap) bitmap.recycle()
-            // `recortado` SÓLO se recicla si el OCR terminó bien. En el camino de error
-            // —sobre todo el TimeoutException— Tasks.await() deja de esperar pero NO
-            // cancela la tarea: el reconocedor sigue corriendo y su InputImage todavía
-            // apunta a estos píxeles. Reciclarlo acá es liberarle la memoria de abajo a
-            // un worker nativo vivo: crash. No reciclarlo no filtra nada, el GC lo
-            // levanta cuando ML Kit suelta la referencia.
-            if (ocrOk) recortado.recycle()
-
-            entregarTexto(texto)
-            Handler(Looper.getMainLooper()).post { terminarServicio() }
         }.start()
     }
 
@@ -483,7 +580,7 @@ class ScreenCaptureService : Service() {
      *  final vuelve a pasar por acá, así que la baja de la vista va guardada. */
     private fun liberarVentanaOverlay() {
         // Mostrar el bubble de nuevo
-        FloatingBubbleService.showBubble()
+        FloatingBubbleService.setBubbleVisible(true)
 
         val vista = overlayView ?: return
         try {
