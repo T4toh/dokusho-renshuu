@@ -50,7 +50,7 @@
             android:foregroundServiceType="mediaProjection|specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Captura de pantalla para OCR de texto japonés" />
+                android:value="Screen capture for Japanese text OCR" />
         </service>
 
         <service
@@ -60,7 +60,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Overlay flotante para captura rápida de texto" />
+                android:value="Floating overlay for quick text capture" />
         </service>
     </application>
 </manifest>
