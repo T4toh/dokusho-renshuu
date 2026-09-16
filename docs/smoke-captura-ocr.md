@@ -1,11 +1,49 @@
 # Smoke de dispositivo — captura OCR (Plan E)
 
-> **NO EJECUTADA.** No hubo dispositivo ni emulador disponible durante la Task 5 ni la
-> Task 6 (`adb devices` vacío en ambos entornos). Todo lo demás de la feature está
-> verificado por compilación y 248 tests unitarios (0 failures), pero **nada probó
-> todavía que la captura funcione en un teléfono real**. Copiado desde
-> `task-5-report.md` (directorio `.superpowers/sdd/` git-ignoreado) para que sobreviva.
-> Queda para el humano — ver enlace desde `docs/ESTADO.md`.
+> **PARCIALMENTE EJECUTADA — 2026-09-16.** Corrida en un POCO 2412DPC0AG,
+> HyperOS V816OS3.0, **Android 16 (API 36)**, navegación por gestos. Ese dispositivo
+> cubre las tres condiciones de riesgo del plan a la vez: ROM Xiaomi (los workarounds
+> de MIUI), Android 14+ (consentimiento de MediaProjection en cada captura) y gestos
+> (el margen de los botones del overlay).
+>
+> **Verificado en dispositivo:** pasos 4, 5 y 6 — burbuja, permisos, captura y OCR.
+> **Sin verificar todavía:** el recorte a la selección, la salida del overlay (paso 16)
+> y todo el tramo posterior al OCR (pasos 7 a 15, 17 a 20). Ver "Resultados" abajo.
+
+## Resultados de la corrida del 2026-09-16
+
+Evidencia de `adb logcat` (PID 18859 de la app; ojo que SurfaceFlinger de HyperOS usa
+el **mismo tag `ScreenCapture`** con otro PID — filtrar por `--pid`).
+
+**Funcionó:**
+
+- Burbuja añadida al `WindowManager` (`type=2038`, o sea `TYPE_APPLICATION_OVERLAY`),
+  arrastre y snap al borde (`ACTION_UP recibido, moved=true`).
+- Tap corto detectado y distinguido del arrastre (`Click detectado!`).
+- Camino sin credenciales: `captureResultCode = 0` → abre MainActivity a pedir permiso.
+- `startForeground() llamado con tipos múltiples` — el combo
+  `mediaProjection|specialUse` de Android 14+ lo acepta HyperOS.
+- Overlay añadido, botón `Capture` responde.
+- `VirtualDisplay` creado a 1220x2712, densidad 520.
+- **`OCR devolvió 120 chars`** — ML Kit japonés reconoció texto real on-device.
+- Overlay removido y `MediaProjection.Callback.onStop()`; sin crash, sin overlay colgado.
+
+**NO se verificó (y el paso quedó pendiente, no aprobado):**
+
+- **El recorte a la selección.** El log dice `Recorte escalado: null` y
+  `Bitmap creado: 1220x2712`: se OCReó la pantalla entera. O no se arrastró, o el
+  arrastre fue menor al umbral de 10 px. Toda la lógica de `escalarRecorte` —el bug
+  histórico de la app vieja, con 8 tests unitarios— **sigue sin correr en hardware**.
+- **Paso 16 (Back y Cancel en el overlay).** Sin rastro en el log. Es el fix del
+  Critical del review final: si `Cancel` queda bajo la barra de gestos, el usuario
+  queda encerrado.
+- **El tramo post-OCR.** `files/importadas/` vacío y `palabras_tocadas` en 0 después
+  de la corrida: el texto reconocido nunca llegó a ser historia, así que no se probó
+  ni `ImportScreen` precargada, ni la furigana, ni `PalabraSheet` sobre texto capturado.
+
+**Defecto de logging detectado:** `Recorte escalado: null` no distingue "el usuario no
+arrastró" de "la selección era inusable". Con esa línea sola no se puede saber cuál de
+las dos pasó — conviene loguear el `Recorte` de entrada y el tamaño del overlay.
 
 Requiere Android 10+ (la captura se deshabilita sola en 9 o menos).
 
