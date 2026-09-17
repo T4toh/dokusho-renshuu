@@ -14,7 +14,9 @@ class RecortesRepoTest {
 
     @get:Rule val carpeta = TemporaryFolder()
 
-    private fun repo() = RecortesRepo(carpeta.root)
+    // log no-op: android.util.Log no existe en tests de JVM plano (mismo patrón que
+    // ImportViewModelTest/ExportViewModelTest).
+    private fun repo() = RecortesRepo(carpeta.root, log = { _, _ -> })
 
     private fun recorte(id: String, ts: Long, texto: String = "あ") = Recorte(
         id = id,

@@ -8,7 +8,11 @@ import java.io.File
  *
  *  Repo aparte y no un quinto origen dentro de HistoriasRepo: ese ya maneja assets,
  *  descargas, catálogo remoto e importadas. */
-class RecortesRepo(private val dir: File) {
+class RecortesRepo(
+    private val dir: File,
+    // inyectable: android.util.Log no existe en los tests de JVM plano
+    private val log: (String, Throwable) -> Unit = { msg, t -> android.util.Log.w("RecortesRepo", msg, t) },
+) {
 
     companion object {
         /** Slot fijo donde el Service deja la imagen recién capturada. Uno solo, porque
@@ -25,17 +29,6 @@ class RecortesRepo(private val dir: File) {
 
     private fun json(id: String) = File(dir, "$id.json")
     private fun jpg(id: String) = File(dir, "$id.jpg")
-
-    /** android.util.Log no existe en los tests de JVM plano (sin Robolectric): logueamos
-     *  best-effort porque un log que revienta no puede tumbar la lectura, que es
-     *  justamente lo que este catch existe para proteger. */
-    private fun log(msg: String, e: Exception) {
-        try {
-            android.util.Log.w("RecortesRepo", msg, e)
-        } catch (_: Throwable) {
-            // sin logger disponible: no hay nada más que hacer
-        }
-    }
 
     /** Descendente por timestamp: la última captura arriba. Un JSON corrupto se
      *  saltea — mismo criterio que historiasLocales(): nunca tumbar la lista entera
