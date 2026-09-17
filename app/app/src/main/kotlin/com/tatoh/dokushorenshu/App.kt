@@ -4,9 +4,11 @@ import android.app.Application
 import com.tatoh.dokushorenshu.datos.Diccionario
 import com.tatoh.dokushorenshu.datos.DiccionarioSqlite
 import com.tatoh.dokushorenshu.datos.HistoriasRepo
+import com.tatoh.dokushorenshu.datos.RecortesRepo
 import com.tatoh.dokushorenshu.datos.progreso.PrefsRepo
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDb
 import com.tatoh.dokushorenshu.dominio.BuscadorPalabras
+import com.tatoh.dokushorenshu.dominio.CreadorRecortes
 import com.tatoh.dokushorenshu.dominio.GeneradorFurigana
 import com.tatoh.dokushorenshu.dominio.ImportadorHistoria
 import com.tatoh.dokushorenshu.dominio.Tokenizador
@@ -29,6 +31,8 @@ class Contenedor(private val app: Application) {
     val ocr by lazy { OcrJapones() }
     val armadorMazos by lazy { ArmadorMazos(progresoDb.dao(), diccionario, historias) }
     val importador by lazy { ImportadorHistoria(GeneradorFurigana(tokenizador), historias) }
+    val recortes by lazy { RecortesRepo.desde(app) }
+    val creadorRecortes by lazy { CreadorRecortes(GeneradorFurigana(tokenizador), recortes) }
     // cache, no filesDir: el .apkg es descartable, se regenera en cada export
     // (mismo criterio que FileProvider — spec Plan 4a "sin permisos de storage").
     val dirExportMazos by lazy { File(app.cacheDir, "export").apply { mkdirs() } }
