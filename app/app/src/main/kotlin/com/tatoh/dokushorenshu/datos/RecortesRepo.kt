@@ -112,10 +112,23 @@ class RecortesRepo(
         return json(id).delete()
     }
 
-    /** Borra solo la imagen y reescribe el recorte con `tieneImagen = false`. */
+    /** Borra solo la imagen y reescribe el recorte con `tieneImagen = false`.
+     *  Devuelve false si el recorte no existe o si el `.jpg` no se pudo borrar.
+     *
+     *  El resultado de delete() se chequea a mano porque es de las APIs que avisan del
+     *  fallo POR VALOR DE RETORNO y no con una excepción: un try/catch alrededor no
+     *  atrapa nada y el compilador no dice una palabra (tercer caso en este plan, con
+     *  `origen.delete()` de moverImagen y el `compress()` del Service). Sin el chequeo,
+     *  con el borrado fallado el JSON diría `tieneImagen = true` —guardar() lo deriva del
+     *  disco, y el archivo sigue ahí— mientras la pantalla muestra la imagen como
+     *  quitada: reaparece al reabrir la nota, sin ningún error en el medio. */
     fun quitarImagen(id: String): Boolean {
         val recorte = cargar(id) ?: return false
-        jpg(id).delete()
+        val jpg = jpg(id)
+        if (jpg.exists() && !jpg.delete()) {
+            log("no se pudo borrar la imagen: ${jpg.path}", IllegalStateException("delete() devolvió false"))
+            return false
+        }
         guardar(recorte.copy(tieneImagen = false), null)
         return true
     }

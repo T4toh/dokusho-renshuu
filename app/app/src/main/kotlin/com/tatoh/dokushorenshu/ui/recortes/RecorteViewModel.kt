@@ -93,6 +93,12 @@ class RecorteViewModel(
                 planas = datos.planas,
                 imagen = datos.imagen,
                 cargado = true,
+                // Se resetean porque apuntan a las planas VIEJAS, que esta línea acaba de
+                // reemplazar: los offsets de `seleccion` quedarían fuera de rango y el
+                // substring de textoSeleccionado tiraría IndexOutOfBounds. El lector se
+                // salva de esto solo porque su cargar() arma un estado entero nuevo.
+                seleccion = null,
+                consulta = null,
             )
         }
     }
@@ -163,12 +169,19 @@ class RecorteViewModel(
 
     fun quitarImagen() {
         viewModelScope.launch {
-            withContext(ioDispatcher) { recortesRepo.quitarImagen(id) }
+            val imagen = withContext(ioDispatcher) {
+                recortesRepo.quitarImagen(id)
+                // Se RE-LEE el disco en vez de asumir que se borró: si delete() falló
+                // (quitarImagen devuelve false y lo loguea), el .jpg sigue ahí y la
+                // miniatura tiene que seguir ofreciéndose. Mostrarla como quitada sería
+                // mentir hasta que el usuario reabre la nota y la ve reaparecer.
+                recortesRepo.archivoImagen(id)
+            }
             val estado = _estado.value
             _estado.value = estado.copy(
-                recorte = estado.recorte?.copy(tieneImagen = false),
-                imagen = null,
-                imagenExpandida = false,
+                recorte = estado.recorte?.copy(tieneImagen = imagen != null),
+                imagen = imagen,
+                imagenExpandida = estado.imagenExpandida && imagen != null,
             )
         }
     }
@@ -182,7 +195,10 @@ class RecorteViewModel(
     }
 
     fun cancelarEdicion() {
-        _estado.value = _estado.value.copy(editando = false, textoEditado = "")
+        // Limpia la selección igual que empezarEdicion() y guardarEdicion(): la regla es
+        // "al entrar Y al salir de la edición", y de esa regla depende que los offsets de
+        // seleccion siempre apunten a las planas vigentes.
+        _estado.value = _estado.value.copy(editando = false, textoEditado = "", seleccion = null)
     }
 
     fun setTextoEditado(texto: String) {
