@@ -138,7 +138,13 @@ fun BibliotecaScreen(
                 // catálogo crece.
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 300.dp),
-                    modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    // contentPadding y no Modifier.padding: el relleno va DENTRO del área
+                    // scrolleable, así las cards pasan por debajo al scrollear en vez de
+                    // cortarse contra un borde. El top de 16dp separa la primera card de la
+                    // línea del PrimaryTabRow —sin él quedan pegadas— y empareja con el
+                    // contentPadding de la lista de Notes.
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
