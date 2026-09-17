@@ -68,14 +68,15 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
     ) { relleno ->
         Column(Modifier.padding(relleno).padding(24.dp).fillMaxSize()) {
             Text(
-                "${contadores.words} words · ${contadores.kanjisTaggeados} tagged kanji · ${contadores.historias} stories",
+                "${contadores.words} words · ${contadores.kanjisTaggeados} tagged kanji · " +
+                    "${contadores.historias} stories · ${contadores.scans} scan words",
                 style = MaterialTheme.typography.bodyMedium,
             )
 
             Spacer(Modifier.height(24.dp))
             // FlowRow: los botones van en fila cuando el ancho alcanza (tablet,
             // landscape) y bajan de línea solos en angosto — sin ramas por tamaño
-            // de pantalla. Los tres comparten ancho: el texto invisible con el
+            // de pantalla. Los cuatro comparten ancho: el texto invisible con el
             // label más largo dentro de BotonExport define el intrínseco común.
             val tipoGenerando = (estado as? EstadoExport.Generando)?.tipo
             FlowRow(
@@ -98,6 +99,15 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
                     generandoEste = tipoGenerando == TipoExport.KANJI,
                     generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.KANJI,
                     onClick = { vm.exportar(TipoExport.KANJI) },
+                    modifier = Modifier.width(IntrinsicSize.Max),
+                )
+                BotonExport(
+                    titulo = "Export Scans deck",
+                    habilitado = contadores.scans > 0,
+                    hint = "Tap words in a clipping first",
+                    generandoEste = tipoGenerando == TipoExport.SCANS,
+                    generandoOtro = tipoGenerando != null && tipoGenerando != TipoExport.SCANS,
+                    onClick = { vm.exportar(TipoExport.SCANS) },
                     modifier = Modifier.width(IntrinsicSize.Max),
                 )
                 BotonExport(
@@ -155,7 +165,7 @@ fun ExportScreen(vm: ExportViewModel, onCerrar: () -> Unit) {
     }
 }
 
-// El más largo de los 3 títulos de BotonExport — define el ancho común de los
+// El más largo de los 4 títulos de BotonExport — define el ancho común de los
 // botones vía el texto invisible del Box. Si se agrega/cambia un título, revisar.
 private const val TITULO_BOTON_MAS_LARGO = "Export Stories deck"
 

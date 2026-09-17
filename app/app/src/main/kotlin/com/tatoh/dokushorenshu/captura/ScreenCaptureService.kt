@@ -23,8 +23,10 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.tatoh.dokushorenshu.App
 import com.tatoh.dokushorenshu.MainActivity
+import com.tatoh.dokushorenshu.datos.RecortesRepo
 import com.tatoh.dokushorenshu.dominio.ocr.Recorte
 import com.tatoh.dokushorenshu.dominio.ocr.escalarRecorte
+import java.io.File
 import java.nio.ByteBuffer
 
 class ScreenCaptureService : Service() {
@@ -54,6 +56,10 @@ class ScreenCaptureService : Service() {
          *  estático; nativo no lo necesita y el texto entra holgado en un Intent. */
         const val ACTION_TEXTO_OCR = "com.tatoh.dokushorenshu.captura.TEXTO_OCR"
         const val EXTRA_TEXTO_OCR = "texto_ocr"
+
+        /** Ruta absoluta del JPEG de la captura. Ausente si el guardado falló —
+         *  perder la imagen nunca puede costar el texto. */
+        const val EXTRA_RUTA_IMAGEN = "ruta_imagen"
     }
     
     override fun onCreate() {
@@ -493,6 +499,12 @@ class ScreenCaptureService : Service() {
                 }
                 android.util.Log.d("ScreenCapture", "OCR devolvió ${texto.length} chars")
 
+                // Antes de reciclar: el bitmap recortado es lo que el usuario eligió, y es
+                // lo que queremos conservar como imagen del recorte. Guardar acá y no
+                // después de los recycle() no es opcional: compress() sobre un bitmap
+                // reciclado tira IllegalStateException.
+                val rutaImagen = if (texto.isNotBlank()) guardarImagen(recortado) else null
+
                 // `bitmap` nunca se le pasó a ML Kit, así que reciclarlo siempre es seguro
                 // (identidad, no equals: si no hubo recorte son el mismo objeto).
                 if (recortado !== bitmap) bitmap.recycle()
@@ -504,14 +516,14 @@ class ScreenCaptureService : Service() {
                 // levanta cuando ML Kit suelta la referencia.
                 if (ocrOk) recortado.recycle()
 
-                // Un texto vacío NO se entrega: entregarTexto() trae la app al frente y abre
-                // Import con el campo en blanco, pisando lo que el usuario estuviera editando
-                // de una captura anterior. Avisar y desarmar es lo correcto.
+                // Un texto vacío NO se entrega: entregarTexto() trae la app al frente, y del
+                // otro lado crear() rechaza el texto en blanco — el usuario vería la app
+                // saltar y un error, en vez de nada. Avisar y desarmar es lo correcto.
                 if (texto.isBlank()) {
                     android.util.Log.w("ScreenCapture", "OCR sin texto: no se abre la app")
                     avisar("No text found in the selected area")
                 } else {
-                    entregarTexto(texto)
+                    entregarTexto(texto, rutaImagen)
                 }
             } catch (e: Throwable) {
                 // Sin este catch, cualquier excepción acá adentro mata el proceso: corre en un
@@ -557,13 +569,44 @@ class ScreenCaptureService : Service() {
         return bitmap to recortado
     }
 
+    /** Guarda la captura como JPEG 90 en el slot fijo de RecortesRepo.
+     *
+     *  JPEG y no PNG: el PNG de una captura de pantalla pesa 2-5 MB y se guarda una
+     *  por nota. En JPEG 90 una pantalla completa queda en ~700 KB, con calidad de
+     *  sobra para releer el original cuando el OCR salió ilegible.
+     *
+     *  Throwable y no Exception, por lo mismo que prepararBitmaps: comprimir un bitmap
+     *  de pantalla completa puede tirar OutOfMemoryError, que es Error y no Exception.
+     *
+     *  Devuelve null si falla: el recorte se crea igual, sin imagen. */
+    private fun guardarImagen(bitmap: Bitmap): File? = try {
+        val destino = RecortesRepo.imagenPendiente(this)
+        // compress() avisa que falló DEVOLVIENDO false, no lanzando: el catch de abajo no
+        // cubre este caso. Sin mirar el retorno, outputStream() ya creó el archivo y
+        // devolveríamos un File apuntando a un JPEG vacío o truncado — peor que no tener
+        // imagen, porque el recorte muestra una imagen rota en vez de ninguna.
+        val ok = destino.outputStream().use { salida ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, salida)
+        }
+        if (ok) {
+            destino
+        } else {
+            android.util.Log.e("ScreenCapture", "compress() devolvió false: JPEG inservible")
+            null
+        }
+    } catch (e: Throwable) {
+        android.util.Log.e("ScreenCapture", "no se pudo guardar la imagen de la captura", e)
+        null
+    }
+
     /** Abre la app con el texto reconocido. Arrancar una Activity desde background
      *  está bloqueado desde Android 10, pero la app queda exenta por tener
      *  SYSTEM_ALERT_WINDOW concedido — que es el permiso del propio overlay. */
-    private fun entregarTexto(texto: String) {
+    private fun entregarTexto(texto: String, rutaImagen: File?) {
         val intent = Intent(this, MainActivity::class.java).apply {
             action = ACTION_TEXTO_OCR
             putExtra(EXTRA_TEXTO_OCR, texto)
+            if (rutaImagen != null) putExtra(EXTRA_RUTA_IMAGEN, rutaImagen.absolutePath)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP

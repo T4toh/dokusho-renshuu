@@ -101,8 +101,8 @@ fun CapturaScreen(pedirPermisoAlEntrar: Boolean, onCerrar: () -> Unit) {
     // diálogo directo, sin obligar a un tap más. El flag existe porque el argumento
     // de navegación vive en la entrada del backstack y sobrevive a la composición:
     // sin él, el diálogo del sistema vuelve a saltar al rotar y al volver acá con
-    // popBackStack desde el import. rememberSaveable para que aguante rotación y
-    // muerte de proceso, no remember.
+    // popBackStack desde la nota recién creada. rememberSaveable para que aguante
+    // rotación y muerte de proceso, no remember.
     var yaPedido by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(pedirPermisoAlEntrar) {
         if (pedirPermisoAlEntrar && !yaPedido && SOPORTADO && permisos.overlay) {

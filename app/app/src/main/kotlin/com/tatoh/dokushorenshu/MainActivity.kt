@@ -2,12 +2,14 @@ package com.tatoh.dokushorenshu
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -30,17 +32,24 @@ import com.tatoh.dokushorenshu.ui.kanji.DetalleKanjiScreen
 import com.tatoh.dokushorenshu.ui.kanji.DetalleKanjiViewModel
 import com.tatoh.dokushorenshu.ui.lector.LectorScreen
 import com.tatoh.dokushorenshu.ui.lector.LectorViewModel
+import com.tatoh.dokushorenshu.ui.recortes.ListaRecortesScreen
+import com.tatoh.dokushorenshu.ui.recortes.RecorteScreen
+import com.tatoh.dokushorenshu.ui.recortes.RecorteViewModel
+import com.tatoh.dokushorenshu.ui.recortes.RecortesViewModel
 import com.tatoh.dokushorenshu.ui.tema.TemaDokusho
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.withContext
+import java.io.File
 
 class MainActivity : ComponentActivity() {
 
-    /** Texto que dejó ScreenCaptureService en el Intent, esperando a que la ruta
-     *  "importar" lo consuma. Es estado de la Activity y no del NavHost porque
-     *  puede llegar por onNewIntent con la app ya abierta (launchMode singleTop). */
-    private val textoOcrPendiente = mutableStateOf<String?>(null)
+    /** Texto + ruta de la imagen que dejó ScreenCaptureService en el Intent,
+     *  esperando a convertirse en recorte. La ruta es opcional: si el guardado del
+     *  JPEG falló, el recorte se crea igual pero sin imagen. Es estado de la Activity
+     *  y no del NavHost porque puede llegar por onNewIntent con la app ya abierta
+     *  (launchMode singleTop). */
+    private val capturaPendiente = mutableStateOf<Pair<String, String?>?>(null)
 
     /** El bubble se tocó sin credenciales de MediaProjection: hay que abrir la
      *  pantalla de captura pidiendo el permiso. Mismo ciclo de vida que el de arriba. */
@@ -61,13 +70,35 @@ class MainActivity : ComponentActivity() {
         setContent {
             TemaDokusho {
                 val nav = rememberNavController()
-                val textoOcr by textoOcrPendiente
                 val pedirPermiso by pedirPermisoPendiente
-                // Llegó una captura: saltar al import. El texto se consume dentro de
-                // la ruta "importar" (no acá) para que sobreviva a la navegación.
-                // singleTop para no apilar pantallas de import si llegan varias capturas.
-                LaunchedEffect(textoOcr) {
-                    if (textoOcr != null) nav.navigate("importar") { launchSingleTop = true }
+                // Llegó una captura: se vuelve recorte y se abre. singleTop para no apilar
+                // pantallas si llegan varias capturas.
+                //
+                // La key es Unit y NO `capturaPendiente`: keyeado en el valor, el propio
+                // `= null` de abajo cambia la key y LaunchedEffect cancela su job mientras
+                // sigue suspendido en el withContext esperando a Kuromoji — el recorte se
+                // crea pero el navigate nunca corre. Con Unit, la identidad del efecto no
+                // depende del valor y consumirlo no cancela nada. No volver a
+                // LaunchedEffect(captura) "para simplificar".
+                LaunchedEffect(Unit) {
+                    snapshotFlow { capturaPendiente.value }.filterNotNull().collect { actual ->
+                        // Consumido ANTES de la IO: si se limpiara recién después de navegar,
+                        // rotar en el medio dejaría el valor y la nueva composición crearía un
+                        // segundo recorte de la misma captura.
+                        capturaPendiente.value = null
+                        val (texto, ruta) = actual
+                        // crear() bloquea en Kuromoji: jamás en el main thread.
+                        val recorte = withContext(Dispatchers.IO) {
+                            runCatching { contenedor.creadorRecortes.crear(texto, ruta?.let(::File)) }
+                        }
+                        recorte.onSuccess { nav.navigate("recorte/${it.id}") { launchSingleTop = true } }
+                        recorte.onFailure {
+                            // Sin aviso el usuario se queda mirando la biblioteca sin saber que
+                            // su captura se perdió: el texto original ya no existe en ningún lado.
+                            android.util.Log.e("MainActivity", "no se pudo crear el recorte", it)
+                            Toast.makeText(this@MainActivity, "Could not save the capture", Toast.LENGTH_LONG).show()
+                        }
+                    }
                 }
                 LaunchedEffect(pedirPermiso) {
                     if (pedirPermiso) {
@@ -80,6 +111,9 @@ class MainActivity : ComponentActivity() {
                         val vm: BibliotecaViewModel = viewModel(factory = viewModelFactory {
                             initializer { BibliotecaViewModel(contenedor.historias, contenedor.progresoDb.dao(), contenedor.diccionario) }
                         })
+                        val recortesVm: RecortesViewModel = viewModel(factory = viewModelFactory {
+                            initializer { RecortesViewModel(contenedor.recortes) }
+                        })
                         // BibliotecaScreen dispara vm.cargar() con LaunchedEffect (Task 9).
                         BibliotecaScreen(
                             vm = vm,
@@ -88,7 +122,13 @@ class MainActivity : ComponentActivity() {
                             onVerKanji = { k -> nav.navigate("kanji/$k") },
                             onExport = { nav.navigate("export") },
                             onImportar = { nav.navigate("importar") },
-                            onScan = { nav.navigate("captura?permiso=false") },
+                            contenidoNotas = {
+                                ListaRecortesScreen(
+                                    vm = recortesVm,
+                                    onAbrirRecorte = { id -> nav.navigate("recorte/$id") },
+                                    onScan = { nav.navigate("captura?permiso=false") },
+                                )
+                            },
                         )
                     }
                     composable("lector/{id}") { entrada ->
@@ -103,6 +143,24 @@ class MainActivity : ComponentActivity() {
                         })
                         // LectorScreen dispara vm.cargar() con LaunchedEffect (Task 10).
                         LectorScreen(vm = vm, onVerKanji = { k -> nav.navigate("kanji/$k") })
+                    }
+                    composable("recorte/{id}") { entrada ->
+                        val id = entrada.arguments!!.getString("id")!!
+                        val vm: RecorteViewModel = viewModel(factory = viewModelFactory {
+                            initializer {
+                                RecorteViewModel(
+                                    id, contenedor.recortes, contenedor.creadorRecortes,
+                                    contenedor.tokenizador, contenedor.buscador,
+                                    contenedor.progresoDb.dao(),
+                                )
+                            }
+                        })
+                        // RecorteScreen dispara vm.cargar() con LaunchedEffect (mismo patrón).
+                        RecorteScreen(
+                            vm = vm,
+                            onVerKanji = { k -> nav.navigate("kanji/$k") },
+                            onCerrar = { nav.popBackStack() },
+                        )
                     }
                     composable("kanji/{kanji}") { entrada ->
                         val kanji = entrada.arguments!!.getString("kanji")!!
@@ -126,21 +184,6 @@ class MainActivity : ComponentActivity() {
                         val vm: ImportViewModel = viewModel(factory = viewModelFactory {
                             initializer { ImportViewModel(contenedor.importador) }
                         })
-                        // El texto de una captura se vuelca acá y se consume (se pone en
-                        // null) para que no reaparezca al rotar ni al volver desde la
-                        // biblioteca. La key es el propio texto y no Unit: con
-                        // launchSingleTop una segunda captura reusa esta entrada del
-                        // backstack, así que el efecto tiene que volver a correr cuando
-                        // cambia el valor. Queda editable a propósito: el OCR de texto
-                        // vertical puede equivocar el orden de las columnas.
-                        val texto by textoOcrPendiente
-                        LaunchedEffect(texto) {
-                            texto?.let {
-                                vm.setTexto(it)
-                                vm.setTitulo(tituloDeCaptura())
-                                textoOcrPendiente.value = null
-                            }
-                        }
                         ImportScreen(
                             vm = vm,
                             onImportado = { nav.popBackStack() },
@@ -173,22 +216,17 @@ class MainActivity : ComponentActivity() {
 
     /** Vuelca el Intent de los Services al estado y lo marca como consumido. Sin
      *  limpiarlo, al rotar (o al volver de background) onCreate lo vuelve a leer y
-     *  el texto reaparece pisando lo que el usuario haya editado en el import. */
+     *  la misma captura genera un recorte duplicado. */
     private fun leerIntent(intent: Intent?) {
         when (intent?.action) {
             ScreenCaptureService.ACTION_TEXTO_OCR ->
-                textoOcrPendiente.value = intent.getStringExtra(ScreenCaptureService.EXTRA_TEXTO_OCR)
+                capturaPendiente.value = intent.getStringExtra(ScreenCaptureService.EXTRA_TEXTO_OCR)
+                    ?.let { it to intent.getStringExtra(ScreenCaptureService.EXTRA_RUTA_IMAGEN) }
             FloatingBubbleService.ACTION_PEDIR_PERMISO -> pedirPermisoPendiente.value = true
             else -> return
         }
         intent.action = null
         intent.removeExtra(ScreenCaptureService.EXTRA_TEXTO_OCR)
+        intent.removeExtra(ScreenCaptureService.EXTRA_RUTA_IMAGEN)
     }
 }
-
-/** Título por defecto de una captura. Con fecha y hora porque se generan muchas
- *  seguidas y el id de la historia sale del título (colisión → sufijo -2, -3…).
- *  Locale.ROOT porque ofPattern hereda el DecimalStyle del locale del sistema y en
- *  ar-EG (por ejemplo) los dígitos saldrían en árabe: la UI va en inglés. */
-private fun tituloDeCaptura(): String = "Scan " + LocalDateTime.now()
-    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withLocale(Locale.ROOT))

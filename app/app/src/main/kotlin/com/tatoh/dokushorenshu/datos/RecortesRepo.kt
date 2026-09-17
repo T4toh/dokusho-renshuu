@@ -1,0 +1,146 @@
+package com.tatoh.dokushorenshu.datos
+
+import android.content.Context
+import java.io.File
+
+/** Recortes en `filesDir/recortes/`: `<id>.json` con el texto y `<id>.jpg` con la
+ *  imagen original de la captura.
+ *
+ *  Repo aparte y no un quinto origen dentro de HistoriasRepo: ese ya maneja assets,
+ *  descargas, catálogo remoto e importadas. */
+class RecortesRepo(
+    private val dir: File,
+    // inyectable: android.util.Log no existe en los tests de JVM plano
+    private val log: (String, Throwable) -> Unit = { msg, t -> android.util.Log.w("RecortesRepo", msg, t) },
+    // inyectable: el fallback copy+delete de moverImagen() no se puede forzar con
+    // un TemporaryFolder real, porque renameTo() ahí nunca falla.
+    private val renombrar: (File, File) -> Boolean = File::renameTo,
+) {
+
+    companion object {
+        /** Slot fijo donde el Service deja la imagen recién capturada. Uno solo, porque
+         *  `isCapturing` garantiza una captura en vuelo a la vez: si el usuario cancela,
+         *  el huérfano se pisa en la próxima en vez de quedar acumulándose. */
+        const val NOMBRE_PENDIENTE = "captura-pendiente.jpg"
+
+        fun desde(contexto: Context): RecortesRepo =
+            RecortesRepo(File(contexto.filesDir, "recortes"))
+
+        fun imagenPendiente(contexto: Context): File =
+            File(contexto.filesDir, NOMBRE_PENDIENTE)
+    }
+
+    private fun json(id: String) = File(dir, "$id.json")
+    private fun jpg(id: String) = File(dir, "$id.jpg")
+
+    /** Descendente por timestamp: la última captura arriba. Un JSON corrupto se
+     *  saltea — mismo criterio que historiasLocales(): nunca tumbar la lista entera
+     *  por un archivo roto. */
+    fun listar(): List<Recorte> = (dir.listFiles() ?: emptyArray())
+        .filter { it.name.endsWith(".json") }
+        .mapNotNull { archivo ->
+            try {
+                ParserRecorte.parsear(archivo.readText())
+            } catch (e: Exception) {
+                log("recorte corrupto, se saltea: ${archivo.name}", e)
+                null
+            }
+        }
+        .sortedByDescending { it.timestamp }
+
+    fun cargar(id: String): Recorte? = try {
+        json(id).takeIf { it.exists() }?.let { ParserRecorte.parsear(it.readText()) }
+    } catch (e: Exception) {
+        log("recorte corrupto: $id", e)
+        null
+    }
+
+    /** Mueve `imagenPendiente` a `<id>.jpg` si viene, y escribe el JSON de forma
+     *  atómica (tmp → rename), igual que guardarImportada().
+     *
+     *  Si el movimiento de la imagen falla, el recorte se guarda igual con
+     *  `tieneImagen = false`: perder la imagen NUNCA puede costar el texto. */
+    fun guardar(recorte: Recorte, imagenPendiente: File? = null): Recorte {
+        dir.mkdirs()
+        // Sin pendiente, tieneImagen se deriva del disco y NO del flag que venga en
+        // `recorte`: reescribir un recorte ya guardado (editar su texto) no puede
+        // hacerle perder la imagen, y quitarImagen() borra el .jpg ANTES de llamar acá,
+        // así que ahí sigue dando false.
+        val conImagen = if (imagenPendiente != null && imagenPendiente.exists()) {
+            moverImagen(imagenPendiente, jpg(recorte.id))
+        } else {
+            jpg(recorte.id).exists()
+        }
+        val definitivo = recorte.copy(tieneImagen = conImagen)
+        val crudo = SerializadorRecorte.serializar(definitivo)
+        ParserRecorte.parsear(crudo)  // round-trip antes de escribir: nunca JSON a medias
+        val tmp = File(dir, "${recorte.id}.json.tmp")
+        try {
+            tmp.writeText(crudo)
+            check(tmp.renameTo(json(recorte.id))) { "no se pudo renombrar $tmp" }
+        } catch (e: Exception) {
+            tmp.delete()
+            throw e
+        }
+        return definitivo
+    }
+
+    private fun moverImagen(origen: File, destino: File): Boolean = try {
+        // renameTo falla entre dispositivos de archivo distintos; ambos están en
+        // filesDir, pero el copy+delete es el fallback barato y seguro.
+        if (renombrar(origen, destino)) true
+        else {
+            origen.copyTo(destino, overwrite = true)
+            // Si el borrado del origen falla, el pendiente queda con los bytes de ESTA
+            // captura: la próxima la reutilizaría como si fuera suya. delete() no lanza
+            // ante ese fallo, así que hay que chequear el resultado a mano y avisar.
+            if (!origen.delete()) {
+                log("no se pudo borrar el pendiente tras copiarlo: ${origen.path}", IllegalStateException("delete() devolvió false"))
+            }
+            true
+        }
+    } catch (e: Exception) {
+        log("no se pudo guardar la imagen", e)
+        false
+    }
+
+    /** El JSON es lo que define si el recorte existe: un `.jpg` huérfano (por ejemplo,
+     *  si su borrado falla acá) no lo resucita, así que el resultado depende solo de
+     *  borrar el JSON. */
+    fun borrar(id: String): Boolean {
+        jpg(id).delete()
+        return json(id).delete()
+    }
+
+    /** Borra solo la imagen y reescribe el recorte con `tieneImagen = false`.
+     *  Devuelve false si el recorte no existe o si el `.jpg` no se pudo borrar.
+     *
+     *  El resultado de delete() se chequea a mano porque es de las APIs que avisan del
+     *  fallo POR VALOR DE RETORNO y no con una excepción: un try/catch alrededor no
+     *  atrapa nada y el compilador no dice una palabra (tercer caso en este plan, con
+     *  `origen.delete()` de moverImagen y el `compress()` del Service). Sin el chequeo,
+     *  con el borrado fallado el JSON diría `tieneImagen = true` —guardar() lo deriva del
+     *  disco, y el archivo sigue ahí— mientras la pantalla muestra la imagen como
+     *  quitada: reaparece al reabrir la nota, sin ningún error en el medio. */
+    fun quitarImagen(id: String): Boolean {
+        val recorte = cargar(id) ?: return false
+        val jpg = jpg(id)
+        if (jpg.exists() && !jpg.delete()) {
+            log("no se pudo borrar la imagen: ${jpg.path}", IllegalStateException("delete() devolvió false"))
+            return false
+        }
+        guardar(recorte.copy(tieneImagen = false), null)
+        return true
+    }
+
+    fun archivoImagen(id: String): File? = jpg(id).takeIf { it.exists() }
+
+    /** El id es el timestamp en millis; si ya está tomado se incrementa. Dos capturas
+     *  en el mismo milisegundo es prácticamente imposible, pero pisar un recorte del
+     *  usuario no es un riesgo que valga la pena correr por una línea. */
+    fun idLibre(timestamp: Long): String {
+        var candidato = timestamp
+        while (json(candidato.toString()).exists()) candidato++
+        return candidato.toString()
+    }
+}

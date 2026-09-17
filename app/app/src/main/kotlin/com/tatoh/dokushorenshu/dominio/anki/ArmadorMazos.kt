@@ -7,6 +7,9 @@ import com.tatoh.dokushorenshu.datos.KanjiInfo
 import com.tatoh.dokushorenshu.datos.Oracion
 import com.tatoh.dokushorenshu.datos.OracionEjemplo
 import com.tatoh.dokushorenshu.datos.Palabra
+import com.tatoh.dokushorenshu.datos.Parrafo
+import com.tatoh.dokushorenshu.datos.Recorte
+import com.tatoh.dokushorenshu.datos.RecortesRepo
 import com.tatoh.dokushorenshu.datos.progreso.KanjiTocado
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
 
@@ -52,6 +55,7 @@ class ArmadorMazos(
     private val progresoDao: ProgresoDao,
     private val diccionario: Diccionario,
     private val historiasRepo: HistoriasRepo,
+    private val recortesRepo: RecortesRepo,
 ) {
     /** Id/título de cada historia local, en el mismo orden que `historiasLocales()`
      *  — la pantalla de Export lo usa para listar checkboxes de selección
@@ -73,10 +77,29 @@ class ArmadorMazos(
 
     /** Una nota por término único tocado — `palabras_tocadas` tiene primary key
      *  (idHistoria, termino), la misma palabra puede repetirse en varias
-     *  historias y no debe duplicar nota. */
+     *  historias y no debe duplicar nota.
+     *
+     *  `palabrasDeHistorias()` y NUNCA una lectura sin filtrar: las palabras tocadas en
+     *  recortes van a su propio mazo (ver [armarScans]). Sin este filtro se
+     *  colarían acá sin error ni log — falla silenciosa que solo se nota semanas
+     *  después, con el mazo de lectura lleno de fragmentos de manga. */
     suspend fun armarWords(historias: List<Historia> = historiasRepo.historiasLocales()): List<NotaWords> {
-        val terminos = progresoDao.todasPalabras().map { it.termino }.distinct()
-        return terminos.map { termino -> armarNotaWords(termino, historias) }
+        val terminos = progresoDao.palabrasDeHistorias().map { it.termino }.distinct()
+        return terminos.map { termino -> armarNotaWords(termino, historias.map { it.parrafos }) }
+    }
+
+    /** Mazo "Dokusho — Scans": las palabras tocadas en recortes, con las oraciones de
+     *  ejemplo salidas del propio recorte (o de Tatoeba si no aporta ninguna usable,
+     *  mismo fallback que el mazo Words). */
+    suspend fun armarScans(recortes: List<Recorte> = recortesRepo.listar()): List<NotaWords> {
+        val terminos = progresoDao.palabrasDeRecortes().map { it.termino }.distinct()
+        return terminos.map { termino ->
+            // GUID propio: si compartiera "words:<termino>" con el mazo Words, una
+            // palabra tocada en los dos lados haría que el import de Anki (match
+            // global por guid) pise una nota con la otra en vez de tener una en cada
+            // mazo — misma razón que `NotaKanji.claveGuidPropia` en los mazos Stories.
+            armarNotaWords(termino, recortes.map { it.parrafos }, claveGuid = "scan:$termino")
+        }
     }
 
     /** Solo kanjis taggeados (dificultad != null); uno fuera del db se salta y
@@ -85,13 +108,14 @@ class ArmadorMazos(
         historias: List<Historia> = historiasRepo.historiasLocales(),
     ): Pair<List<NotaKanji>, Int> {
         var omitidos = 0
+        val parrafos = historias.map { it.parrafos }
         val notas = progresoDao.kanjisTaggeados().mapNotNull { tocado ->
             val info = diccionario.buscarKanji(tocado.kanji)
             if (info == null) {
                 omitidos++
                 null
             } else {
-                armarNotaKanji(tocado, info, historias)
+                armarNotaKanji(tocado, info, parrafos)
             }
         }
         return notas to omitidos
@@ -184,7 +208,15 @@ class ArmadorMazos(
 
     private fun esKanji(c: Char): Boolean = esKanjiChar(c)
 
-    private fun armarNotaWords(termino: String, historias: List<Historia>): NotaWords {
+    /** [parrafos]: los párrafos de cada texto fuente de donde sacar oraciones de
+     *  ejemplo. `List<List<Parrafo>>` y no `List<Historia>` porque el mazo Scans le
+     *  pasa recortes: `Historia.parrafos` y `Recorte.parrafos` son el mismo shape y
+     *  es lo único que necesita acá. */
+    private fun armarNotaWords(
+        termino: String,
+        parrafos: List<List<Parrafo>>,
+        claveGuid: String? = null,
+    ): NotaWords {
         // buscarPalabra por superficie; tokens en kana puro sin entrada propia
         // (p.ej. おじいさん) caen al índice de lectura — mismo fallback que
         // BuscadorPalabras (Plan 3.5 Frente C).
@@ -195,13 +227,14 @@ class ArmadorMazos(
             lectura = palabra?.lectura ?: termino,
             significados = palabra?.significados?.joinToString("; ") ?: "",
             tag = "",  // campo reservado vacío — spec: "Nota Words ... Tag (vacío)"
-            oraciones = armarOraciones(historias, termino) { limite ->
+            oraciones = armarOraciones(parrafos, termino) { limite ->
                 diccionario.oracionesDePalabra(termino, limite)
             },
+            claveGuidPropia = claveGuid,
         )
     }
 
-    private fun armarNotaKanji(tocado: KanjiTocado, info: KanjiInfo, historias: List<Historia>): NotaKanji {
+    private fun armarNotaKanji(tocado: KanjiTocado, info: KanjiInfo, parrafos: List<List<Parrafo>>): NotaKanji {
         val forma = formaDiccionario(info)
         val sustantivo = sustantivo(tocado.kanji, forma)
         return NotaKanji(
@@ -215,7 +248,7 @@ class ArmadorMazos(
             },
             // Las oraciones se buscan y resaltan por el KANJI, no por la forma de
             // diccionario: así una oración con 刈り sigue marcando 刈.
-            oraciones = armarOraciones(historias, tocado.kanji) { limite ->
+            oraciones = armarOraciones(parrafos, tocado.kanji) { limite ->
                 diccionario.oracionesDeKanji(tocado.kanji, limite)
             },
             // El guid sigue atado al kanji pelado: si colgara de la forma de
@@ -289,19 +322,20 @@ class ArmadorMazos(
         return palabra.lectura?.let { "$termino〈${escapeHtml(it)}〉" } ?: termino
     }
 
-    /** Prioridad historias > Tatoeba, cap 5. Las oraciones de historias AHORA
+    /** Prioridad texto propio (historia o recorte) > Tatoeba, cap 5. Las oraciones
+     *  del texto propio AHORA
      *  pueden llevar traducción (PR B): si la trae, va en un
      *  `<span class="traduccion">` junto al ruby (ver `oracionDeTarjeta`). Las
      *  de Tatoeba siempre traen traducción (inglés provisto por Tatoeba),
      *  mismo formato de span — sin el `<br>` viejo, la clase ya es
      *  `display:block` en el CSS del template. */
     private fun armarOraciones(
-        historias: List<Historia>,
+        parrafos: List<List<Parrafo>>,
         termino: String,
         tatoeba: (limite: Int) -> List<OracionEjemplo>,
     ): List<String> {
-        val candidatas = historias.asSequence()
-            .flatMap { it.parrafos.asSequence() }
+        val candidatas = parrafos.asSequence()
+            .flatMap { it.asSequence() }
             .flatMap { it.oraciones.asSequence() }
             .filter { it.texto.contains(termino) }
             .toList()

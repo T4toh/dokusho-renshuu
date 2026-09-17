@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.tatoh.dokushorenshu.datos.EntradaCatalogo
 import com.tatoh.dokushorenshu.datos.HistoriasRepo
 import com.tatoh.dokushorenshu.datos.Historia
-import com.tatoh.dokushorenshu.datos.Oracion
 import com.tatoh.dokushorenshu.datos.progreso.PalabraTocada
 import com.tatoh.dokushorenshu.datos.progreso.PrefsRepo
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDao
@@ -14,31 +13,15 @@ import com.tatoh.dokushorenshu.dominio.BuscadorPalabras
 import com.tatoh.dokushorenshu.dominio.ConsultaPalabra
 import com.tatoh.dokushorenshu.dominio.PalabraToken
 import com.tatoh.dokushorenshu.dominio.Tokenizador
+import com.tatoh.dokushorenshu.ui.comun.OracionPlana
+import com.tatoh.dokushorenshu.ui.comun.SeleccionTexto
+import com.tatoh.dokushorenshu.ui.comun.aplanar
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-/** Selección de un rango de tokens dentro de UNA oración (backlog feedback de uso
- *  2026-07-13: buscar en el browser expresiones/frases que el diccionario no tiene).
- *  [inicio]/[fin] son offsets de chars sobre `oracion.texto` (fin EXCLUSIVO, mismo
- *  contrato que [PalabraToken]): el rango cubre tokens completos, y el texto
- *  seleccionado es el substring crudo — partículas intermedias incluidas, sin
- *  furigana. */
-data class SeleccionTexto(val indiceOracion: Int, val inicio: Int, val fin: Int)
-
-data class OracionPlana(
-    val parrafo: Int,
-    val oracionEnParrafo: Int,
-    val oracion: Oracion,
-    val tokens: List<PalabraToken>,
-    // Precomputado en cargar() (fix de performance, Plan 3.6 feedback de dispositivo):
-    // antes TextoConFurigana calculaba esto (agruparTokens + segmentosDeGrupo) en cada
-    // recomposición de item durante el scroll. Ver doc de [calcularGruposFurigana].
-    val gruposFurigana: List<GrupoFurigana>,
-)
 
 /** indiceActual == -1 representa la portada (Task C3): título, autor, stats y
  *  botón Start/Continue reading. "Previous" desde la oración 0 vuelve acá. */
@@ -109,15 +92,7 @@ class LectorViewModel(
             val datos = withContext(ioDispatcher) {
                 val historia = historiasRepo.cargarHistoria(idHistoria) ?: return@withContext null
                 val metadata = historiasRepo.catalogoLocal()?.historias?.firstOrNull { it.id == idHistoria }
-                val planas = historia.parrafos.flatMapIndexed { p, parrafo ->
-                    parrafo.oraciones.mapIndexed { o, oracion ->
-                        val tokens = tokenizador.tokenizar(oracion.texto)
-                        // agruparTokens/segmentosDeGrupo (vía calcularGruposFurigana) corren
-                        // acá, en ioDispatcher, UNA sola vez por oración — no en cada
-                        // recomposición de item (ver doc en TextoConFurigana.kt).
-                        OracionPlana(p, o, oracion, tokens, calcularGruposFurigana(tokens, oracion.furigana))
-                    }
-                }
+                val planas = aplanar(historia.parrafos, tokenizador)
                 DatosCarga(
                     historia, metadata, planas,
                     prefs.furiganaActiva(), prefs.katakanaActiva(),

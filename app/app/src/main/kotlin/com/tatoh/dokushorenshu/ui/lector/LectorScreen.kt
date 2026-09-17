@@ -1,10 +1,5 @@
 package com.tatoh.dokushorenshu.ui.lector
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -16,13 +11,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tatoh.dokushorenshu.dominio.PalabraToken
+import com.tatoh.dokushorenshu.ui.comun.BarraSeleccion
+import com.tatoh.dokushorenshu.ui.comun.ItemOracion
+import com.tatoh.dokushorenshu.ui.comun.buscarEnWeb
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -329,48 +325,6 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
     }
 }
 
-/** Un item de oración de [ListaOracionesLibre], extraído a su propio composable (fix de
- *  performance, Plan 3.6 feedback de dispositivo): así Compose puede saltear su
- *  recomposición cuando cambia algo AJENO a esta oración (p.ej. se abre el sheet de
- *  palabra, o cualquier otro campo de [EstadoLector] no relacionado con el foco). Solo
- *  recibe [esActual] (un `Boolean` plano, ya comparado en el callsite de `itemsIndexed`)
- *  y los datos propios de la oración — nunca `EstadoLector` completo. */
-@Composable
-private fun ItemOracion(
-    esActual: Boolean,
-    plana: OracionPlana,
-    furiganaActiva: Boolean,
-    katakanaActiva: Boolean,
-    onTapPalabra: (PalabraToken) -> Unit,
-    onLongPressPalabra: (PalabraToken) -> Unit,
-    // rango de selección SOLO si pertenece a esta oración (ya filtrado en el
-    // callsite de itemsIndexed, mismo criterio que esActual: nunca entra
-    // EstadoLector completo — un cambio de selección solo recompone los items
-    // cuyo param cambió).
-    rangoSeleccion: IntRange?,
-) {
-    // Foco SOLO por alpha (animado), nunca por tamaño: todas las oraciones tienen la
-    // misma altura de item siempre, así que cambiar el foco jamás reflowea la
-    // LazyColumn — únicamente el scroll mueve cosas. El fundido de ~250ms hace que el
-    // foco se deslice entre oraciones en vez de saltar.
-    val alphaAnimada by animateFloatAsState(
-        targetValue = if (esActual) 1f else 0.35f,
-        animationSpec = tween(durationMillis = 250),
-        label = "alphaOracion",
-    )
-    Box(Modifier.alpha(alphaAnimada).fillMaxWidth()) {
-        TextoConFurigana(
-            tokens = plana.tokens,
-            gruposFurigana = plana.gruposFurigana,
-            furiganaActiva = furiganaActiva,
-            katakanaActiva = katakanaActiva,
-            onTapPalabra = onTapPalabra,
-            onLongPressPalabra = onLongPressPalabra,
-            rangoSeleccion = rangoSeleccion,
-        )
-    }
-}
-
 /** Portada de la historia (Task C3): se muestra cuando indiceActual == -1, antes
  *  de arrancar a leer o al retroceder desde la primera oración. */
 @Composable
@@ -401,42 +355,4 @@ private fun Portada(estado: EstadoLector, modifier: Modifier = Modifier) {
             )
         }
     }
-}
-
-/** Barra contextual de selección: texto elegido + Search web / Copy / cancelar.
- *  Reemplaza a Previous/Next en el bottomBar mientras hay selección activa. */
-@Composable
-private fun BarraSeleccion(
-    texto: String,
-    onBuscarWeb: () -> Unit,
-    onCopiar: () -> Unit,
-    onCancelar: () -> Unit,
-) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            texto,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onCopiar) { Text("Copy") }
-        Button(onClick = onBuscarWeb) { Text("Search web") }
-        TextButton(onClick = onCancelar) { Text("✕") }
-    }
-}
-
-/** Abre la búsqueda web del texto seleccionado en el BROWSER DEFAULT del usuario:
- *  ACTION_VIEW con la URL de búsqueda. Antes se intentaba ACTION_WEB_SEARCH
- *  primero, pero en MIUI (y otros OEM) lo captura la app de búsqueda
- *  (Google/Xiaomi) que abre su webview embebido en vez del browser elegido por
- *  el usuario — feedback de uso 2026-07-16. Si no hay browser (emulador
- *  pelado), no crashear: la selección queda para Copy. */
-private fun buscarEnWeb(contexto: Context, texto: String) {
-    val url = "https://www.google.com/search?q=${Uri.encode(texto)}"
-    runCatching { contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
 }
