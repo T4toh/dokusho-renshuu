@@ -58,4 +58,25 @@ class RecorteTest {
             ParserRecorte.parsear("""{"id":"1","texto":"あ"}""")
         }
     }
+
+    @Test
+    fun `furigana no es terna lanza IllegalArgumentException`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ParserRecorte.parsear("""{"id":"1","texto":"test","timestamp":1000,"tieneImagen":false,"parrafos":[{"oraciones":[{"texto":"test","furigana":[[0,2]]}]}]}""")
+        }
+    }
+
+    @Test
+    fun `furigana fuera de rango lanza IllegalArgumentException`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ParserRecorte.parsear("""{"id":"1","texto":"test","timestamp":1000,"tieneImagen":false,"parrafos":[{"oraciones":[{"texto":"test","furigana":[[0,10,"abc"]]}]}]}""")
+        }
+    }
+
+    @Test
+    fun `timestamp con tipo incorrecto lanza IllegalArgumentException`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ParserRecorte.parsear("""{"id":"1","texto":"test","timestamp":"abc","tieneImagen":false,"parrafos":[]}""")
+        }
+    }
 }

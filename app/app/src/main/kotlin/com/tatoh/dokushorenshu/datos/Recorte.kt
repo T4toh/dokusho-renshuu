@@ -50,6 +50,7 @@ object SerializadorRecorte {
                                 add(f.inicio); add(f.fin); add(f.lectura)
                             }
                         }
+                        // un recorte no tiene traducción: es captura sin contexto
                     }
                 }
             }
@@ -73,22 +74,26 @@ object ParserRecorte {
             parrafos = raiz.req("parrafos").jsonArray.map { p ->
                 Parrafo(p.jsonObject.req("oraciones").jsonArray.map { o ->
                     val obj = o.jsonObject
+                    val textoOracion = obj.req("texto").jsonPrimitive.content
                     Oracion(
-                        texto = obj.req("texto").jsonPrimitive.content,
+                        texto = textoOracion,
                         furigana = obj.req("furigana").jsonArray.map { f ->
                             val terna = f.jsonArray
-                            Furigana(
-                                terna[0].jsonPrimitive.int,
-                                terna[1].jsonPrimitive.int,
-                                terna[2].jsonPrimitive.content,
-                            )
+                            require(terna.size == 3) { "furigana no es terna: $terna" }
+                            val inicio = terna[0].jsonPrimitive.int
+                            val fin = terna[1].jsonPrimitive.int
+                            val lectura = terna[2].jsonPrimitive.content
+                            require(inicio in 0 until fin && fin <= textoOracion.length && lectura.isNotEmpty()) {
+                                "furigana fuera de rango: [$inicio, $fin] sobre ${textoOracion.length} chars"
+                            }
+                            Furigana(inicio, fin, lectura)
                         },
                     )
                 })
             },
         )
     } catch (e: IllegalArgumentException) {
-        throw e
+        throw IllegalArgumentException("JSON de recorte inválido: ${e.message}", e)
     } catch (e: Exception) {
         throw IllegalArgumentException("JSON de recorte inválido: ${e.message}", e)
     }
