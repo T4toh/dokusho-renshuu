@@ -178,7 +178,7 @@ class MainActivity : ComponentActivity() {
                                 RecorteViewModel(
                                     id, contenedor.recortes, contenedor.creadorRecortes,
                                     contenedor.tokenizador, contenedor.buscador,
-                                    contenedor.progresoDb.dao(),
+                                    contenedor.progresoDb.dao(), contenedor.recortadorOcr,
                                 )
                             }
                         })

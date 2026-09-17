@@ -8,6 +8,8 @@ import com.tatoh.dokushorenshu.dominio.BuscadorPalabras
 import com.tatoh.dokushorenshu.dominio.CreadorRecortes
 import com.tatoh.dokushorenshu.dominio.GeneradorFurigana
 import com.tatoh.dokushorenshu.dominio.Tokenizador
+import com.tatoh.dokushorenshu.dominio.ocr.RecortadorOcr
+import com.tatoh.dokushorenshu.dominio.ocr.Recorte as RectanguloOcr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -49,13 +51,18 @@ class RecorteViewModelTest {
     private fun crear(texto: String, imagenPendiente: File? = null): Recorte =
         creador().crear(texto, imagenPendiente)
 
-    private fun vm(recorte: Recorte, dao: ProgresoDaoFake = ProgresoDaoFake()) = RecorteViewModel(
+    private fun vm(
+        recorte: Recorte,
+        dao: ProgresoDaoFake = ProgresoDaoFake(),
+        recortador: RecortadorOcr = RecortadorOcr { _, _, _, _ -> "" },
+    ) = RecorteViewModel(
         id = recorte.id,
         recortesRepo = repo(),
         creadorRecortes = creador(),
         tokenizador = tokenizador,
         buscador = BuscadorPalabras(DiccionarioFake()),
         progresoDao = dao,
+        recortador = recortador,
         // mismo dispatcher que Dispatchers.Main (ver @Before): así advanceUntilIdle()
         // cubre también el trabajo de I/O y es determinístico.
         ioDispatcher = dispatcher,
@@ -226,6 +233,7 @@ class RecorteViewModelTest {
             tokenizador = tokenizador,
             buscador = BuscadorPalabras(DiccionarioFake()),
             progresoDao = ProgresoDaoFake(),
+            recortador = RecortadorOcr { _, _, _, _ -> "" },
             ioDispatcher = dispatcher,
         )
     }
@@ -267,5 +275,97 @@ class RecorteViewModelTest {
         assertNull(vm.estado.value.imagen)
         assertTrue(!vm.estado.value.recorte!!.tieneImagen)
         assertEquals("el texto sobrevive", "今日はいい天気です。", repo().cargar(recorte.id)!!.texto)
+    }
+
+    // ---- Recortar sobre la imagen guardada y re-escanear ----
+
+    /** Nota con imagen + un VM cuyo OCR de recorte responde lo que diga [ocr].
+     *  El archivo tiene bytes de mentira a propósito: el recortador real es el que
+     *  decodifica y recorta, y acá está reemplazado por el fake. */
+    private fun vmConImagen(texto: String, ocr: RecortadorOcr): Pair<Recorte, RecorteViewModel> {
+        val pendiente = carpeta.newFile("captura-pendiente.jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
+        val recorte = crear(texto, pendiente)
+        return recorte to vm(recorte, recortador = ocr)
+    }
+
+    @Test
+    fun `escanear la seleccion precarga la edicion y no toca el texto guardado`() = runTest {
+        val (recorte, vm) = vmConImagen("今日はいい天気です。") { _, _, _, _ -> "犬が走った。" }
+        vm.cargar(); advanceUntilIdle()
+
+        vm.empezarRecorte()
+        vm.setSeleccionImagen(RectanguloOcr(left = 10, top = 20, ancho = 100, alto = 50))
+        vm.escanearSeleccion(anchoDibujado = 200, altoDibujado = 400); advanceUntilIdle()
+
+        val estado = vm.estado.value
+        assertTrue("el texto reconocido tiene que quedar editable, no guardado", estado.editando)
+        assertEquals("犬が走った。", estado.textoEditado)
+        assertTrue("y el modo recorte se cierra", !estado.modoRecorte)
+        assertEquals(
+            "en disco sigue el texto viejo hasta que el usuario toque Save",
+            "今日はいい天気です。",
+            repo().cargar(recorte.id)!!.texto,
+        )
+    }
+
+    @Test
+    fun `escanear un area sin texto avisa y deja el modo recorte para reintentar`() = runTest {
+        val (recorte, vm) = vmConImagen("今日はいい天気です。") { _, _, _, _ -> "" }
+        vm.cargar(); advanceUntilIdle()
+
+        vm.empezarRecorte()
+        vm.setSeleccionImagen(RectanguloOcr(left = 0, top = 0, ancho = 10, alto = 10))
+        vm.escanearSeleccion(anchoDibujado = 200, altoDibujado = 400); advanceUntilIdle()
+
+        val estado = vm.estado.value
+        assertTrue("no puede entrar en edición con texto vacío", !estado.editando)
+        assertTrue("se queda en modo recorte para reintentar el recuadro", estado.modoRecorte)
+        assertNotNull("y avisa, nunca en silencio", estado.error)
+        assertEquals("今日はいい天気です。", repo().cargar(recorte.id)!!.texto)
+    }
+
+    @Test
+    fun `si el OCR falla el estado queda intacto y se avisa`() = runTest {
+        val (recorte, vm) = vmConImagen("今日はいい天気です。") { _, _, _, _ -> error("ML Kit se cayó") }
+        vm.cargar(); advanceUntilIdle()
+
+        vm.empezarRecorte()
+        vm.setSeleccionImagen(RectanguloOcr(left = 0, top = 0, ancho = 10, alto = 10))
+        // Sin el runCatching de escanearSeleccion() esta línea propaga fuera del
+        // viewModelScope: en el dispositivo mata el proceso, acá tumba el test.
+        vm.escanearSeleccion(anchoDibujado = 200, altoDibujado = 400); advanceUntilIdle()
+
+        val estado = vm.estado.value
+        assertTrue(!estado.editando)
+        assertTrue(estado.modoRecorte)
+        assertNotNull(estado.error)
+        assertEquals("今日はいい天気です。", repo().cargar(recorte.id)!!.texto)
+    }
+
+    @Test
+    fun `escanear sin haber dibujado un recuadro no hace nada`() = runTest {
+        val (_, vm) = vmConImagen("今日はいい天気です。") { _, _, _, _ -> "犬が走った。" }
+        vm.cargar(); advanceUntilIdle()
+
+        vm.empezarRecorte()
+        vm.escanearSeleccion(anchoDibujado = 200, altoDibujado = 400); advanceUntilIdle()
+
+        val estado = vm.estado.value
+        assertTrue("sin recuadro no hay OCR que abrir", !estado.editando)
+        assertNull("y no es un error del usuario: no se avisa nada", estado.error)
+    }
+
+    @Test
+    fun `cancelar el recorte descarta el recuadro`() = runTest {
+        val (_, vm) = vmConImagen("今日はいい天気です。") { _, _, _, _ -> "犬が走った。" }
+        vm.cargar(); advanceUntilIdle()
+
+        vm.empezarRecorte()
+        vm.setSeleccionImagen(RectanguloOcr(left = 10, top = 20, ancho = 100, alto = 50))
+        vm.cancelarRecorte()
+
+        val estado = vm.estado.value
+        assertTrue(!estado.modoRecorte)
+        assertNull("el recuadro no puede sobrevivir a la salida del modo", estado.seleccionImagen)
     }
 }

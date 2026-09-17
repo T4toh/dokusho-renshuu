@@ -14,6 +14,7 @@ import com.tatoh.dokushorenshu.dominio.ImportadorHistoria
 import com.tatoh.dokushorenshu.dominio.Tokenizador
 import com.tatoh.dokushorenshu.dominio.anki.ArmadorMazos
 import com.tatoh.dokushorenshu.dominio.ocr.OcrJapones
+import com.tatoh.dokushorenshu.dominio.ocr.RecortadorOcrMlKit
 import java.io.File
 
 /** DI manual. Todo lazy: el primer acceso a `diccionario` copia el db de assets
@@ -29,6 +30,7 @@ class Contenedor(private val app: Application) {
     val tokenizador by lazy { Tokenizador() }
     val buscador by lazy { BuscadorPalabras(diccionario) }
     val ocr by lazy { OcrJapones() }
+    val recortadorOcr by lazy { RecortadorOcrMlKit(ocr) }
     val armadorMazos by lazy { ArmadorMazos(progresoDb.dao(), diccionario, historias, recortes) }
     val importador by lazy { ImportadorHistoria(GeneradorFurigana(tokenizador), historias) }
     val recortes by lazy { RecortesRepo.desde(app) }

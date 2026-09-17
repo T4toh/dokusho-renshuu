@@ -2,15 +2,19 @@ package com.tatoh.dokushorenshu.ui.recortes
 
 import android.graphics.BitmapFactory
 import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -35,12 +39,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.tatoh.dokushorenshu.dominio.ocr.Recorte as RectanguloOcr
 import com.tatoh.dokushorenshu.ui.comun.BarraSeleccion
 import com.tatoh.dokushorenshu.ui.comun.ItemOracion
 import com.tatoh.dokushorenshu.ui.comun.buscarEnWeb
@@ -62,6 +74,9 @@ fun RecorteScreen(vm: RecorteViewModel, onVerKanji: (String) -> Unit, onCerrar: 
     val contexto = LocalContext.current
     val portapapeles = LocalClipboardManager.current
     var confirmarQuitarImagen by remember { mutableStateOf(false) }
+    // Tamaño en px del área donde se DIBUJA la imagen: es el sistema de coordenadas
+    // del recuadro, y lo necesita la app bar para poder mandar Scan.
+    var imagenDibujada by remember { mutableStateOf(IntSize.Zero) }
 
     LaunchedEffect(Unit) { vm.cargar() }
 
@@ -80,7 +95,18 @@ fun RecorteScreen(vm: RecorteViewModel, onVerKanji: (String) -> Unit, onCerrar: 
             TopAppBar(
                 title = { Text("Note") },
                 actions = {
-                    if (estado.editando) {
+                    if (estado.modoRecorte) {
+                        // Scan/Cancel van acá y no debajo de la imagen: una captura de
+                        // pantalla completa dibujada a ancho completo mide más que el
+                        // viewport, así que unos botones al pie de la foto quedaban
+                        // literalmente fuera de alcance — y en modo recorte el arrastre se
+                        // come el scroll de la lista, así que no había forma de bajar.
+                        TextButton(
+                            onClick = { vm.escanearSeleccion(imagenDibujada.width, imagenDibujada.height) },
+                            enabled = estado.seleccionImagen != null,
+                        ) { Text("Scan") }
+                        TextButton(onClick = vm::cancelarRecorte) { Text("Cancel") }
+                    } else if (estado.editando) {
                         TextButton(
                             onClick = vm::guardarEdicion,
                             enabled = estado.textoEditado.isNotBlank(),
@@ -136,7 +162,18 @@ fun RecorteScreen(vm: RecorteViewModel, onVerKanji: (String) -> Unit, onCerrar: 
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             estado.imagen?.let { archivo ->
-                item { Miniatura(archivo, estado.imagenExpandida, vm::alternarImagen) }
+                item {
+                    Miniatura(
+                        archivo = archivo,
+                        expandida = estado.imagenExpandida,
+                        modoRecorte = estado.modoRecorte,
+                        seleccion = estado.seleccionImagen,
+                        onAlternar = vm::alternarImagen,
+                        onEmpezarRecorte = vm::empezarRecorte,
+                        onSeleccion = vm::setSeleccionImagen,
+                        onTamanoDibujado = { imagenDibujada = it },
+                    )
+                }
             }
             if (estado.editando) {
                 item {
@@ -194,34 +231,156 @@ fun RecorteScreen(vm: RecorteViewModel, onVerKanji: (String) -> Unit, onCerrar: 
     }
 }
 
-/** Fila "Image" + chevron que despliega el JPEG original.
+/** Arrastre menor a esto no cuenta como recuadro. Mismo umbral que el overlay de
+ *  captura (`SelectionOverlayView.getSelectionRect`): abajo de eso es un toque, no una
+ *  selección, y un rectángulo de 2 px no tiene nada adentro para reconocer. */
+private const val UMBRAL_ARRASTRE = 10
+
+/** Oscurecido de lo que queda FUERA del recuadro. Mismo papel que el fondo del overlay
+ *  de captura: que se vea qué entra y qué no. */
+private val VELO = Color.Black.copy(alpha = 0.45f)
+
+/** Fila "Image" + chevron que despliega el JPEG original, y encima el modo recorte:
+ *  arrastrar un recuadro sobre la foto para re-correr el OCR de ese pedazo.
  *
  *  El bitmap se decodifica DENTRO de la rama expandida a propósito: colapsado no ocupa
  *  memoria (una captura de pantalla completa son varios MB descomprimida), que es
  *  justamente para lo que sirve que arranque colapsada. Sin librería de imágenes: es un
  *  archivo local y una sola foto por pantalla. decodeFile devuelve null si el archivo
- *  está corrupto — ahí simplemente no se dibuja nada. */
+ *  está corrupto — ahí simplemente no se dibuja nada.
+ *
+ *  El recuadro se mide en píxeles del área DIBUJADA (`onSizeChanged`), no del bitmap: la
+ *  imagen va con ContentScale.FillWidth, así que los dos tamaños difieren y el escalado
+ *  lo hace el recortador con `escalarRecorte` — el mismo camino, y los mismos 8 tests,
+ *  que el recorte de la captura. */
 @Composable
-private fun Miniatura(archivo: File, expandida: Boolean, onAlternar: () -> Unit) {
+private fun Miniatura(
+    archivo: File,
+    expandida: Boolean,
+    modoRecorte: Boolean,
+    seleccion: RectanguloOcr?,
+    onAlternar: () -> Unit,
+    onEmpezarRecorte: () -> Unit,
+    onSeleccion: (RectanguloOcr?) -> Unit,
+    onTamanoDibujado: (IntSize) -> Unit,
+) {
     Column {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onAlternar).padding(vertical = 8.dp),
+            Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Image", style = MaterialTheme.typography.labelLarge)
-            Text(if (expandida) "▾" else "▸", style = MaterialTheme.typography.titleMedium)
-        }
-        if (expandida) {
-            val bitmap = remember(archivo) { BitmapFactory.decodeFile(archivo.path) }
-            bitmap?.let {
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = "Captured image",
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.FillWidth,
-                )
+            // El clickable va en el texto y no en la Row entera: la Row ahora also
+            // contiene el botón de recorte, y colapsar la imagen al tocarlo sería
+            // exactamente lo contrario de lo que el usuario pidió.
+            Row(
+                Modifier.clickable(onClick = onAlternar),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("Image", style = MaterialTheme.typography.labelLarge)
+                Text(if (expandida) "▾" else "▸", style = MaterialTheme.typography.titleMedium)
+            }
+            if (expandida && !modoRecorte) {
+                TextButton(onClick = onEmpezarRecorte) { Text("Rescan area") }
             }
         }
+        if (!expandida) return@Column
+        val bitmap = remember(archivo) { BitmapFactory.decodeFile(archivo.path) } ?: return@Column
+
+        var ancla by remember { mutableStateOf(Offset.Zero) }
+
+        // En modo recorte la imagen se achica hasta entrar ENTERA en pantalla: si se
+        // dibuja a ancho completo, una captura de pantalla queda más alta que el viewport
+        // y la mitad de abajo no se puede ni ver ni recortar. Se limita el alto y se fija
+        // la proporción del bitmap, así el área dibujada sigue siendo exactamente el Box
+        // —sin bandas negras— y el recuadro mapea 1 a 1 contra lo que se ve. El OCR corre
+        // igual sobre el bitmap original en resolución completa: la vista chica no le
+        // quita calidad.
+        val aspecto = bitmap.width.toFloat() / bitmap.height
+        val medida = if (modoRecorte) {
+            Modifier.heightIn(max = 440.dp).aspectRatio(aspecto, matchHeightConstraintsFirst = true)
+        } else {
+            Modifier.fillMaxWidth()
+        }
+
+        Box(medida.onSizeChanged(onTamanoDibujado)) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "Captured image",
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.FillBounds,
+            )
+            if (modoRecorte) {
+                Canvas(
+                    Modifier
+                        .matchParentSize()
+                        // pointerInput keyeado en modoRecorte: si la key fuera Unit, el
+                        // gesto quedaría registrado con el callback de la composición
+                        // vieja al salir y volver a entrar al modo.
+                        .pointerInput(modoRecorte) {
+                            detectDragGestures(
+                                onDragStart = { inicio ->
+                                    ancla = inicio
+                                    onSeleccion(null)
+                                },
+                                onDrag = { cambio, _ ->
+                                    // Consumido para que el drag no se lo lleve el scroll
+                                    // del LazyColumn de arriba.
+                                    cambio.consume()
+                                    onSeleccion(recuadroEntre(ancla, cambio.position))
+                                },
+                            )
+                        },
+                ) {
+                    val r = seleccion
+                    if (r == null) {
+                        drawRect(VELO)
+                        return@Canvas
+                    }
+                    // El velo se dibuja en cuatro pedazos ALREDEDOR del recuadro en vez de
+                    // taparlo entero y "borrar" el centro con BlendMode.Clear: Clear sólo
+                    // hace lo que uno espera dentro de una capa de composición propia, y
+                    // sin ella se come también la imagen de abajo. Cuatro rectángulos no
+                    // dependen de nada.
+                    val izquierda = r.left.toFloat()
+                    val arriba = r.top.toFloat()
+                    val derecha = izquierda + r.ancho
+                    val abajo = arriba + r.alto
+                    drawRect(VELO, Offset.Zero, Size(size.width, arriba))
+                    drawRect(VELO, Offset(0f, abajo), Size(size.width, size.height - abajo))
+                    drawRect(VELO, Offset(0f, arriba), Size(izquierda, abajo - arriba))
+                    drawRect(VELO, Offset(derecha, arriba), Size(size.width - derecha, abajo - arriba))
+                    drawRect(
+                        Color.White,
+                        Offset(izquierda, arriba),
+                        Size(r.ancho.toFloat(), r.alto.toFloat()),
+                        style = Stroke(width = 3f),
+                    )
+                }
+            }
+        }
+        if (modoRecorte) {
+            Text(
+                "Drag a box over the text, then tap Scan.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+    }
+}
+
+/** Dos puntos de la pantalla → recuadro normalizado, o null si el arrastre fue tan corto
+ *  que no puede haber texto adentro. */
+private fun recuadroEntre(desde: Offset, hasta: Offset): RectanguloOcr? {
+    val left = minOf(desde.x, hasta.x).toInt()
+    val top = minOf(desde.y, hasta.y).toInt()
+    val ancho = (maxOf(desde.x, hasta.x).toInt() - left)
+    val alto = (maxOf(desde.y, hasta.y).toInt() - top)
+    return if (ancho > UMBRAL_ARRASTRE && alto > UMBRAL_ARRASTRE) {
+        RectanguloOcr(left = left, top = top, ancho = ancho, alto = alto)
+    } else {
+        null
     }
 }
