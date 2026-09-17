@@ -43,6 +43,10 @@ fun AcercaScreen() {
             Text("Tokenization", style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(top = 20.dp))
             Text("• Kuromoji (Atilika) — Apache License 2.0")
+
+            Text("Text recognition", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 20.dp))
+            Text("• Google ML Kit Text Recognition v2 — Apache License 2.0")
         }
     }
 }

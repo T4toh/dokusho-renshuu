@@ -2,6 +2,7 @@ package com.tatoh.dokushorenshu.ui.export
 
 import com.tatoh.dokushorenshu.datos.DiccionarioFake
 import com.tatoh.dokushorenshu.datos.HistoriasRepo
+import com.tatoh.dokushorenshu.datos.RecortesRepo
 import com.tatoh.dokushorenshu.datos.progreso.KanjiTocado
 import com.tatoh.dokushorenshu.datos.progreso.PalabraTocada
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDaoFake
@@ -42,6 +43,9 @@ class ExportViewModelTest {
 
     private fun dirTemp(): File = File.createTempFile("export", "").let { it.delete(); it.mkdirs(); it }
 
+    // Dir vacío: los tests del mazo Scans arman sus propios recortes.
+    private fun recortesRepo() = RecortesRepo(dirTemp(), log = { _, _ -> })
+
     /** Repo con DOS historias locales — el fixture de un solo momotaro no
      *  alcanza para probar que la selección filtra (con una sola historia
      *  filtrar o no da el mismo resultado). */
@@ -66,7 +70,7 @@ class ExportViewModelTest {
         escribirMazos: (File, List<MazoNotas>) -> Unit = { _, _ -> },
         dirExport: File = dirTemp(),
     ): ExportViewModel {
-        val armador = ArmadorMazos(dao, diccionario, historiasRepoDos())
+        val armador = ArmadorMazos(dao, diccionario, historiasRepoDos(), recortesRepo())
         return ExportViewModel(dao, armador, dirExport, { _, _, _ -> }, escribirMazos, dispatcher, log = { _, _ -> })
     }
 
@@ -77,7 +81,7 @@ class ExportViewModelTest {
         escribirMazos: (File, List<MazoNotas>) -> Unit = { _, _ -> },
         dirExport: File = dirTemp(),
     ): ExportViewModel {
-        val armador = ArmadorMazos(dao, diccionario, historiasRepo())
+        val armador = ArmadorMazos(dao, diccionario, historiasRepo(), recortesRepo())
         return ExportViewModel(dao, armador, dirExport, escribir, escribirMazos, dispatcher, log = { _, _ -> })
     }
 
@@ -95,6 +99,47 @@ class ExportViewModelTest {
         advanceUntilIdle()
 
         assertEquals(ContadoresExport(words = 2, kanjisTaggeados = 1, historias = 1), viewModel.contadores.value)
+    }
+
+    /** El contador de Words alimenta el `habilitado` del botón y el texto de la
+     *  pantalla: si contara las palabras de recortes, diría un número que el mazo
+     *  exportado no tiene. */
+    @Test
+    fun `los contadores separan las palabras de historias de las de recortes`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.registrarPalabra(PalabraTocada("momotaro", "犬", timestamp = 1L))
+        dao.registrarPalabra(PalabraTocada("recorte:100", "稲妻", timestamp = 2L))
+
+        val viewModel = vm(dao = dao)
+        viewModel.cargar()
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.contadores.value.words)
+        assertEquals(1, viewModel.contadores.value.scans)
+    }
+
+    @Test
+    fun `exportar SCANS escribe un mazo propio solo con las palabras de recortes`() = runTest {
+        val dao = ProgresoDaoFake()
+        dao.registrarPalabra(PalabraTocada("momotaro", "犬", timestamp = 1L))
+        dao.registrarPalabra(PalabraTocada("recorte:100", "稲妻", timestamp = 2L))
+        val escritos = mutableListOf<MazoNotas>()
+        val dirExport = dirTemp()
+        val viewModel = vm(
+            dao = dao,
+            escribirMazos = { _, mazos -> escritos.addAll(mazos) },
+            dirExport = dirExport,
+        )
+
+        viewModel.exportar(TipoExport.SCANS)
+        advanceUntilIdle()
+
+        val listo = viewModel.estado.value as EstadoExport.Listo
+        assertEquals(File(dirExport, "dokusho-scans.apkg"), listo.archivo)
+        assertEquals(1, escritos.size)
+        assertEquals(ModeloNotas.NOMBRE_DECK_SCANS, escritos[0].nombre)
+        assertEquals(ModeloNotas.DECK_ID_SCANS, escritos[0].deckId)
+        assertEquals(listOf("稲妻"), escritos[0].notasWords.map { it.palabra })
     }
 
     @Test

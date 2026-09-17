@@ -13,6 +13,7 @@ import com.tatoh.dokushorenshu.datos.progreso.ProgresoHistoria
 import com.tatoh.dokushorenshu.dominio.BuscadorPalabras
 import com.tatoh.dokushorenshu.dominio.PalabraToken
 import com.tatoh.dokushorenshu.dominio.Tokenizador
+import com.tatoh.dokushorenshu.ui.comun.SeleccionTexto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle

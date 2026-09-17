@@ -24,6 +24,16 @@ Requiere JDK 17+ (probado con JDK 21) y Android SDK 36. Los assets NO se commite
   `oracion_palabra` 2-6 chars, fallback `oracion_kanji`). JVM puro.
 - `ui/` — Compose M3: Biblioteca, Lector (furigana pre-alineada del JSON,
   fin exclusivo), Detalle kanji, Acerca de (atribuciones).
+- `captura/` — overlay flotante (bubble) + captura con MediaProjection, portado de
+  Kanji-no-Ryoushi. El Service hace el OCR (ML Kit japonés, modelo embebido) y le
+  pasa a MainActivity el texto reconocido junto con la ruta de la imagen capturada,
+  por Intent. Android 10+; por debajo la pantalla Scan avisa y no ofrece nada.
+- `datos/RecortesRepo` + `ui/recortes/` — una captura arma un `Recorte`, no una
+  `Historia`: tipo propio (`datos/Recorte.kt`) sin metadata de catálogo, persistido
+  en `filesDir/recortes/<id>.json` + `<id>.jpg` opcional. Biblioteca lo muestra en
+  la pestaña "Notes"; `ui/recortes/RecorteScreen.kt` reusa el renderizado de
+  oraciones y la selección de texto que salieron de `ui/lector/` hacia `ui/comun/`
+  para no duplicarlos.
 
 ## Actualizar datos
 
