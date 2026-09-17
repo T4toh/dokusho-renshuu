@@ -1,16 +1,142 @@
 # Smoke de dispositivo — captura OCR (Plan E)
 
-> **PARCIALMENTE EJECUTADA — 2026-09-16.** Corrida en un POCO 2412DPC0AG,
-> HyperOS V816OS3.0, **Android 16 (API 36)**, navegación por gestos. Ese dispositivo
-> cubre las tres condiciones de riesgo del plan a la vez: ROM Xiaomi (los workarounds
-> de MIUI), Android 14+ (consentimiento de MediaProjection en cada captura) y gestos
-> (el margen de los botones del overlay).
+> **PARCIALMENTE EJECUTADA — 2026-09-16, ampliada el 2026-09-17.** Las dos corridas
+> fueron en un POCO 2412DPC0AG, HyperOS V816OS3.0, **Android 16 (API 36)**, navegación
+> por gestos. Ese dispositivo cubre las tres condiciones de riesgo del plan a la vez:
+> ROM Xiaomi (los workarounds de MIUI), Android 14+ (consentimiento de MediaProjection
+> en cada captura) y gestos (el margen de los botones del overlay).
 >
-> **Verificado en dispositivo:** pasos 4, 5 y 6 — burbuja, permisos, captura y OCR.
-> **Sin verificar todavía:** el recorte a la selección, la salida del overlay (paso 16)
-> y todo el tramo posterior al OCR (pasos 7 a 15, 17 a 20). Ver "Resultados" abajo.
+> **Verificado en dispositivo:** pasos 4, 5, 6, 16 y 17 — burbuja, permisos, captura,
+> OCR, **el recorte a la selección**, las dos salidas del overlay y el camino sin texto.
+> **Sin verificar todavía:** pasos 18, 19 y 20 (captura en frío, segundo tap durante el
+> OCR, revocar el permiso de overlay en caliente).
+> **Obsoletos:** los pasos 7 a 15 describen el flujo viejo (una captura = una historia
+> importada, pantalla `Import`). El Plan F lo reemplazó: una captura ahora crea un
+> `Recorte` y abre la vista de nota. El equivalente vigente está en
+> `docs/smoke-recortes.md`.
+>
+> **Bug encontrado y arreglado el 2026-09-17:** con la burbuja activa la app dejaba de
+> responder a toques y al Back. Ver "Hallazgo" abajo.
+
+## Resultados de la corrida del 2026-09-17 (conducida por adb)
+
+Build debug de `main` 82a2e86. La corrida se manejó con `adb shell input tap/swipe/keyevent`
+y `adb shell screencap`, no con el dedo — para los pasos de abajo da lo mismo (el sistema
+inyecta MotionEvent/KeyEvent reales), pero queda anotado porque el hallazgo del final
+merece una contraprueba con el dedo.
+
+**Unit tests antes de la corrida:** `./gradlew testDebugUnitTest` → **299 tests, 0 failures,
+0 errors**.
+
+### Paso 6 — el recorte a la selección: **PASA** (era el hueco principal del plan)
+
+Selección arrastrada de (77,562) a (1163,736) sobre el botón "Capture now" de la propia
+pantalla Scan, o sea un texto conocido de antemano:
+
+```
+Bitmap creado: 1220x2712
+Recorte escalado: Recorte(left=77, top=562, ancho=1086, alto=174)
+OCR devolvió 11 chars
+```
+
+El rectángulo escalado coincide exactamente con el arrastre (1163-77 = 1086, 736-562 = 174)
+y los 11 chars son exactamente `"Capture now"` — o sea el recorte mapeó a lo que el usuario
+eligió, no a otra parte de la pantalla. Confirmación cruzada en disco: la nota quedó como
+`files/recortes/1789656802773.json` con `"texto":"Capture now"`, y su `.jpg` pesa **10.7 KB**
+contra los **~355 KB** de las dos notas anteriores, que sí eran de pantalla completa.
+
+**Salvedad que queda abierta:** en este dispositivo el overlay y el bitmap miden lo mismo
+(1220x2712), así que el escalado corrió con factor **1:1**. El camino con factor ≠ 1 —el
+que producía el recorte corrido en la app vieja— sigue sin ejercitarse en hardware; lo
+cubren los 8 tests de `TextoOcrTest` en JVM. Para ejercitarlo haría falta un dispositivo
+donde el overlay no cubra las barras de sistema.
+
+### Paso 16 — salir del overlay: **PASA (a) y (b)**
+
+- **(a) Back:** `Back en el overlay: se trata como Cancel` → `stopOverlay()` → `Bubble
+  visible=true`. El overlay se cierra y la burbuja vuelve. (Inyectado como `KEYCODE_BACK`;
+  no se probó el gesto de borde.)
+- **(b) Cancel:** se ve **entero y por encima** de la franja de gestos (captura de pantalla
+  adjunta en la corrida) y el toque llega: `Botón CANCELAR presionado` → `stopOverlay()`.
+  O sea `margenInferiorBotones()` da bien en este dispositivo — era el único número que no
+  se había podido validar sin hardware.
+
+En los dos casos la app **no** pasó al frente y la burbuja siguió respondiendo.
+
+### Paso 17 — capturar un área sin texto: **PASA**
+
+Selección (200,1500)→(900,2000) sobre fondo liso:
+
+```
+Recorte escalado: Recorte(left=200, top=1500, ancho=695, alto=497)
+OCR devolvió 0 chars
+OCR sin texto: no se abre la app
+```
+
+No se creó ninguna nota (`files/recortes/` quedó en los mismos 6 archivos = 3 notas).
+
+### Tramo post-OCR: cubierto
+
+La captura del paso 6 aterrizó en la vista de nota con el texto reconocido y la imagen
+guardada, y la nota figura en la pestaña Notes de la biblioteca. Esto reemplaza a los
+pasos 7-15, escritos para el flujo de `Import` que el Plan F retiró.
+
+### Hallazgo: con la burbuja activa la app no responde a toques ni al Back
+
+Reproducido dos veces, y con contraprueba negativa:
+
+| Estado | Back en la pantalla Scan | Toque en `Close` / `Capture now` |
+| ------ | ------------------------ | -------------------------------- |
+| Sin burbuja | sale a la biblioteca | responden |
+| Con burbuja activa | no hace nada | no hacen nada |
+
+La diferencia la muestra `dumpsys window`: apenas arranca la burbuja, el foco de entrada
+se lo lleva su ventana, no la Activity.
+
+```
+# con burbuja
+mCurrentFocus=Window{8eb3f0d u0 com.tatoh.dokushorenshu}          <- ventana type=2038 del bubble
+# sin burbuja
+mCurrentFocus=Window{48999e9 u0 com.tatoh.dokushorenshu/...MainActivity}
+```
+
+La ventana de la burbuja mide 182x182 en (20,200), así que **no** está tapando los
+controles que dejan de responder: `mAttrs={(20,200)(182x182) ... ty=APPLICATION_OVERLAY}`.
+
+**Causa:** `FloatingBubbleService.showBubble()` arma la ventana **sin** `FLAG_NOT_FOCUSABLE`,
+a propósito y con el comentario puesto — *"Remover FLAG_NOT_FOCUSABLE para que MIUI
+reconozca la ventana"*. Es un workaround heredado de `Kanji-no-Ryoushi`. Una ventana
+`TYPE_APPLICATION_OVERLAY` focusable se queda con el foco de teclas mientras existe, que es
+la misma clase de problema que el fix del paso 16 arregló para el overlay de captura —
+sólo que acá sigue vivo, y encima en HyperOS se lleva puestos también los toques a la
+Activity (probablemente la protección anti-tapjacking de la ROM, que descarta eventos
+hacia una ventana obscurecida por otra de la misma app).
+
+**Arreglado el mismo día:** se le devolvió `FLAG_NOT_FOCUSABLE` a la ventana de la burbuja
+(`flags` pasa de `0x01040020` a `0x01040028`). La burbuja sólo maneja toques, no teclas, así
+que no necesita el foco.
+
+El workaround de MIUI **ya no hace falta** en esta ROM: con el flag puesto la burbuja se
+sigue viendo y funcionando igual. Reverificado en el mismo POCO, todo sobre el build parcheado:
+
+| Chequeo | Resultado |
+| ------- | --------- |
+| `mCurrentFocus` con la burbuja activa | `.../MainActivity` (antes: la ventana de la burbuja) |
+| Back con la burbuja activa | sale de Scan a la biblioteca |
+| Toques a la app con la burbuja activa | responden (cambio de pestaña Stories/Notes) |
+| Burbuja visible en HyperOS | sí |
+| Arrastre + snap al borde | `ACTION_UP recibido, moved=true`, snap OK |
+| Tap corto en la burbuja | `Click detectado! Ejecutando onBubbleClicked()` |
+| Captura completa | `Recorte escalado: Recorte(left=77, top=562, ancho=1077, alto=172)`, `OCR devolvió 11 chars`, nota nueva en disco |
+| Back en el overlay de captura (paso 16a) | `Back en el overlay: se trata como Cancel` |
+| Unit tests | 299 tests, 0 failures |
+
+Lo que queda sin poder verificar acá: si el workaround todavía hace falta en **MIUI viejo**
+(la ROM para la que se escribió, de 2025). No hay dispositivo. Si aparece un reporte de que
+la burbuja no se ve en MIUI antiguo, este flag es el primer sospechoso.
 
 ## Resultados de la corrida del 2026-09-16
+
 
 Evidencia de `adb logcat` (PID 18859 de la app; ojo que SurfaceFlinger de HyperOS usa
 el **mismo tag `ScreenCapture`** con otro PID — filtrar por `--pid`).
