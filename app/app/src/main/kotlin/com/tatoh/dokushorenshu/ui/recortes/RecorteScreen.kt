@@ -1,6 +1,7 @@
 package com.tatoh.dokushorenshu.ui.recortes
 
 import android.graphics.BitmapFactory
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +64,16 @@ fun RecorteScreen(vm: RecorteViewModel, onVerKanji: (String) -> Unit, onCerrar: 
     var confirmarQuitarImagen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { vm.cargar() }
+
+    // Toast y no Snackbar: es el mismo aviso que usa MainActivity cuando falla la
+    // creación del recorte, y sobrevive a que esta pantalla se recomponga entera.
+    // El borrador sigue en pantalla: el ViewModel no lo descarta ante un fallo.
+    LaunchedEffect(estado.error) {
+        estado.error?.let { mensaje ->
+            Toast.makeText(contexto, mensaje, Toast.LENGTH_LONG).show()
+            vm.errorMostrado()
+        }
+    }
 
     Scaffold(
         topBar = {

@@ -42,6 +42,10 @@ data class EstadoRecorte(
     val consulta: ConsultaPalabra? = null,
     val seleccion: SeleccionTexto? = null,
     val cargado: Boolean = false,
+    // Mensaje de error pendiente de mostrar (Toast). Vive en el estado y no en un
+    // canal aparte porque es el único aviso de esta pantalla y la Screen ya observa
+    // este StateFlow; se limpia con errorMostrado() apenas se muestra.
+    val error: String? = null,
 ) {
     val textoSeleccionado: String? get() = seleccion?.let { s ->
         planas.getOrNull(s.indiceOracion)?.oracion?.texto?.substring(s.inicio, s.fin)
@@ -169,13 +173,25 @@ class RecorteViewModel(
 
     fun quitarImagen() {
         viewModelScope.launch {
-            val imagen = withContext(ioDispatcher) {
-                recortesRepo.quitarImagen(id)
-                // Se RE-LEE el disco en vez de asumir que se borró: si delete() falló
-                // (quitarImagen devuelve false y lo loguea), el .jpg sigue ahí y la
-                // miniatura tiene que seguir ofreciéndose. Mostrarla como quitada sería
-                // mentir hasta que el usuario reabre la nota y la ve reaparecer.
-                recortesRepo.archivoImagen(id)
+            // runCatching adentro del withContext, igual que la creación en MainActivity:
+            // quitarImagen() reescribe el JSON vía guardar(), que lanza si el rename o el
+            // writeText fallan, y una excepción suelta en viewModelScope mata el proceso.
+            val resultado = withContext(ioDispatcher) {
+                runCatching {
+                    recortesRepo.quitarImagen(id)
+                    // Se RE-LEE el disco en vez de asumir que se borró: si delete() falló
+                    // (quitarImagen devuelve false y lo loguea), el .jpg sigue ahí y la
+                    // miniatura tiene que seguir ofreciéndose. Mostrarla como quitada sería
+                    // mentir hasta que el usuario reabre la nota y la ve reaparecer.
+                    recortesRepo.archivoImagen(id)
+                }
+            }
+            val imagen = resultado.getOrElse {
+                // Estado intacto a propósito: no se sabe si el .jpg sobrevivió, y mostrar
+                // la miniatura como quitada sin haberla quitado es la mentira que el
+                // chequeo de delete() en el repo existe para evitar.
+                _estado.value = _estado.value.copy(error = "Could not remove the image")
+                return@launch
             }
             val estado = _estado.value
             _estado.value = estado.copy(
@@ -214,17 +230,39 @@ class RecorteViewModel(
         val texto = estado.textoEditado
         if (texto.isBlank()) return
         viewModelScope.launch {
+            // runCatching adentro del withContext, igual que la creación en MainActivity:
+            // guardar() lanza si el rename atómico o el writeText fallan, y una excepción
+            // suelta en viewModelScope mata el proceso entero.
             val guardado = withContext(ioDispatcher) {
-                val nuevo = creadorRecortes.editar(recorte, texto)
-                nuevo to aplanar(nuevo.parrafos, tokenizador)
+                runCatching {
+                    val nuevo = creadorRecortes.editar(recorte, texto)
+                    nuevo to aplanar(nuevo.parrafos, tokenizador)
+                }
             }
-            _estado.value = _estado.value.copy(
-                recorte = guardado.first,
-                planas = guardado.second,
-                editando = false,
-                textoEditado = "",
-                seleccion = null,
-            )
+            guardado.onSuccess { (nuevo, planas) ->
+                _estado.value = _estado.value.copy(
+                    recorte = nuevo,
+                    planas = planas,
+                    editando = false,
+                    textoEditado = "",
+                    seleccion = null,
+                )
+            }
+            guardado.onFailure {
+                // El borrador NO se toca: ni se sale de `editando` ni se limpia
+                // `textoEditado`. Este texto lo tipeó el usuario a mano y el disco es el
+                // único lugar donde NO quedó, así que salir de la edición acá lo perdería
+                // para siempre — justo lo que la spec (sección "Errores") prohíbe: "el
+                // texto queda en pantalla, nunca se pierde en silencio". El aviso alcanza;
+                // reintentar Save es del usuario.
+                _estado.value = _estado.value.copy(error = "Could not save the note")
+            }
         }
+    }
+
+    /** La Screen avisa que ya mostró el Toast: sin esto el mensaje se repetiría en cada
+     *  recomposición con key nueva (rotar, por ejemplo). */
+    fun errorMostrado() {
+        _estado.value = _estado.value.copy(error = null)
     }
 }

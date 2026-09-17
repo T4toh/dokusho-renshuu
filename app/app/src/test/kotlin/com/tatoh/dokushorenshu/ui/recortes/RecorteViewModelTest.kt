@@ -213,6 +213,44 @@ class RecorteViewModelTest {
         assertEquals("今日はいい天気です。", repo().cargar(recorte.id)!!.texto)
     }
 
+    /** VM cuyo guardado en disco SIEMPRE falla: el creador escribe en un "directorio"
+     *  que en realidad es un archivo, así que mkdirs() no hace nada y el writeText del
+     *  .tmp tira FileNotFoundException — el mismo camino que un disco lleno o un rename
+     *  rechazado. La lectura sigue yendo al repo bueno, así que cargar() funciona. */
+    private fun vmConGuardadoRoto(recorte: Recorte): RecorteViewModel {
+        val roto = RecortesRepo(carpeta.newFile("no-soy-un-directorio"), log = { _, _ -> })
+        return RecorteViewModel(
+            id = recorte.id,
+            recortesRepo = repo(),
+            creadorRecortes = CreadorRecortes(GeneradorFurigana(tokenizador), roto),
+            tokenizador = tokenizador,
+            buscador = BuscadorPalabras(DiccionarioFake()),
+            progresoDao = ProgresoDaoFake(),
+            ioDispatcher = dispatcher,
+        )
+    }
+
+    @Test
+    fun `si el guardado falla, el borrador queda en pantalla en vez de perderse`() = runTest {
+        val recorte = crear("今日はいい天気です。")
+        val vm = vmConGuardadoRoto(recorte)
+        vm.cargar(); advanceUntilIdle()
+
+        vm.empezarEdicion()
+        vm.setTextoEditado("犬が走った。")
+        // Sin el runCatching de guardarEdicion() esta línea propaga la excepción fuera
+        // del viewModelScope: en el dispositivo mata el proceso, acá tumba el test.
+        vm.guardarEdicion(); advanceUntilIdle()
+
+        assertTrue("no puede salir del modo edición", vm.estado.value.editando)
+        assertEquals("el texto tipeado a mano sobrevive", "犬が走った。", vm.estado.value.textoEditado)
+        assertNotNull("y el fallo se avisa, nunca en silencio", vm.estado.value.error)
+        assertEquals("en disco sigue el texto viejo", "今日はいい天気です。", repo().cargar(recorte.id)!!.texto)
+
+        vm.errorMostrado()
+        assertNull("el aviso no se repite tras mostrarse", vm.estado.value.error)
+    }
+
     // ---- Imagen ----
 
     @Test
