@@ -30,6 +30,8 @@ import com.tatoh.dokushorenshu.ui.kanji.DetalleKanjiScreen
 import com.tatoh.dokushorenshu.ui.kanji.DetalleKanjiViewModel
 import com.tatoh.dokushorenshu.ui.lector.LectorScreen
 import com.tatoh.dokushorenshu.ui.lector.LectorViewModel
+import com.tatoh.dokushorenshu.ui.recortes.ListaRecortesScreen
+import com.tatoh.dokushorenshu.ui.recortes.RecortesViewModel
 import com.tatoh.dokushorenshu.ui.tema.TemaDokusho
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -80,6 +82,9 @@ class MainActivity : ComponentActivity() {
                         val vm: BibliotecaViewModel = viewModel(factory = viewModelFactory {
                             initializer { BibliotecaViewModel(contenedor.historias, contenedor.progresoDb.dao(), contenedor.diccionario) }
                         })
+                        val recortesVm: RecortesViewModel = viewModel(factory = viewModelFactory {
+                            initializer { RecortesViewModel(contenedor.recortes) }
+                        })
                         // BibliotecaScreen dispara vm.cargar() con LaunchedEffect (Task 9).
                         BibliotecaScreen(
                             vm = vm,
@@ -88,7 +93,15 @@ class MainActivity : ComponentActivity() {
                             onVerKanji = { k -> nav.navigate("kanji/$k") },
                             onExport = { nav.navigate("export") },
                             onImportar = { nav.navigate("importar") },
-                            onScan = { nav.navigate("captura?permiso=false") },
+                            contenidoNotas = {
+                                ListaRecortesScreen(
+                                    vm = recortesVm,
+                                    // no-op: la ruta "recorte/{id}" recién existe en la Task 7,
+                                    // que reemplaza esto por nav.navigate("recorte/$id").
+                                    onAbrirRecorte = {},
+                                    onScan = { nav.navigate("captura?permiso=false") },
+                                )
+                            },
                         )
                     }
                     composable("lector/{id}") { entrada ->
