@@ -17,6 +17,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
+/** Selección de un rango de tokens dentro de UNA oración (backlog feedback de uso
+ *  2026-07-13: buscar en el browser expresiones/frases que el diccionario no tiene).
+ *  [inicio]/[fin] son offsets de chars sobre `oracion.texto` (fin EXCLUSIVO, mismo
+ *  contrato que `PalabraToken`): el rango cubre tokens completos, y el texto
+ *  seleccionado es el substring crudo — partículas intermedias incluidas, sin
+ *  furigana.
+ *
+ *  Vive en ui/comun, con la [BarraSeleccion] que la muestra: el lector y la vista de
+ *  recorte la usan igual, y tenerla en uno de los dos paquetes obligaba al otro a
+ *  depender de su hermano — justo el acoplamiento que ui/comun vino a sacar. */
+data class SeleccionTexto(val indiceOracion: Int, val inicio: Int, val fin: Int)
+
 /** Barra contextual de selección: texto elegido + Search web / Copy / cancelar.
  *  Reemplaza a Previous/Next en el bottomBar mientras hay selección activa. */
 @Composable

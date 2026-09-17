@@ -12,8 +12,8 @@ import com.tatoh.dokushorenshu.dominio.CreadorRecortes
 import com.tatoh.dokushorenshu.dominio.PalabraToken
 import com.tatoh.dokushorenshu.dominio.Tokenizador
 import com.tatoh.dokushorenshu.ui.comun.OracionPlana
+import com.tatoh.dokushorenshu.ui.comun.SeleccionTexto
 import com.tatoh.dokushorenshu.ui.comun.aplanar
-import com.tatoh.dokushorenshu.ui.lector.SeleccionTexto
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

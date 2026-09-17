@@ -14,6 +14,7 @@ import com.tatoh.dokushorenshu.dominio.ConsultaPalabra
 import com.tatoh.dokushorenshu.dominio.PalabraToken
 import com.tatoh.dokushorenshu.dominio.Tokenizador
 import com.tatoh.dokushorenshu.ui.comun.OracionPlana
+import com.tatoh.dokushorenshu.ui.comun.SeleccionTexto
 import com.tatoh.dokushorenshu.ui.comun.aplanar
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -21,18 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-/** Selección de un rango de tokens dentro de UNA oración (backlog feedback de uso
- *  2026-07-13: buscar en el browser expresiones/frases que el diccionario no tiene).
- *  [inicio]/[fin] son offsets de chars sobre `oracion.texto` (fin EXCLUSIVO, mismo
- *  contrato que [PalabraToken]): el rango cubre tokens completos, y el texto
- *  seleccionado es el substring crudo — partículas intermedias incluidas, sin
- *  furigana.
- *
- *  Se queda acá, y no en ui/comun con BarraSeleccion, solo para no tener que tocar los
- *  tests del lector (que la nombran sin import por estar en el mismo paquete): la vista
- *  de recorte la importa desde acá. */
-data class SeleccionTexto(val indiceOracion: Int, val inicio: Int, val fin: Int)
 
 /** indiceActual == -1 representa la portada (Task C3): título, autor, stats y
  *  botón Start/Continue reading. "Previous" desde la oración 0 vuelve acá. */
