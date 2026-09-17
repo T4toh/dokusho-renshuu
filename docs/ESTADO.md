@@ -26,6 +26,7 @@
 | E    | app/ — captura OCR con overlay flotante (migración de Kanji-no-Ryoushi) | ✅ Completo ([PR #19](https://github.com/T4toh/dokusho-renshuu/pull/19) mergeado; smoke de dispositivo ampliado el 2026-09-17 — pasos 6, 16 y 17 OK, ver `docs/smoke-captura-ocr.md`) |
 | F    | app/ — recortes/notas: la captura crea su propio tipo de contenido en vez de una historia | ✅ Completo (mergeado a `main` en `4892b14`, sin PR; smoke parcial en dispositivo 2026-09-17, ver `docs/smoke-recortes.md`) |
 | fix  | app/ — la burbuja no se queda con el foco (Back y toques muertos con la burbuja activa) + smoke de captura OCR cerrado | ✅ Completo ([PR #20](https://github.com/T4toh/dokusho-renshuu/pull/20)) |
+| fix  | app/ — cancelar la captura ya no quema el permiso de MediaProjection + el segundo pedido vuelve a mostrar el diálogo | ✅ Completo ([PR #21](https://github.com/T4toh/dokusho-renshuu/pull/21)) |
 
 ## Datos operativos
 

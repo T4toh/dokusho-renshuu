@@ -1,11 +1,15 @@
 package com.tatoh.dokushorenshu
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,17 +17,18 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.tatoh.dokushorenshu.captura.FloatingBubbleService
 import com.tatoh.dokushorenshu.captura.ScreenCaptureService
 import com.tatoh.dokushorenshu.ui.acerca.AcercaScreen
 import com.tatoh.dokushorenshu.ui.biblioteca.BibliotecaScreen
 import com.tatoh.dokushorenshu.ui.biblioteca.BibliotecaViewModel
 import com.tatoh.dokushorenshu.ui.captura.CapturaScreen
+import com.tatoh.dokushorenshu.ui.captura.SOPORTADO
+import com.tatoh.dokushorenshu.ui.captura.intentDeProyeccion
+import com.tatoh.dokushorenshu.ui.captura.iniciarCaptura
 import com.tatoh.dokushorenshu.ui.export.ExportScreen
 import com.tatoh.dokushorenshu.ui.export.ExportViewModel
 import com.tatoh.dokushorenshu.ui.importar.ImportScreen
@@ -100,10 +105,32 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                // El diálogo del sistema se lanza desde acá y NO desde CapturaScreen:
+                // con la pantalla Scan ya arriba, launchSingleTop reusa su entrada del
+                // backstack, así que un LaunchedEffect de la pantalla no vuelve a correr
+                // y el segundo tap del bubble se quedaba sin diálogo — la app pasaba al
+                // frente y no hacía nada. Acá el launcher es de la Activity y no depende
+                // de qué pantalla esté arriba.
+                val lanzadorProyeccion = rememberLauncherForActivityResult(
+                    ActivityResultContracts.StartActivityForResult()
+                ) { resultado ->
+                    val datos = resultado.data
+                    if (resultado.resultCode == Activity.RESULT_OK && datos != null) {
+                        iniciarCaptura(this@MainActivity, resultado.resultCode, datos)
+                    }
+                }
                 LaunchedEffect(pedirPermiso) {
                     if (pedirPermiso) {
+                        // Consumido antes de lanzar nada: el flag es de la Activity y se
+                        // rearma sólo con un Intent nuevo, así que rotar no repite el
+                        // diálogo (leerIntent() ya borra la action del Intent consumido).
                         pedirPermisoPendiente.value = false
-                        nav.navigate("captura?permiso=true") { launchSingleTop = true }
+                        nav.navigate("captura") { launchSingleTop = true }
+                        // Sin permiso de overlay no hay captura posible: la pantalla Scan
+                        // que se acaba de abrir muestra el botón para concederlo.
+                        if (SOPORTADO && Settings.canDrawOverlays(this@MainActivity)) {
+                            lanzadorProyeccion.launch(intentDeProyeccion(this@MainActivity))
+                        }
                     }
                 }
                 NavHost(navController = nav, startDestination = "biblioteca") {
@@ -126,7 +153,7 @@ class MainActivity : ComponentActivity() {
                                 ListaRecortesScreen(
                                     vm = recortesVm,
                                     onAbrirRecorte = { id -> nav.navigate("recorte/$id") },
-                                    onScan = { nav.navigate("captura?permiso=false") },
+                                    onScan = { nav.navigate("captura") },
                                 )
                             },
                         )
@@ -190,17 +217,8 @@ class MainActivity : ComponentActivity() {
                             onCerrar = { nav.popBackStack() },
                         )
                     }
-                    composable(
-                        "captura?permiso={permiso}",
-                        arguments = listOf(navArgument("permiso") {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        }),
-                    ) { entrada ->
-                        CapturaScreen(
-                            pedirPermisoAlEntrar = entrada.arguments!!.getBoolean("permiso"),
-                            onCerrar = { nav.popBackStack() },
-                        )
+                    composable("captura") {
+                        CapturaScreen(onCerrar = { nav.popBackStack() })
                     }
                     composable("acerca") { AcercaScreen() }
                 }
