@@ -11,6 +11,8 @@ import com.tatoh.dokushorenshu.dominio.ConsultaPalabra
 import com.tatoh.dokushorenshu.dominio.CreadorRecortes
 import com.tatoh.dokushorenshu.dominio.PalabraToken
 import com.tatoh.dokushorenshu.dominio.Tokenizador
+import com.tatoh.dokushorenshu.dominio.ocr.RecortadorOcr
+import com.tatoh.dokushorenshu.dominio.ocr.Recorte as RectanguloOcr
 import com.tatoh.dokushorenshu.ui.comun.OracionPlana
 import com.tatoh.dokushorenshu.ui.comun.SeleccionTexto
 import com.tatoh.dokushorenshu.ui.comun.aplanar
@@ -39,6 +41,8 @@ data class EstadoRecorte(
     val editando: Boolean = false,
     val textoEditado: String = "",
     val imagenExpandida: Boolean = false,
+    val modoRecorte: Boolean = false,
+    val seleccionImagen: RectanguloOcr? = null,
     val consulta: ConsultaPalabra? = null,
     val seleccion: SeleccionTexto? = null,
     val cargado: Boolean = false,
@@ -67,6 +71,7 @@ class RecorteViewModel(
     private val tokenizador: Tokenizador,
     private val buscador: BuscadorPalabras,
     private val progresoDao: ProgresoDao,
+    private val recortador: RecortadorOcr,
     // Inyectable solo para tests (mismo patrón que LectorViewModel): en producción
     // siempre Dispatchers.IO — aplanar() bloquea en Kuromoji.
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -264,5 +269,72 @@ class RecorteViewModel(
      *  recomposición con key nueva (rotar, por ejemplo). */
     fun errorMostrado() {
         _estado.value = _estado.value.copy(error = null)
+    }
+
+    /** Entra al modo recorte sobre la imagen guardada. Expande la miniatura de paso: sin
+     *  imagen a la vista no hay nada que recortar. Sin `.jpg` en disco no hace nada — la
+     *  Screen tampoco ofrece la acción, pero el estado manda. */
+    fun empezarRecorte() {
+        val estado = _estado.value
+        if (estado.imagen == null) return
+        // La selección de TEXTO se limpia al entrar, misma regla que la edición: sus
+        // offsets apuntan a las planas y el modo recorte tapa la lista con otra cosa.
+        _estado.value = estado.copy(
+            modoRecorte = true,
+            imagenExpandida = true,
+            seleccionImagen = null,
+            seleccion = null,
+        )
+    }
+
+    /** El recuadro que el usuario arrastró, en coordenadas del área DIBUJADA (la imagen
+     *  se muestra con ContentScale.FillWidth, así que no coincide con el bitmap; el
+     *  escalado es del recortador). null mientras no haya arrastrado nada. */
+    fun setSeleccionImagen(seleccion: RectanguloOcr?) {
+        _estado.value = _estado.value.copy(seleccionImagen = seleccion)
+    }
+
+    fun cancelarRecorte() {
+        _estado.value = _estado.value.copy(modoRecorte = false, seleccionImagen = null)
+    }
+
+    /** Re-corre el OCR sobre el pedazo elegido de la imagen y deja el texto reconocido
+     *  EN EL EDITOR, sin guardarlo: el texto viejo sobrevive en disco hasta que el
+     *  usuario toque Save. Es la válvula para el texto chico y para el recorte que salió
+     *  mal en la captura original, sin volver a la app de origen.
+     *
+     *  Sin recuadro no hace nada y no avisa: no es un error del usuario, todavía no
+     *  eligió. Con recuadro pero sin texto sí avisa — ahí eligió y no salió nada.
+     *
+     *  runCatching adentro del withContext, igual que guardarEdicion(): reconocer()
+     *  lanza si ML Kit se traba (timeout de 15 s) o si el .jpg no se puede decodificar,
+     *  y una excepción suelta en viewModelScope mata el proceso. */
+    fun escanearSeleccion(anchoDibujado: Int, altoDibujado: Int) {
+        val estado = _estado.value
+        val archivo = estado.imagen ?: return
+        val seleccion = estado.seleccionImagen ?: return
+        viewModelScope.launch {
+            val resultado = withContext(ioDispatcher) {
+                runCatching { recortador.reconocer(archivo, seleccion, anchoDibujado, altoDibujado) }
+            }
+            val texto = resultado.getOrElse {
+                // Se queda en modo recorte con el recuadro puesto: reintentar es un tap.
+                _estado.value = _estado.value.copy(error = "Could not scan the selection")
+                return@launch
+            }
+            if (texto.isBlank()) {
+                // Mismo texto que el aviso del Service al capturar un área vacía: es el
+                // mismo hecho para el usuario, no conviene que suene distinto.
+                _estado.value = _estado.value.copy(error = "No text found in the selected area")
+                return@launch
+            }
+            _estado.value = _estado.value.copy(
+                modoRecorte = false,
+                seleccionImagen = null,
+                editando = true,
+                textoEditado = texto,
+                seleccion = null,
+            )
+        }
     }
 }
