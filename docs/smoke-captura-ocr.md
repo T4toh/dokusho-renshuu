@@ -1,22 +1,91 @@
 # Smoke de dispositivo — captura OCR (Plan E)
 
-> **PARCIALMENTE EJECUTADA — 2026-09-16, ampliada el 2026-09-17.** Las dos corridas
-> fueron en un POCO 2412DPC0AG, HyperOS V816OS3.0, **Android 16 (API 36)**, navegación
-> por gestos. Ese dispositivo cubre las tres condiciones de riesgo del plan a la vez:
-> ROM Xiaomi (los workarounds de MIUI), Android 14+ (consentimiento de MediaProjection
-> en cada captura) y gestos (el margen de los botones del overlay).
+> **EJECUTADA COMPLETA — 2026-09-16 y 2026-09-17 (tres corridas).** Todas en un POCO
+> 2412DPC0AG, HyperOS V816OS3.0, **Android 16 (API 36)**, navegación por gestos. Ese
+> dispositivo cubre las tres condiciones de riesgo del plan a la vez: ROM Xiaomi (los
+> workarounds de MIUI), Android 14+ (consentimiento de MediaProjection en cada captura)
+> y gestos (el margen de los botones del overlay).
 >
-> **Verificado en dispositivo:** pasos 4, 5, 6, 16 y 17 — burbuja, permisos, captura,
-> OCR, **el recorte a la selección**, las dos salidas del overlay y el camino sin texto.
-> **Sin verificar todavía:** pasos 18, 19 y 20 (captura en frío, segundo tap durante el
-> OCR, revocar el permiso de overlay en caliente).
+> **Verificado en dispositivo:** pasos 4, 5, 6, 16, 17, **18, 19 y 20** — burbuja,
+> permisos, captura, OCR, el recorte a la selección, las dos salidas del overlay, el
+> camino sin texto, la captura en frío tras reiniciar, el segundo tap durante el OCR y
+> revocar el permiso de overlay en caliente. No quedan pasos pendientes.
 > **Obsoletos:** los pasos 7 a 15 describen el flujo viejo (una captura = una historia
 > importada, pantalla `Import`). El Plan F lo reemplazó: una captura ahora crea un
 > `Recorte` y abre la vista de nota. El equivalente vigente está en
 > `docs/smoke-recortes.md`.
 >
-> **Bug encontrado y arreglado el 2026-09-17:** con la burbuja activa la app dejaba de
-> responder a toques y al Back. Ver "Hallazgo" abajo.
+> **Dos bugs encontrados y arreglados el 2026-09-17:** (1) con la burbuja activa la app
+> dejaba de responder a toques y al Back — ver "Hallazgo" abajo; (2) cancelar la captura
+> quemaba el permiso de MediaProjection y el segundo pedido no mostraba el diálogo — ver
+> la corrida de la tarde.
+
+## Corrida del 2026-09-17, cierre: pasos 18, 19 y 20
+
+Build debug de `main` `da92143` (post PR #21), mismo POCO. Conducida por adb salvo donde
+se aclara. Los tres pasos que quedaban abiertos desde el 16 **PASAN**.
+
+### Paso 18 — captura en frío: **PASA**
+
+`adb reboot` a las 15:54:49 (`sys.boot_completed=1`), y se capturó apenas se pudo, a las
+**15:56:45** — sin esperar a que el sistema se asentara. El pipeline salió entero a la
+primera:
+
+```
+15:56:45.017  MediaProjection obtenido
+15:56:45.047  VirtualDisplay creado: 1220x2712
+15:56:45.278  Selección: Rect(200, 380 - 1048, 1049), overlay: 1220x2712
+15:56:45.636  OCR devolvió 196 chars
+```
+
+Nota `1789671405675.json` + `.jpg` en disco y la vista de nota abierta con el texto. Cero
+`Screen capture failed`, y sobre todo cero overlays esfumados en silencio, que era el
+desenlace que el paso marca como bug. **No hace falta tocar el `postDelayed` de 200 ms**:
+no se necesitó ni un reintento, así que no hay evidencia que justifique cambiar timings
+probados por un `setOnImageAvailableListener`.
+
+### Paso 19 — segundo tap mientras corre el OCR: **PASA**
+
+```
+15:57:50.794  Bubble visible=true                           <- la burbuja vuelve
+15:57:50.914  Click detectado!                              <- segundo tap, OCR en curso
+15:57:50.963  Tenemos credenciales - iniciando captura SIN abrir app
+15:57:50.965  isCapturing = true
+15:57:50.965  W/ScreenCapture: Ya hay una captura en curso, ignorando
+15:57:51.001  OCR devolvió 194 chars                        <- la primera termina normal
+```
+
+Las tres contrapruebas que pide el paso: **una sola** nota nueva (`1789671471032`), ningún
+segundo overlay, y la burbuja viva después (tap a las 15:58:09 → `Click detectado!` y pidió
+permiso, correcto con el token ya quemado).
+
+**Cómo se enganchó, que importa para repetirlo:** la ventana real es angosta —desde que la
+burbuja reaparece hasta que el OCR termina— y depende de cuánto texto haya que reconocer.
+Con 40 chars dura ~150 ms y un intento previo cayó 15 ms tarde (`ACTION_DOWN` adentro,
+`ACTION_UP` afuera: el click se dispara en el UP). Con **194 chars la ventana sube a
+~360 ms** y ahí sí entra. Para reproducirlo: capturar un área densa en texto y disparar el
+segundo tap ~420 ms después del botón `Capture`, encadenado en el mismo `adb shell` para no
+pagar el ida y vuelta al host.
+
+### Paso 20 — revocar el permiso de overlay en caliente: **PASA**
+
+Con la burbuja corriendo, `adb shell appops set com.tatoh.dokushorenshu SYSTEM_ALERT_WINDOW
+deny`: la burbuja **desaparece sola**, el proceso sigue vivo y el log no tiene una sola línea
+`FATAL` ni `AndroidRuntime`. Los toques en su posición vieja pasan a la app de abajo
+(`ACTION_OUTSIDE`). Es uno de los tres desenlaces que el paso da por aceptables; no hubo
+crash, que es lo único que sería bug. El permiso se devolvió con `appops set ... allow`.
+
+### Nota de método: adb no siempre le pega a la burbuja
+
+`adb shell input tap` sobre la ventana de la burbuja se pierde con frecuencia: el evento
+termina en la Activity de abajo y el log no registra ni `ACTION_DOWN`. `input swipe x y x y
+<ms>` (un tap con duración) sí le llega de forma fiable. Para la UI de Compose de la app es
+al revés: `input tap` anda y `input swipe` no. Contraprueba de que no es un bug de la app:
+con el dedo la burbuja responde siempre (`15:39:42 Click detectado!`), incluso con Dokusho
+en primer plano.
+
+Ojo también con el gesto de borde: un `input swipe` que arranque en x < ~80 lo interpreta
+el sistema como Back y cierra el overlay en vez de dibujar la selección.
 
 ## Corrida del 2026-09-17, tarde (con el dedo): cancelar quemaba el permiso
 
