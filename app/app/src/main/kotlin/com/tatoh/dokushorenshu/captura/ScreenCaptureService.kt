@@ -559,7 +559,13 @@ class ScreenCaptureService : Service() {
                 anchoOverlay, altoOverlay, bitmap.width, bitmap.height,
             )
         }
-        android.util.Log.d("ScreenCapture", "Recorte escalado: $recorte")
+        // Se loguean los tres: con "Recorte escalado: null" solo no se distingue
+        // "el usuario no arrastró" (seleccion=null, arrastre < 10 px) de "la
+        // selección era inusable" (escalarRecorte devolvió null).
+        android.util.Log.d(
+            "ScreenCapture",
+            "Selección: $seleccion, overlay: ${anchoOverlay}x$altoOverlay, recorte escalado: $recorte",
+        )
 
         val recortado = if (recorte != null) {
             Bitmap.createBitmap(bitmap, recorte.left, recorte.top, recorte.ancho, recorte.alto)
@@ -678,10 +684,10 @@ class ScreenCaptureService : Service() {
     private fun terminarServicio() {
         cleanup()
 
-        // cleanup() (arriba) ya borró las credenciales de MediaProjection: Android 14+
-        // invalida el token después de cada sesión, así que reusarlo no es opción y
-        // guardarlo sólo lograría que la próxima captura falle con SecurityException.
-        // El próximo tap del bubble vuelve a pedir el permiso, y eso es lo esperado.
+        // cleanup() (arriba) borra las credenciales sólo si hubo sesión de
+        // MediaProjection: tras una captura real el token ya está quemado y el próximo
+        // tap del bubble tiene que volver a pedir permiso, pero si esto es un Cancel las
+        // credenciales siguen sirviendo y se conservan.
 
         isCapturing = false
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -698,6 +704,14 @@ class ScreenCaptureService : Service() {
     }
 
     private fun cleanup() {
+        // Android 14+ quema el token al usarlo, así que después de una sesión real hay
+        // que borrar las credenciales: el próximo tap del bubble pide el permiso de
+        // nuevo. Pero cancelar el overlay NO abre ninguna sesión —acá mediaProjection
+        // es null— y borrarlas ahí obligaba a re-consentir de gusto: cada Cancel dejaba
+        // al bubble abriendo la app sin capturar. Si aun así el token quedara rancio,
+        // captureScreen() atrapa la SecurityException y las limpia ahí.
+        val huboSesion = mediaProjection != null
+
         virtualDisplay?.release()
         imageReader?.close()
         mediaProjection?.stop()
@@ -705,11 +719,11 @@ class ScreenCaptureService : Service() {
         virtualDisplay = null
         imageReader = null
         mediaProjection = null
-        
-        // INVALIDAR credenciales después de cada captura
-        // Android 14+ solo permite usar el token UNA vez
-        FloatingBubbleService.captureResultCode = 0
-        FloatingBubbleService.captureResultData = null
+
+        if (huboSesion) {
+            FloatingBubbleService.captureResultCode = 0
+            FloatingBubbleService.captureResultData = null
+        }
     }
     
     override fun onDestroy() {

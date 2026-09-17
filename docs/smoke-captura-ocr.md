@@ -18,6 +18,64 @@
 > **Bug encontrado y arreglado el 2026-09-17:** con la burbuja activa la app dejaba de
 > responder a toques y al Back. Ver "Hallazgo" abajo.
 
+## Corrida del 2026-09-17, tarde (con el dedo): cancelar quemaba el permiso
+
+Build debug de `fix/permiso-captura-tras-cancelar`, mismo POCO. Esta corrida fue **con
+el dedo**, no por adb, así que también sirve de contraprueba de la corrida inyectada.
+
+### Síntoma reportado
+
+"Toco la burbuja y me vuelve a la app sin hacer nada." Después de cancelar una captura,
+cada tap del bubble abría Dokusho en la pantalla Scan y ahí se terminaba: ni overlay ni
+diálogo de permiso. La única salida era `Close` y volver a entrar.
+
+### Dos causas encadenadas
+
+1. **`cleanup()` invalidaba las credenciales de MediaProjection siempre**, también al
+   cancelar el overlay — y cancelar no abre ninguna sesión, el token nunca se usó. El
+   comentario del código ("Android 14+ invalida el token después de cada sesión") es
+   cierto para una captura real, no para un Cancel. Evidencia:
+
+   ```
+   14:52:17.925 Botón CANCELAR presionado → stopOverlay()
+   14:52:23.826 captureResultCode = 0, captureResultData = null
+                NO hay credenciales - abriendo MainActivity para pedir permisos
+   ```
+
+2. **El segundo pedido de permiso no mostraba el diálogo.** El tap sin credenciales hacía
+   `nav.navigate("captura?permiso=true") { launchSingleTop = true }`, y con la pantalla
+   Scan ya arriba singleTop **reusa la entrada del backstack**: `CapturaScreen` no se
+   recomponía de cero, su `yaPedido` (`rememberSaveable`) seguía en `true` y el
+   `LaunchedEffect` no volvía a correr. La app pasaba al frente y no hacía nada.
+
+### Arreglos
+
+1. `cleanup()` borra las credenciales sólo si hubo sesión (`mediaProjection != null`).
+2. El launcher del diálogo subió a `MainActivity`, fuera del NavHost, así no depende de
+   qué pantalla esté arriba. Se fueron el arg `?permiso=` de la ruta, el parámetro
+   `pedirPermisoAlEntrar` y el guard `yaPedido`.
+
+### Verificación en dispositivo (build parcheado)
+
+| Chequeo | Resultado |
+| ------- | --------- |
+| Cancel en el overlay → tap del bubble | `captureResultCode = -1` → `Tenemos credenciales - iniciando captura SIN abrir app` → overlay directo, sin re-consentir |
+| Captura real después de ese Cancel | `MediaProjection obtenido`, `VirtualDisplay creado` — **un token nunca usado sigue siendo válido**, que era la incógnita del arreglo 1 |
+| `SecurityException` de token expirado | no aparece en todo el log |
+| Recorte + OCR | `Selección: Rect(50, 1124 - 1009, 1456), overlay: 1220x2712, recorte escalado: Recorte(left=50, top=1124, ancho=959, alto=332)` → `OCR devolvió 26 chars` |
+| Unit tests | 299 tests, 0 failures |
+
+**Sin verificar todavía:** el arreglo 2 (cancelar el **diálogo del sistema** y volver a
+tocar la burbuja → el diálogo tiene que reaparecer). La corrida nunca ejercitó ese camino:
+el permiso se concedió a la primera.
+
+### De paso: el log del recorte ya distingue los dos "null"
+
+`Recorte escalado: null` solo no dejaba saber si el usuario no había arrastrado o si la
+selección era inusable (defecto anotado en la corrida del 16). Ahora la línea lleva los
+tres valores: `Selección: null` = no arrastró (< 10 px); `Selección` con valor y
+`recorte escalado: null` = la selección no servía.
+
 ## Resultados de la corrida del 2026-09-17 (conducida por adb)
 
 Build debug de `main` 82a2e86. La corrida se manejó con `adb shell input tap/swipe/keyevent`

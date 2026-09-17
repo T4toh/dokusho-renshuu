@@ -26,11 +26,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -42,7 +40,31 @@ import com.tatoh.dokushorenshu.captura.ScreenCaptureService
 /** MediaProjection con recorte por overlay necesita Android 10+. minSdk sigue en
  *  26 porque el lector anda perfecto sin esto: la feature se deshabilita, no se
  *  sube el piso de la app. */
-private val SOPORTADO = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+internal val SOPORTADO = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+/** El Intent del diálogo de consentimiento del sistema. */
+internal fun intentDeProyeccion(context: Context): Intent =
+    (context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager)
+        .createScreenCaptureIntent()
+
+/** Guarda las credenciales para el bubble y arranca el Service de captura.
+ *  Compartido entre el botón "Capture now" de esta pantalla y el pedido que dispara
+ *  el tap del bubble, que se atiende en MainActivity. */
+internal fun iniciarCaptura(context: Context, resultCode: Int, datos: Intent) {
+    // El bubble guarda las credenciales para poder disparar capturas sin pasar por la
+    // Activity. Android 14+ las invalida después de cada sesión y el Service las limpia
+    // solo (sólo cuando la sesión existió de verdad: cancelar el overlay no las toca).
+    FloatingBubbleService.captureResultCode = resultCode
+    FloatingBubbleService.captureResultData = datos
+    ContextCompat.startForegroundService(
+        context,
+        Intent(context, ScreenCaptureService::class.java).apply {
+            action = ScreenCaptureService.ACTION_START_CAPTURE
+            putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, resultCode)
+            putExtra(ScreenCaptureService.EXTRA_RESULT_DATA, datos)
+        },
+    )
+}
 
 private data class EstadoPermisos(val overlay: Boolean, val notificaciones: Boolean)
 
@@ -55,7 +77,7 @@ private fun leerPermisos(context: Context) = EstadoPermisos(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CapturaScreen(pedirPermisoAlEntrar: Boolean, onCerrar: () -> Unit) {
+fun CapturaScreen(onCerrar: () -> Unit) {
     val context = LocalContext.current
     var permisos by remember { mutableStateOf(leerPermisos(context)) }
     var bubbleActivo by remember { mutableStateOf(FloatingBubbleService.isRunning) }
@@ -76,38 +98,7 @@ fun CapturaScreen(pedirPermisoAlEntrar: Boolean, onCerrar: () -> Unit) {
     ) { resultado ->
         val datos = resultado.data
         if (resultado.resultCode == Activity.RESULT_OK && datos != null) {
-            // El bubble guarda las credenciales para poder disparar capturas sin
-            // pasar por la Activity. Android 14+ las invalida después de cada
-            // sesión y el Service las limpia solo.
-            FloatingBubbleService.captureResultCode = resultado.resultCode
-            FloatingBubbleService.captureResultData = datos
-            ContextCompat.startForegroundService(
-                context,
-                Intent(context, ScreenCaptureService::class.java).apply {
-                    action = ScreenCaptureService.ACTION_START_CAPTURE
-                    putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, resultado.resultCode)
-                    putExtra(ScreenCaptureService.EXTRA_RESULT_DATA, datos)
-                },
-            )
-        }
-    }
-
-    fun pedirProyeccion() {
-        val manager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        lanzadorProyeccion.launch(manager.createScreenCaptureIntent())
-    }
-
-    // Llegada desde el tap del bubble sin credenciales vigentes: disparar el
-    // diálogo directo, sin obligar a un tap más. El flag existe porque el argumento
-    // de navegación vive en la entrada del backstack y sobrevive a la composición:
-    // sin él, el diálogo del sistema vuelve a saltar al rotar y al volver acá con
-    // popBackStack desde la nota recién creada. rememberSaveable para que aguante
-    // rotación y muerte de proceso, no remember.
-    var yaPedido by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(pedirPermisoAlEntrar) {
-        if (pedirPermisoAlEntrar && !yaPedido && SOPORTADO && permisos.overlay) {
-            yaPedido = true
-            pedirProyeccion()
+            iniciarCaptura(context, resultado.resultCode, datos)
         }
     }
 
@@ -161,7 +152,7 @@ fun CapturaScreen(pedirPermisoAlEntrar: Boolean, onCerrar: () -> Unit) {
             val listo = permisos.overlay && permisos.notificaciones
 
             Button(
-                onClick = { pedirProyeccion() },
+                onClick = { lanzadorProyeccion.launch(intentDeProyeccion(context)) },
                 enabled = listo,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Capture now") }
