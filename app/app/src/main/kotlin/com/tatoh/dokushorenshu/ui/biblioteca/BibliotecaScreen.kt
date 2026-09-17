@@ -110,7 +110,10 @@ fun BibliotecaScreen(
         )
     }) { relleno ->
         Column(Modifier.padding(relleno)) {
-            SecondaryTabRow(selectedTabIndex = pestania) {
+            // Primary y no Secondary: Stories/Notes son destinos de primer nivel bajo el
+            // propio TopAppBar de esta pantalla, no un filtro dentro de una sección ya
+            // elegida (ese es el caso de Secondary).
+            PrimaryTabRow(selectedTabIndex = pestania) {
                 Tab(selected = pestania == 0, onClick = { pestania = 0 }, text = { Text("Stories") })
                 Tab(selected = pestania == 1, onClick = { pestania = 1 }, text = { Text("Notes") })
             }
