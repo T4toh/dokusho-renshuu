@@ -581,10 +581,19 @@ class ScreenCaptureService : Service() {
      *  Devuelve null si falla: el recorte se crea igual, sin imagen. */
     private fun guardarImagen(bitmap: Bitmap): File? = try {
         val destino = RecortesRepo.imagenPendiente(this)
-        destino.outputStream().use { salida ->
+        // compress() avisa que falló DEVOLVIENDO false, no lanzando: el catch de abajo no
+        // cubre este caso. Sin mirar el retorno, outputStream() ya creó el archivo y
+        // devolveríamos un File apuntando a un JPEG vacío o truncado — peor que no tener
+        // imagen, porque el recorte muestra una imagen rota en vez de ninguna.
+        val ok = destino.outputStream().use { salida ->
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, salida)
         }
-        destino
+        if (ok) {
+            destino
+        } else {
+            android.util.Log.e("ScreenCapture", "compress() devolvió false: JPEG inservible")
+            null
+        }
     } catch (e: Throwable) {
         android.util.Log.e("ScreenCapture", "no se pudo guardar la imagen de la captura", e)
         null
