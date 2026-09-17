@@ -1,8 +1,5 @@
 package com.tatoh.dokushorenshu.ui.lector
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -17,10 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tatoh.dokushorenshu.dominio.PalabraToken
+import com.tatoh.dokushorenshu.ui.comun.BarraSeleccion
 import com.tatoh.dokushorenshu.ui.comun.ItemOracion
+import com.tatoh.dokushorenshu.ui.comun.buscarEnWeb
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -357,42 +355,4 @@ private fun Portada(estado: EstadoLector, modifier: Modifier = Modifier) {
             )
         }
     }
-}
-
-/** Barra contextual de selección: texto elegido + Search web / Copy / cancelar.
- *  Reemplaza a Previous/Next en el bottomBar mientras hay selección activa. */
-@Composable
-private fun BarraSeleccion(
-    texto: String,
-    onBuscarWeb: () -> Unit,
-    onCopiar: () -> Unit,
-    onCancelar: () -> Unit,
-) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            texto,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onCopiar) { Text("Copy") }
-        Button(onClick = onBuscarWeb) { Text("Search web") }
-        TextButton(onClick = onCancelar) { Text("✕") }
-    }
-}
-
-/** Abre la búsqueda web del texto seleccionado en el BROWSER DEFAULT del usuario:
- *  ACTION_VIEW con la URL de búsqueda. Antes se intentaba ACTION_WEB_SEARCH
- *  primero, pero en MIUI (y otros OEM) lo captura la app de búsqueda
- *  (Google/Xiaomi) que abre su webview embebido en vez del browser elegido por
- *  el usuario — feedback de uso 2026-07-16. Si no hay browser (emulador
- *  pelado), no crashear: la selección queda para Copy. */
-private fun buscarEnWeb(contexto: Context, texto: String) {
-    val url = "https://www.google.com/search?q=${Uri.encode(texto)}"
-    runCatching { contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
 }

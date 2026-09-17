@@ -27,7 +27,11 @@ import kotlinx.coroutines.withContext
  *  [inicio]/[fin] son offsets de chars sobre `oracion.texto` (fin EXCLUSIVO, mismo
  *  contrato que [PalabraToken]): el rango cubre tokens completos, y el texto
  *  seleccionado es el substring crudo — partículas intermedias incluidas, sin
- *  furigana. */
+ *  furigana.
+ *
+ *  Se queda acá, y no en ui/comun con BarraSeleccion, solo para no tener que tocar los
+ *  tests del lector (que la nombran sin import por estar en el mismo paquete): la vista
+ *  de recorte la importa desde acá. */
 data class SeleccionTexto(val indiceOracion: Int, val inicio: Int, val fin: Int)
 
 /** indiceActual == -1 representa la portada (Task C3): título, autor, stats y

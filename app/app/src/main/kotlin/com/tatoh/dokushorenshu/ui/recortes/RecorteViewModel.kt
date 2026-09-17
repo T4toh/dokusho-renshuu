@@ -13,6 +13,7 @@ import com.tatoh.dokushorenshu.dominio.PalabraToken
 import com.tatoh.dokushorenshu.dominio.Tokenizador
 import com.tatoh.dokushorenshu.ui.comun.OracionPlana
 import com.tatoh.dokushorenshu.ui.comun.aplanar
+import com.tatoh.dokushorenshu.ui.lector.SeleccionTexto
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +40,20 @@ data class EstadoRecorte(
     val textoEditado: String = "",
     val imagenExpandida: Boolean = false,
     val consulta: ConsultaPalabra? = null,
+    val seleccion: SeleccionTexto? = null,
     val cargado: Boolean = false,
+) {
+    val textoSeleccionado: String? get() = seleccion?.let { s ->
+        planas.getOrNull(s.indiceOracion)?.oracion?.texto?.substring(s.inicio, s.fin)
+    }
+}
+
+/** Resultado intermedio de cargar(): lo que sale del disco, antes de mezclarlo con el
+ *  estado vivo (que puede tener una edición a medio tipear). */
+private data class DatosRecorte(
+    val recorte: Recorte?,
+    val planas: List<OracionPlana>,
+    val imagen: File?,
 )
 
 class RecorteViewModel(
@@ -56,25 +70,66 @@ class RecorteViewModel(
     private val _estado = MutableStateFlow(EstadoRecorte())
     val estado: StateFlow<EstadoRecorte> = _estado
 
-    /** Idempotente a propósito: la Screen la dispara con LaunchedEffect(Unit), que vuelve
-     *  a correr al rotar (la composición se recrea, el ViewModel no). Recargar ahí
-     *  pisaría una edición en curso con el texto de disco. */
+    /** NUNCA puede pisar un borrador en curso, y eso es por construcción, no por suerte:
+     *  solo escribe los campos que salen del disco (recorte/planas/imagen/cargado) vía
+     *  copy() sobre el estado vigente, así `editando` y `textoEditado` sobreviven aunque
+     *  alguien agregue mañana un refresh forzado. Importa porque la Screen la dispara con
+     *  LaunchedEffect(Unit), que vuelve a correr al rotar: la composición se recrea, el
+     *  ViewModel no. El corte por `cargado` es aparte y es solo de costo — evita repetir
+     *  el aplanar() de Kuromoji en cada rotación. */
     fun cargar() {
         if (_estado.value.cargado) return
         viewModelScope.launch {
-            _estado.value = withContext(ioDispatcher) {
+            val datos = withContext(ioDispatcher) {
                 val recorte = recortesRepo.cargar(id)
-                EstadoRecorte(
+                DatosRecorte(
                     recorte = recorte,
                     planas = recorte?.let { aplanar(it.parrafos, tokenizador) }.orEmpty(),
                     imagen = recortesRepo.archivoImagen(id),
-                    cargado = true,
                 )
             }
+            _estado.value = _estado.value.copy(
+                recorte = datos.recorte,
+                planas = datos.planas,
+                imagen = datos.imagen,
+                cargado = true,
+            )
         }
     }
 
-    fun tocarPalabra(token: PalabraToken) {
+    /** Long-press: ancla (o re-ancla) la selección en ese token. No abre el diccionario
+     *  — eso es del tap simple. Misma mecánica que el lector, sin el enfocar(): acá no
+     *  hay oración "actual" que mover. */
+    fun iniciarSeleccion(indice: Int, token: PalabraToken) {
+        if (indice !in _estado.value.planas.indices) return
+        _estado.value = _estado.value.copy(seleccion = SeleccionTexto(indice, token.inicio, token.fin))
+    }
+
+    /** Tap sobre un token: con selección activa en la MISMA oración extiende el rango a
+     *  la unión [min(inicio), max(fin)] en vez de abrir el diccionario; en cualquier otro
+     *  caso (sin selección, o en otra oración) limpia la selección vieja y consulta.
+     *  Idéntico a LectorViewModel.tapPalabra, salvo que allá el limpiado lo hacía
+     *  enfocar() de paso. */
+    fun tapPalabra(indice: Int, token: PalabraToken) {
+        val seleccion = _estado.value.seleccion
+        if (seleccion != null && seleccion.indiceOracion == indice) {
+            _estado.value = _estado.value.copy(
+                seleccion = seleccion.copy(
+                    inicio = minOf(seleccion.inicio, token.inicio),
+                    fin = maxOf(seleccion.fin, token.fin),
+                ),
+            )
+            return
+        }
+        _estado.value = _estado.value.copy(seleccion = null)
+        tocarPalabra(token)
+    }
+
+    fun limpiarSeleccion() {
+        _estado.value = _estado.value.copy(seleccion = null)
+    }
+
+    private fun tocarPalabra(token: PalabraToken) {
         viewModelScope.launch {
             val consulta = withContext(ioDispatcher) {
                 // El idHistoria que se registra es "recorte:$id", y el literal NO se puede
@@ -121,7 +176,9 @@ class RecorteViewModel(
     fun empezarEdicion() {
         val estado = _estado.value
         val recorte = estado.recorte ?: return
-        _estado.value = estado.copy(editando = true, textoEditado = recorte.texto)
+        // La selección se limpia al entrar y al salir de la edición: sus offsets apuntan
+        // a oraciones que el TextField oculta y que guardarEdicion() regenera desde cero.
+        _estado.value = estado.copy(editando = true, textoEditado = recorte.texto, seleccion = null)
     }
 
     fun cancelarEdicion() {
@@ -150,6 +207,7 @@ class RecorteViewModel(
                 planas = guardado.second,
                 editando = false,
                 textoEditado = "",
+                seleccion = null,
             )
         }
     }

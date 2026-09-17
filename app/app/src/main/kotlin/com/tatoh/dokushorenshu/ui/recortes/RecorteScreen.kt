@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -36,8 +36,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import com.tatoh.dokushorenshu.ui.comun.BarraSeleccion
 import com.tatoh.dokushorenshu.ui.comun.ItemOracion
+import com.tatoh.dokushorenshu.ui.comun.buscarEnWeb
 import com.tatoh.dokushorenshu.ui.lector.PalabraSheet
 import java.io.File
 
@@ -53,6 +58,8 @@ import java.io.File
 fun RecorteScreen(vm: RecorteViewModel, onVerKanji: (String) -> Unit, onCerrar: () -> Unit) {
     val estado by vm.estado.collectAsState()
     val estadoSheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val contexto = LocalContext.current
+    val portapapeles = LocalClipboardManager.current
     var confirmarQuitarImagen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { vm.cargar() }
@@ -79,6 +86,21 @@ fun RecorteScreen(vm: RecorteViewModel, onVerKanji: (String) -> Unit, onCerrar: 
                     }
                 },
             )
+        },
+        bottomBar = {
+            // Solo existe mientras hay selección activa: sin ella esta pantalla no tiene
+            // barra inferior (no hay Previous/Next que reemplazar, como en el lector).
+            estado.textoSeleccionado?.let { seleccionado ->
+                BarraSeleccion(
+                    texto = seleccionado,
+                    onBuscarWeb = { buscarEnWeb(contexto, seleccionado) },
+                    onCopiar = {
+                        portapapeles.setText(AnnotatedString(seleccionado))
+                        vm.limpiarSeleccion()
+                    },
+                    onCancelar = vm::limpiarSeleccion,
+                )
+            }
         },
     ) { relleno ->
         // Recorte borrado desde la lista con esta pantalla abierta: no crashear,
@@ -115,7 +137,7 @@ fun RecorteScreen(vm: RecorteViewModel, onVerKanji: (String) -> Unit, onCerrar: 
                     )
                 }
             } else {
-                items(estado.planas, key = { "${it.parrafo}:${it.oracionEnParrafo}" }) { plana ->
+                itemsIndexed(estado.planas, key = { indice, _ -> indice }) { indice, plana ->
                     ItemOracion(
                         // Siempre true: el atenuado por foco es del lector paginado; acá
                         // no hay oración "actual" que valga la pena distinguir.
@@ -123,11 +145,14 @@ fun RecorteScreen(vm: RecorteViewModel, onVerKanji: (String) -> Unit, onCerrar: 
                         plana = plana,
                         furiganaActiva = true,
                         katakanaActiva = true,
-                        onTapPalabra = vm::tocarPalabra,
-                        // Sin selección libre de rangos: eso es del lector, donde hay
-                        // oraciones largas. Acá el texto entero entra en pantalla.
-                        onLongPressPalabra = {},
-                        rangoSeleccion = null,
+                        onTapPalabra = { token -> vm.tapPalabra(indice, token) },
+                        onLongPressPalabra = { token -> vm.iniciarSeleccion(indice, token) },
+                        // rango de selección SOLO si pertenece a esta oración (mismo
+                        // criterio que en el lector, ver doc de ItemOracion): así un
+                        // cambio de selección solo recompone los items cuyo param cambió.
+                        rangoSeleccion = estado.seleccion
+                            ?.takeIf { it.indiceOracion == indice }
+                            ?.let { it.inicio until it.fin },
                     )
                 }
             }
