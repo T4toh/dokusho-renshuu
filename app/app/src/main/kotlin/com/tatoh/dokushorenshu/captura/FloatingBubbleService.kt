@@ -141,17 +141,20 @@ class FloatingBubbleService : Service() {
         val bubbleSize = (BUBBLE_SIZE * resources.displayMetrics.density).toInt()
         
         // Configurar parámetros del bubble
-        // En MIUI necesitamos hacer la ventana FOCUSABLE pero con flags especiales
         val layoutParams = WindowManager.LayoutParams(
             bubbleSize,
             bubbleSize,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            // SOLUCIÓN PARA MIUI:
-            // - Remover FLAG_NOT_FOCUSABLE para que MIUI reconozca la ventana
+            // - FLAG_NOT_FOCUSABLE: la burbuja no toma el foco de entrada. Sin este flag
+            //   —se sacaba a propósito, como workaround de MIUI heredado de
+            //   Kanji-no-Ryoushi— la ventana se queda con el foco mientras exista: el Back
+            //   muere en toda la UI y en HyperOS se van también los toques a la Activity.
+            //   La burbuja sólo maneja toques, no teclas, así que no necesita el foco.
             // - FLAG_NOT_TOUCH_MODAL: permite toques fuera del bubble sin bloquear otras apps
             // - FLAG_WATCH_OUTSIDE_TOUCH: recibe notificaciones de toques externos
             // - FLAG_LAYOUT_NO_LIMITS: permite posicionar en cualquier parte de la pantalla
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
