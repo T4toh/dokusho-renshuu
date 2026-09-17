@@ -71,6 +71,28 @@ class ProgresoDaoTest {
         assertEquals(2, dao.todasPalabras().size)
     }
 
+    /** El LIKE de verdad, contra SQLite: el fake de los tests de ArmadorMazos reproduce
+     *  este filtro con `startsWith`, así que si el SQL se rompiera (un `%` de menos, un
+     *  `-` en vez de `:`) ningún test de dominio lo notaría. Las dos queries tienen que
+     *  ser complementarias: toda fila cae en exactamente una.
+     *
+     *  "recorte-123" es el caso que justifica el `:` del prefijo: `generarId()` sanea
+     *  los títulos con `[\/:*?"<>|.\s　]+` → `_`, o sea que un id de historia puede
+     *  traer un guion pero nunca dos puntos. Con `recorte-` de prefijo, una historia
+     *  llamada "recorte-123" se iría al mazo de los recortes. */
+    @Test
+    fun `palabrasDeHistorias y palabrasDeRecortes parten la tabla por el prefijo recorte dos puntos`() = runTest {
+        val dao = db().dao()
+        dao.registrarPalabra(PalabraTocada("momotaro", "犬", timestamp = 1L))
+        dao.registrarPalabra(PalabraTocada("recorte-123", "亀", timestamp = 2L))  // historia, no recorte
+        dao.registrarPalabra(PalabraTocada("recorte:100", "稲妻", timestamp = 3L))
+
+        // como set: el SELECT no lleva ORDER BY, el orden de filas no es parte del contrato
+        assertEquals(setOf("犬", "亀"), dao.palabrasDeHistorias().map { it.termino }.toSet())
+        assertEquals(listOf("稲妻"), dao.palabrasDeRecortes().map { it.termino })
+        assertEquals(dao.todasPalabras().size, dao.palabrasDeHistorias().size + dao.palabrasDeRecortes().size)
+    }
+
     @Test
     fun `kanjisTaggeados excluye los vistos sin dificultad`() = runTest {
         val dao = db().dao()

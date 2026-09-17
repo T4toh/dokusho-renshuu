@@ -21,9 +21,14 @@ import java.io.File
 
 /** Un botón por mazo en la pantalla — nunca un archivo combinado (spec Plan 4a:
  *  "dos mazos"). */
-enum class TipoExport { WORDS, KANJI, STORIES }
+enum class TipoExport { WORDS, KANJI, STORIES, SCANS }
 
-data class ContadoresExport(val words: Int, val kanjisTaggeados: Int, val historias: Int = 0)
+data class ContadoresExport(
+    val words: Int,
+    val kanjisTaggeados: Int,
+    val historias: Int = 0,
+    val scans: Int = 0,
+)
 
 sealed interface EstadoExport {
     data object Idle : EstadoExport
@@ -70,10 +75,13 @@ class ExportViewModel(
         viewModelScope.launch {
             try {
                 val (nuevosContadores, resumen) = withContext(ioDispatcher) {
-                    val words = progresoDao.todasPalabras().map { it.termino }.distinct().size
+                    // palabrasDeHistorias/palabrasDeRecortes y NO todasPalabras: el
+                    // contador tiene que decir lo mismo que va a exportar cada botón.
+                    val words = progresoDao.palabrasDeHistorias().map { it.termino }.distinct().size
+                    val scans = progresoDao.palabrasDeRecortes().map { it.termino }.distinct().size
                     val kanjis = progresoDao.kanjisTaggeados().size
                     val historias = armadorMazos.resumenHistorias()
-                    ContadoresExport(words, kanjis, historias.size) to historias
+                    ContadoresExport(words, kanjis, historias.size, scans) to historias
                 }
                 _contadores.value = nuevosContadores
                 _historiasStories.value = resumen
@@ -114,6 +122,23 @@ class ExportViewModel(
                             val base = "${resultado.notasKanji.size} kanji"
                             if (resultado.kanjisOmitidos > 0) "$base (${resultado.kanjisOmitidos} skipped)" else base
                         }
+                        TipoExport.SCANS -> {
+                            // Deck propio (no el de Words): es toda la razón de ser de
+                            // este mazo. Va por escribirMazos porque el `escribir` de
+                            // 4a fija los decks Words/Kanji.
+                            val notas = armadorMazos.armarScans()
+                            escribirMazos(
+                                destino,
+                                listOf(
+                                    MazoNotas(
+                                        deckId = ModeloNotas.DECK_ID_SCANS,
+                                        nombre = ModeloNotas.NOMBRE_DECK_SCANS,
+                                        notasWords = notas,
+                                    ),
+                                ),
+                            )
+                            "${notas.size} words"
+                        }
                         TipoExport.STORIES -> {
                             val resultadoHistorias = armadorMazos.armarHistorias(seleccion = _seleccionadas.value)
                             val mazos = resultadoHistorias.mazos.map { mazo ->
@@ -150,5 +175,6 @@ class ExportViewModel(
         TipoExport.WORDS -> "dokusho-words.apkg"
         TipoExport.KANJI -> "dokusho-kanji.apkg"
         TipoExport.STORIES -> "dokusho-stories.apkg"
+        TipoExport.SCANS -> "dokusho-scans.apkg"
     }
 }

@@ -14,6 +14,12 @@ data class NotaWords(
     val significados: String,
     val tag: String = "",
     val oraciones: List<String> = emptyList(),
+    // GUID alternativo para el mazo Scans: "scan:<termino>". Si compartiera
+    // "words:<termino>" con el mazo Dokusho — Words, una palabra tocada en una
+    // historia Y en un recorte tendría el mismo guid en los dos mazos, y el import de
+    // Anki (match global por guid) pisaría una nota con la otra en vez de dejar una en
+    // cada mazo. Mismo mecanismo que NotaKanji.claveGuidPropia.
+    val claveGuidPropia: String? = null,
 ) {
     init {
         require(oraciones.size <= 5) { "NotaWords: máximo 5 oraciones, llegaron ${oraciones.size}" }
@@ -30,7 +36,7 @@ data class NotaWords(
      *  significados/oraciones — si el diccionario o las oraciones de ejemplo cambian
      *  en un re-export, el guid no debe cambiar (spec: "re-export actualiza, no
      *  duplica"). */
-    val claveGuid: String get() = "words:$palabra"
+    val claveGuid: String get() = claveGuidPropia ?: "words:$palabra"
 }
 
 /** Nota del mazo "Dokusho — Kanji" (Kanji, OnYomi, KunYomi, Significados, Dificultad,
@@ -76,9 +82,15 @@ object ModeloNotas {
     const val DECK_ID_WORDS: Long = 1720000000101L
     const val DECK_ID_KANJI: Long = 1720000000102L
 
+    /** El mazo Scans reusa el MODELO Words (mismos 9 campos), pero necesita deck
+     *  propio: es lo que mantiene el vocabulario de los recortes separado del de las
+     *  historias en Anki. Sigue la serie de IDs fijos de 4a (…101/…102). */
+    const val DECK_ID_SCANS: Long = 1720000000103L
+
     const val NOMBRE_DECK_WORDS: String = "Dokusho — Words"
     const val NOMBRE_DECK_KANJI: String = "Dokusho — Kanji"
     const val NOMBRE_DECK_STORIES: String = "Dokusho — Stories"
+    const val NOMBRE_DECK_SCANS: String = "Dokusho — Scans"
     const val NOMBRE_MODELO_WORDS: String = "Dokusho Words"
     const val NOMBRE_MODELO_KANJI: String = "Dokusho Kanji"
 

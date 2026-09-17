@@ -95,9 +95,28 @@ interface ProgresoDao {
 
     /** Todas las filas, de todas las historias — el dedupe por término (una
      *  palabra puede tocarse en más de una historia) lo hace el caller
-     *  (`ArmadorMazos`, Plan 4a). */
+     *  (`ArmadorMazos`, Plan 4a).
+     *
+     *  OJO: mezcla historias y recortes. Nada que arme un mazo debería usarla; para
+     *  eso están [palabrasDeHistorias] y [palabrasDeRecortes]. Hoy no tiene callers
+     *  de producción, solo su test. */
     @Query("SELECT * FROM palabras_tocadas")
     suspend fun todasPalabras(): List<PalabraTocada>
+
+    /** El prefijo `recorte:` separa las palabras tocadas en recortes de las tocadas
+     *  en historias, sin migración de Room (idHistoria ya es TEXT). Un id de historia
+     *  nunca puede contener `:` porque ImportadorHistoria.generarId() lo sanea, así
+     *  que el LIKE no puede confundir una historia con un recorte (con `-` sí pasaría:
+     *  una historia titulada "recorte-123" genera el id `recorte-123`).
+     *
+     *  Son dos queries complementarias sobre la misma tabla y NO una sola con filtro
+     *  en Kotlin: el mazo Words usa la primera y el mazo Scans la segunda, y que el
+     *  filtro viva en el SQL hace imposible olvidárselo en un call site nuevo. */
+    @Query("SELECT * FROM palabras_tocadas WHERE idHistoria NOT LIKE 'recorte:%'")
+    suspend fun palabrasDeHistorias(): List<PalabraTocada>
+
+    @Query("SELECT * FROM palabras_tocadas WHERE idHistoria LIKE 'recorte:%'")
+    suspend fun palabrasDeRecortes(): List<PalabraTocada>
 
     /** Solo kanjis taggeados (easy/medium/hard) — insumo del mazo de kanji
      *  (Plan 4a): los vistos-sin-tag son ruido de consulta, spec explícito. */

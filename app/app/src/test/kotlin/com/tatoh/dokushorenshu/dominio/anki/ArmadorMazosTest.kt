@@ -8,6 +8,7 @@ import com.tatoh.dokushorenshu.datos.Oracion
 import com.tatoh.dokushorenshu.datos.OracionEjemplo
 import com.tatoh.dokushorenshu.datos.Palabra
 import com.tatoh.dokushorenshu.datos.Parrafo
+import com.tatoh.dokushorenshu.datos.RecortesRepo
 import com.tatoh.dokushorenshu.datos.progreso.KanjiTocado
 import com.tatoh.dokushorenshu.datos.progreso.PalabraTocada
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDaoFake
@@ -27,10 +28,18 @@ class ArmadorMazosTest {
         dirImportadas = File.createTempFile("imp", "").let { it.delete(); it.mkdirs(); it },
     )
 
+    /** Repo de recortes sobre un dir vacío: estos tests son de los mazos Words/Kanji/
+     *  Stories, que no tocan recortes. La separación Words/Scans la cubre
+     *  SeparacionMazosTest. */
+    private fun recortesRepo() = RecortesRepo(
+        File.createTempFile("rec", "").let { it.delete(); it.mkdirs(); it },
+        log = { _, _ -> },  // android.util.Log no existe en JVM plano
+    )
+
     private fun armador(
         dao: ProgresoDaoFake = ProgresoDaoFake(),
         diccionario: DiccionarioFake = DiccionarioFake(),
-    ) = ArmadorMazos(dao, diccionario, historiasRepo())
+    ) = ArmadorMazos(dao, diccionario, historiasRepo(), recortesRepo())
 
     /** Repo con DOS historias locales (momotaro + una sintética derivada por
      *  reemplazo de texto) — necesario para probar el filtro de `seleccion`,
@@ -56,7 +65,7 @@ class ArmadorMazosTest {
     private fun armadorDos(
         dao: ProgresoDaoFake = ProgresoDaoFake(),
         diccionario: DiccionarioFake = DiccionarioFake(),
-    ) = ArmadorMazos(dao, diccionario, historiasRepoDos())
+    ) = ArmadorMazos(dao, diccionario, historiasRepoDos(), recortesRepo())
 
     // --- armarWords: enriquecido con Diccionario ---
 
