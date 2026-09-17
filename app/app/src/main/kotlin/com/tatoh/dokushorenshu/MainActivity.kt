@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -37,6 +38,7 @@ import com.tatoh.dokushorenshu.ui.recortes.RecorteViewModel
 import com.tatoh.dokushorenshu.ui.recortes.RecortesViewModel
 import com.tatoh.dokushorenshu.ui.tema.TemaDokusho
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -68,25 +70,34 @@ class MainActivity : ComponentActivity() {
         setContent {
             TemaDokusho {
                 val nav = rememberNavController()
-                val captura by capturaPendiente
                 val pedirPermiso by pedirPermisoPendiente
-                // Llegó una captura: se vuelve recorte y se abre. Se consume ANTES de la
-                // IO para que rotar en el medio no la vuelva a crear. singleTop para no
-                // apilar pantallas si llegan varias capturas.
-                LaunchedEffect(captura) {
-                    val actual = captura ?: return@LaunchedEffect
-                    capturaPendiente.value = null
-                    val (texto, ruta) = actual
-                    // crear() bloquea en Kuromoji: jamás en el main thread.
-                    val recorte = withContext(Dispatchers.IO) {
-                        runCatching { contenedor.creadorRecortes.crear(texto, ruta?.let(::File)) }
-                    }
-                    recorte.onSuccess { nav.navigate("recorte/${it.id}") { launchSingleTop = true } }
-                    recorte.onFailure {
-                        // Sin aviso el usuario se queda mirando la biblioteca sin saber que
-                        // su captura se perdió: el texto original ya no existe en ningún lado.
-                        android.util.Log.e("MainActivity", "no se pudo crear el recorte", it)
-                        Toast.makeText(this@MainActivity, "Could not save the capture", Toast.LENGTH_LONG).show()
+                // Llegó una captura: se vuelve recorte y se abre. singleTop para no apilar
+                // pantallas si llegan varias capturas.
+                //
+                // La key es Unit y NO `capturaPendiente`: keyeado en el valor, el propio
+                // `= null` de abajo cambia la key y LaunchedEffect cancela su job mientras
+                // sigue suspendido en el withContext esperando a Kuromoji — el recorte se
+                // crea pero el navigate nunca corre. Con Unit, la identidad del efecto no
+                // depende del valor y consumirlo no cancela nada. No volver a
+                // LaunchedEffect(captura) "para simplificar".
+                LaunchedEffect(Unit) {
+                    snapshotFlow { capturaPendiente.value }.filterNotNull().collect { actual ->
+                        // Consumido ANTES de la IO: si se limpiara recién después de navegar,
+                        // rotar en el medio dejaría el valor y la nueva composición crearía un
+                        // segundo recorte de la misma captura.
+                        capturaPendiente.value = null
+                        val (texto, ruta) = actual
+                        // crear() bloquea en Kuromoji: jamás en el main thread.
+                        val recorte = withContext(Dispatchers.IO) {
+                            runCatching { contenedor.creadorRecortes.crear(texto, ruta?.let(::File)) }
+                        }
+                        recorte.onSuccess { nav.navigate("recorte/${it.id}") { launchSingleTop = true } }
+                        recorte.onFailure {
+                            // Sin aviso el usuario se queda mirando la biblioteca sin saber que
+                            // su captura se perdió: el texto original ya no existe en ningún lado.
+                            android.util.Log.e("MainActivity", "no se pudo crear el recorte", it)
+                            Toast.makeText(this@MainActivity, "Could not save the capture", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
                 LaunchedEffect(pedirPermiso) {
