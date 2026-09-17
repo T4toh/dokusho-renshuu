@@ -111,4 +111,16 @@ class RecortesRepoTest {
         assertNull(r.archivoImagen("100"))
         assertTrue("el recorte sigue cargando", r.cargar("100") != null)
     }
+
+    @Test
+    fun `guardar con renombrar forzado a fallar cae al fallback de copiar y borrar`() {
+        // renameTo() nunca falla dentro de un mismo TemporaryFolder: para ejercitar el
+        // fallback copy+delete hay que forzarlo con el seam inyectado.
+        val r = RecortesRepo(carpeta.root, log = { _, _ -> }, renombrar = { _, _ -> false })
+        val pendiente = carpeta.newFile("captura-pendiente.jpg").apply { writeBytes(byteArrayOf(9, 8, 7)) }
+        val guardado = r.guardar(recorte("100", 100L), pendiente)
+        assertTrue(guardado.tieneImagen)
+        assertEquals(listOf<Byte>(9, 8, 7), r.archivoImagen("100")!!.readBytes().toList())
+        assertFalse("el pendiente se borra tras copiarlo, si no la próxima captura hereda sus bytes", pendiente.exists())
+    }
 }

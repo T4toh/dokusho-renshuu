@@ -12,6 +12,9 @@ class RecortesRepo(
     private val dir: File,
     // inyectable: android.util.Log no existe en los tests de JVM plano
     private val log: (String, Throwable) -> Unit = { msg, t -> android.util.Log.w("RecortesRepo", msg, t) },
+    // inyectable: el fallback copy+delete de moverImagen() no se puede forzar con
+    // un TemporaryFolder real, porque renameTo() ahí nunca falla.
+    private val renombrar: (File, File) -> Boolean = File::renameTo,
 ) {
 
     companion object {
@@ -81,10 +84,15 @@ class RecortesRepo(
     private fun moverImagen(origen: File, destino: File): Boolean = try {
         // renameTo falla entre dispositivos de archivo distintos; ambos están en
         // filesDir, pero el copy+delete es el fallback barato y seguro.
-        if (origen.renameTo(destino)) true
+        if (renombrar(origen, destino)) true
         else {
             origen.copyTo(destino, overwrite = true)
-            origen.delete()
+            // Si el borrado del origen falla, el pendiente queda con los bytes de ESTA
+            // captura: la próxima la reutilizaría como si fuera suya. delete() no lanza
+            // ante ese fallo, así que hay que chequear el resultado a mano y avisar.
+            if (!origen.delete()) {
+                log("no se pudo borrar el pendiente tras copiarlo: ${origen.path}", IllegalStateException("delete() devolvió false"))
+            }
             true
         }
     } catch (e: Exception) {
@@ -92,6 +100,9 @@ class RecortesRepo(
         false
     }
 
+    /** El JSON es lo que define si el recorte existe: un `.jpg` huérfano (por ejemplo,
+     *  si su borrado falla acá) no lo resucita, así que el resultado depende solo de
+     *  borrar el JSON. */
     fun borrar(id: String): Boolean {
         jpg(id).delete()
         return json(id).delete()
