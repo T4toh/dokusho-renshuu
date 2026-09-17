@@ -1,14 +1,66 @@
 # Smoke de dispositivo — recortes/notas (Plan recortes-notas)
 
-> **SIN EJECUTAR TODAVÍA (redactado 2026-09-17).** Se corre en un POCO
-> 2412DPC0AG, HyperOS, **Android 16 (API 36)**, navegación por gestos — el
-> mismo equipo del smoke de `docs/smoke-captura-ocr.md`. Requiere permiso de
-> overlay y de notificaciones ya concedidos (si no, repetir los pasos 2-3 de
-> ese documento antes de empezar acá).
+> **EJECUTADA — 2026-09-17, en dos tandas.** POCO 2412DPC0AG, HyperOS,
+> **Android 16 (API 36)**, navegación por gestos — el mismo equipo del smoke de
+> `docs/smoke-captura-ocr.md`. Requiere permiso de overlay y de notificaciones
+> ya concedidos (si no, repetir los pasos 2-3 de ese documento antes de empezar
+> acá).
+>
+> Primera tanda (a mano): captura → nota, furigana y diccionario sobre el texto
+> capturado, la pestaña Notes sin la doble app bar, el FAB `Scan` alcanzable; se
+> encontró y arregló en el acto el grid de Stories pegado a las pestañas.
+> Segunda tanda (por adb): **pasos 15, 16, 17 y 18**, que eran los que quedaban.
+> Resultados abajo.
 >
 > Nada de esto es testeable sin hardware — es la única verificación que la
 > feature va a tener. Cada paso dice qué esperar para que una falla sea
 > reconocible.
+
+## Resultados de los pasos 15-18 (2026-09-17, por adb)
+
+Build debug de `main` `da92143`. Los cuatro **PASAN**.
+
+### Paso 15 — el borrado se lleva los dos archivos: **PASA**
+
+Long-press en la nota más nueva → diálogo `Delete note?` / *"This also deletes its
+image."* → `Delete`. En disco desaparecieron **los dos** archivos del par
+(`1789668938245.json` y `1789668938245.jpg`): `files/recortes/` pasó de 16 a 14
+entradas. Que falte uno solo era el modo de falla que el paso vigila.
+
+### Paso 16 — espacio en disco: **PASA**
+
+Con 8 notas: `du -sh files/recortes/` → **1.8M**, y el `.jpg` más pesado 388 KB
+(una captura de pantalla completa). El umbral de alarma del paso son decenas de
+MB, que es lo que daría guardar PNG; 388 KB por pantalla completa confirma JPEG
+calidad 90.
+
+### Paso 17 — los mazos no se mezclan: **PASA**
+
+Se tocó `私` en la historia ごん狐 y ya había `こと` tocada en una nota. Exportados
+por separado y abiertos con sqlite desde el `.apkg`:
+
+| Mazo | Notas | Deck names en el `.apkg` |
+| ---- | ----- | ------------------------ |
+| `dokusho-words.apkg` | `私` | `Dokusho — Words`, `Dokusho — Kanji` |
+| `dokusho-scans.apkg` | `こと` | `Dokusho — Scans` |
+
+O sea `Scans` **no** trae vocabulario de historias ni `Words` vocabulario de notas,
+y los GUID son disjuntos (`c.z6J^kk0L` vs `A9i;vtpgP_`). **Sin ejercitar:** el cruce
+—la misma palabra tocada de los dos lados, que debe salir en ambos mazos con GUID
+propio— no se pudo montar porque no apareció un término compartido a mano.
+
+### Paso 18 — el Import manual sigue creando historias: **PASA**
+
+Import desde el top bar con título `SmokeImport`: creó
+`files/importadas/SmokeImport.json`, **no** una nota — `files/recortes/` quedó igual
+y `SmokeImport` no aparece en la pestaña Notes.
+
+### Limpieza posterior
+
+Los artefactos de esta corrida se borraron del dispositivo: la historia
+`SmokeImport`, las cuatro notas generadas por las capturas de prueba y la palabra
+`私` de `palabras_tocadas` (editando `databases/progreso.db` con la app parada).
+Verificado después: `0 words · 0 tagged kanji · 10 stories · 1 scan words`.
 
 ```
 cd app && ./gradlew installDebug
