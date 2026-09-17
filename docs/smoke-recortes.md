@@ -19,7 +19,15 @@ cd app && ./gradlew installDebug
    adentro de Notes, entran holgadas en vertical (el smoke anterior tenía
    cuatro ahí y ya pedía vigilar esto).
 2. **Pestaña Notes vacía** (antes de la primera captura). Esperado: mensaje
-   explicativo y botón `Scan`.
+   explicativo y un FAB `Scan` abajo a la derecha, por encima de la barra de
+   gestos (no tapado por ella).
+2b. **Layout de la pestaña Notes.** Esperado: el contenido de Notes arranca
+   pegado a las pestañas — **no** hay una franja en blanco del alto de la
+   status bar entre la fila `Stories`/`Notes` y lo de abajo, y **no** hay un
+   segundo título `Notes` debajo de la pestaña. Con notas en la lista, la
+   primera card queda a un margen normal de las pestañas y la última no queda
+   tapada por el FAB al scrollear hasta el fondo. Es el chequeo del doble
+   Scaffold: hay que buscarlo a propósito, de reojo no se nota.
 3. **Capturar texto japonés desde otra app** (burbuja → arrastrar selección →
    `Capture`). Esperado: se abre directamente la pantalla **Note**, nunca
    `Import`.
@@ -37,9 +45,18 @@ cd app && ./gradlew installDebug
 9. Volver a Notes. Esperado: la nota aparece en la lista con sus primeros
    caracteres y la fecha relativa.
 10. **Segunda captura en seguida** (volver a la otra app, capturar otro
-    texto sin haber cerrado nada de la nota anterior). Esperado: dos notas
-    distintas en la lista, la más nueva arriba; abrir cada una y confirmar
-    que ninguna muestra la miniatura de imagen de la otra.
+    texto sin haber cerrado nada de la nota anterior). **Lo primero, antes de
+    tocar NADA:** la pantalla Note que se abre sola tiene que mostrar el texto
+    **NUEVO**, no el de la nota anterior. Es el paso que importa: el navigate
+    va a `recorte/{id}` con `launchSingleTop = true` **desde** un
+    `recorte/{otroId}` — misma ruta, argumento distinto, que es la trampa
+    clásica de Navigation Compose (la entrada se reusa y el ViewModel viejo
+    sobrevive). Si muestra el texto viejo, es bug y hay que reportarlo; abrir
+    la nota desde la lista después lo taparía, porque eso crea una entrada
+    nueva.
+10b. Recién ahora, volver a Notes. Esperado: dos notas distintas, la más nueva
+    arriba; abrir cada una y confirmar que ninguna muestra la miniatura de
+    imagen de la otra.
 11. `Remove image` → confirmar en el diálogo. Esperado: la miniatura
     desaparece, el texto queda igual.
 12. **App bar de Note en modo lectura** (`Edit` `Remove image` `Close`) en
@@ -51,6 +68,12 @@ cd app && ./gradlew installDebug
     texto, y salir con el back del sistema (no con `Cancel`). Esperado: sale
     sin preguntar nada y el cambio se pierde — es el comportamiento aceptado
     del paso 12, no un bug.
+13b. **Cerrar y reabrir la nota** (`Close` → volver a abrirla desde la lista)
+    después del `Edit` del paso 7 y del `Remove image` del paso 11. Esperado:
+    el texto editado sigue editado y la imagen sigue sin estar. El único bug
+    real que apareció en esta rama fue exactamente un persistir-y-reabrir
+    (`tieneImagen` derivado del disco), así que mirar la pantalla sin salir de
+    ella no alcanza como verificación.
 14. **Long-press en la lista de Notes → borrar** una nota con imagen.
     Esperado: desaparece de la lista.
 15. Verificar el borrado en disco:
@@ -61,10 +84,14 @@ cd app && ./gradlew installDebug
     `adb shell run-as com.tatoh.dokushorenshu du -sh files/recortes/`.
     Esperado: del orden de unos pocos MB. Bastante más (decenas de MB) indica
     que se está guardando PNG en vez de JPEG calidad 90.
-17. `Export`. Esperado: entre los mazos generados están `Dokusho — Scans` y
-    `Dokusho — Words`. Abrir `Dokusho — Scans` (AnkiDroid o el .apkg) y
-    confirmar que solo trae vocabulario tocado en notas, nunca el tocado en
-    historias; abrir `Dokusho — Words` y confirmar lo inverso.
+17. `Export`. **Son cuatro botones distintos, cada uno escribe su propio
+    `.apkg`** — no hay un export único que genere todos. Exportar `Scans` y
+    después, por separado, `Words`. Abrir `Dokusho — Scans` (AnkiDroid o el
+    `.apkg`) y confirmar que solo trae vocabulario tocado en **notas**, nunca
+    el tocado en historias; abrir `Dokusho — Words` y confirmar lo inverso.
+    Comparar los dos entre sí: un término tocado en los dos lados aparece en
+    ambos mazos, y eso está bien (GUID propio `scan:<termino>`), lo que no
+    puede pasar es que `Scans` traiga vocabulario de historias.
 18. **Import manual** (`Import` en el top bar de Biblioteca) sigue
     funcionando igual que antes. Esperado: crea una **historia** en la
     pestaña Stories, nunca una nota en Notes.
