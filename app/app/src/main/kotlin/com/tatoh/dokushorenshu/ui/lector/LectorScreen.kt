@@ -3,8 +3,6 @@ package com.tatoh.dokushorenshu.ui.lector
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -16,13 +14,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tatoh.dokushorenshu.dominio.PalabraToken
+import com.tatoh.dokushorenshu.ui.comun.ItemOracion
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -325,48 +323,6 @@ private fun ListaOracionesLibre(estado: EstadoLector, vm: LectorViewModel, modif
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
-        )
-    }
-}
-
-/** Un item de oración de [ListaOracionesLibre], extraído a su propio composable (fix de
- *  performance, Plan 3.6 feedback de dispositivo): así Compose puede saltear su
- *  recomposición cuando cambia algo AJENO a esta oración (p.ej. se abre el sheet de
- *  palabra, o cualquier otro campo de [EstadoLector] no relacionado con el foco). Solo
- *  recibe [esActual] (un `Boolean` plano, ya comparado en el callsite de `itemsIndexed`)
- *  y los datos propios de la oración — nunca `EstadoLector` completo. */
-@Composable
-private fun ItemOracion(
-    esActual: Boolean,
-    plana: OracionPlana,
-    furiganaActiva: Boolean,
-    katakanaActiva: Boolean,
-    onTapPalabra: (PalabraToken) -> Unit,
-    onLongPressPalabra: (PalabraToken) -> Unit,
-    // rango de selección SOLO si pertenece a esta oración (ya filtrado en el
-    // callsite de itemsIndexed, mismo criterio que esActual: nunca entra
-    // EstadoLector completo — un cambio de selección solo recompone los items
-    // cuyo param cambió).
-    rangoSeleccion: IntRange?,
-) {
-    // Foco SOLO por alpha (animado), nunca por tamaño: todas las oraciones tienen la
-    // misma altura de item siempre, así que cambiar el foco jamás reflowea la
-    // LazyColumn — únicamente el scroll mueve cosas. El fundido de ~250ms hace que el
-    // foco se deslice entre oraciones en vez de saltar.
-    val alphaAnimada by animateFloatAsState(
-        targetValue = if (esActual) 1f else 0.35f,
-        animationSpec = tween(durationMillis = 250),
-        label = "alphaOracion",
-    )
-    Box(Modifier.alpha(alphaAnimada).fillMaxWidth()) {
-        TextoConFurigana(
-            tokens = plana.tokens,
-            gruposFurigana = plana.gruposFurigana,
-            furiganaActiva = furiganaActiva,
-            katakanaActiva = katakanaActiva,
-            onTapPalabra = onTapPalabra,
-            onLongPressPalabra = onLongPressPalabra,
-            rangoSeleccion = rangoSeleccion,
         )
     }
 }
