@@ -62,10 +62,14 @@ class RecortesRepo(
      *  `tieneImagen = false`: perder la imagen NUNCA puede costar el texto. */
     fun guardar(recorte: Recorte, imagenPendiente: File? = null): Recorte {
         dir.mkdirs()
+        // Sin pendiente, tieneImagen se deriva del disco y NO del flag que venga en
+        // `recorte`: reescribir un recorte ya guardado (editar su texto) no puede
+        // hacerle perder la imagen, y quitarImagen() borra el .jpg ANTES de llamar acá,
+        // así que ahí sigue dando false.
         val conImagen = if (imagenPendiente != null && imagenPendiente.exists()) {
             moverImagen(imagenPendiente, jpg(recorte.id))
         } else {
-            false
+            jpg(recorte.id).exists()
         }
         val definitivo = recorte.copy(tieneImagen = conImagen)
         val crudo = SerializadorRecorte.serializar(definitivo)

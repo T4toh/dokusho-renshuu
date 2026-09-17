@@ -17,18 +17,7 @@ class CreadorRecortes(
     private val ahora: () -> Long = System::currentTimeMillis,
 ) {
     fun crear(texto: String, imagenPendiente: File? = null): Recorte {
-        val parrafos = texto.lines()
-            .map { it.trim().trim('　') }
-            .filter { it.isNotEmpty() }
-            .map { linea ->
-                Parrafo(SegmentadorTexto.segmentar(linea).map { (inicio, fin) ->
-                    val oracion = linea.substring(inicio, fin)
-                    Oracion(oracion, generadorFurigana.generar(oracion))
-                })
-            }
-            .filter { it.oraciones.isNotEmpty() }
-        require(parrafos.isNotEmpty()) { "texto sin contenido" }
-
+        val parrafos = parrafosDe(texto)
         val timestamp = ahora()
         val id = recortesRepo.idLibre(timestamp)
         return recortesRepo.guardar(
@@ -41,5 +30,26 @@ class CreadorRecortes(
             ),
             imagenPendiente,
         )
+    }
+
+    /** Reescribe el texto de un recorte ya guardado conservando su id (y por lo tanto
+     *  su imagen y su vocabulario ya registrado). Es la válvula para el OCR de texto
+     *  vertical, que puede equivocar el orden de las columnas. */
+    fun editar(recorte: Recorte, texto: String): Recorte =
+        recortesRepo.guardar(recorte.copy(texto = texto, parrafos = parrafosDe(texto)))
+
+    private fun parrafosDe(texto: String): List<Parrafo> {
+        val parrafos = texto.lines()
+            .map { it.trim().trim('　') }
+            .filter { it.isNotEmpty() }
+            .map { linea ->
+                Parrafo(SegmentadorTexto.segmentar(linea).map { (inicio, fin) ->
+                    val oracion = linea.substring(inicio, fin)
+                    Oracion(oracion, generadorFurigana.generar(oracion))
+                })
+            }
+            .filter { it.oraciones.isNotEmpty() }
+        require(parrafos.isNotEmpty()) { "texto sin contenido" }
+        return parrafos
     }
 }

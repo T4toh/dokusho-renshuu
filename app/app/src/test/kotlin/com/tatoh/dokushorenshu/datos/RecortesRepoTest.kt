@@ -3,6 +3,7 @@ package com.tatoh.dokushorenshu.datos
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -72,6 +73,18 @@ class RecortesRepoTest {
         val guardado = r.guardar(recorte("100", 100L), null)
         assertFalse(guardado.tieneImagen)
         assertNull(r.archivoImagen("100"))
+    }
+
+    @Test
+    fun `guardar sin pendiente conserva la imagen ya guardada`() {
+        // Editar el texto de un recorte lo reescribe sin imagen pendiente: si eso
+        // apagara tieneImagen, la miniatura desaparecería con el .jpg todavía en disco.
+        val r = repo()
+        val pendiente = carpeta.newFile("captura-pendiente.jpg").apply { writeBytes(byteArrayOf(1)) }
+        r.guardar(recorte("100", 100L), pendiente)
+        val reescrito = r.guardar(recorte("100", 100L).copy(texto = "otro", tieneImagen = false), null)
+        assertTrue(reescrito.tieneImagen)
+        assertNotNull(r.archivoImagen("100"))
     }
 
     @Test

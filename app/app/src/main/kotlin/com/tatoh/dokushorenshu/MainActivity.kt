@@ -31,6 +31,8 @@ import com.tatoh.dokushorenshu.ui.kanji.DetalleKanjiViewModel
 import com.tatoh.dokushorenshu.ui.lector.LectorScreen
 import com.tatoh.dokushorenshu.ui.lector.LectorViewModel
 import com.tatoh.dokushorenshu.ui.recortes.ListaRecortesScreen
+import com.tatoh.dokushorenshu.ui.recortes.RecorteScreen
+import com.tatoh.dokushorenshu.ui.recortes.RecorteViewModel
 import com.tatoh.dokushorenshu.ui.recortes.RecortesViewModel
 import com.tatoh.dokushorenshu.ui.tema.TemaDokusho
 import java.time.LocalDateTime
@@ -96,9 +98,7 @@ class MainActivity : ComponentActivity() {
                             contenidoNotas = {
                                 ListaRecortesScreen(
                                     vm = recortesVm,
-                                    // no-op: la ruta "recorte/{id}" recién existe en la Task 7,
-                                    // que reemplaza esto por nav.navigate("recorte/$id").
-                                    onAbrirRecorte = {},
+                                    onAbrirRecorte = { id -> nav.navigate("recorte/$id") },
                                     onScan = { nav.navigate("captura?permiso=false") },
                                 )
                             },
@@ -116,6 +116,24 @@ class MainActivity : ComponentActivity() {
                         })
                         // LectorScreen dispara vm.cargar() con LaunchedEffect (Task 10).
                         LectorScreen(vm = vm, onVerKanji = { k -> nav.navigate("kanji/$k") })
+                    }
+                    composable("recorte/{id}") { entrada ->
+                        val id = entrada.arguments!!.getString("id")!!
+                        val vm: RecorteViewModel = viewModel(factory = viewModelFactory {
+                            initializer {
+                                RecorteViewModel(
+                                    id, contenedor.recortes, contenedor.creadorRecortes,
+                                    contenedor.tokenizador, contenedor.buscador,
+                                    contenedor.progresoDb.dao(),
+                                )
+                            }
+                        })
+                        // RecorteScreen dispara vm.cargar() con LaunchedEffect (mismo patrón).
+                        RecorteScreen(
+                            vm = vm,
+                            onVerKanji = { k -> nav.navigate("kanji/$k") },
+                            onCerrar = { nav.popBackStack() },
+                        )
                     }
                     composable("kanji/{kanji}") { entrada ->
                         val kanji = entrada.arguments!!.getString("kanji")!!
