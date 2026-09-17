@@ -79,7 +79,7 @@ class ArmadorMazos(
      *  (idHistoria, termino), la misma palabra puede repetirse en varias
      *  historias y no debe duplicar nota.
      *
-     *  `palabrasDeHistorias()` y NO `todasPalabras()`: las palabras tocadas en
+     *  `palabrasDeHistorias()` y NUNCA una lectura sin filtrar: las palabras tocadas en
      *  recortes van a su propio mazo (ver [armarScans]). Sin este filtro se
      *  colarían acá sin error ni log — falla silenciosa que solo se nota semanas
      *  después, con el mazo de lectura lleno de fragmentos de manga. */

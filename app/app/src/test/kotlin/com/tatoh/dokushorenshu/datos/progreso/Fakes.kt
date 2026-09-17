@@ -53,8 +53,6 @@ class ProgresoDaoFake : ProgresoDao {
     override suspend fun kanjisPorDificultad(dificultad: String): List<KanjiTocado> =
         kanjisTocados.values.filter { it.dificultad == dificultad }.sortedBy { it.timestamp }
 
-    override suspend fun todasPalabras(): List<PalabraTocada> = palabras.toList()
-
     // Mismo criterio que el LIKE/NOT LIKE del DAO real: el prefijo literal
     // "recorte:" parte la tabla en dos mitades complementarias.
     override suspend fun palabrasDeHistorias(): List<PalabraTocada> =

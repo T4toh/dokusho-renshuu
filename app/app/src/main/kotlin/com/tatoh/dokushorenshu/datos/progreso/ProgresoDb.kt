@@ -93,17 +93,16 @@ interface ProgresoDao {
     @Query("SELECT * FROM kanjis_tocados WHERE dificultad = :dificultad ORDER BY timestamp ASC")
     suspend fun kanjisPorDificultad(dificultad: String): List<KanjiTocado>
 
-    /** Todas las filas, de todas las historias — el dedupe por término (una
-     *  palabra puede tocarse en más de una historia) lo hace el caller
-     *  (`ArmadorMazos`, Plan 4a).
+    /** El dedupe por término (una palabra puede tocarse en más de un texto) lo hace
+     *  el caller (`ArmadorMazos`, Plan 4a).
      *
-     *  OJO: mezcla historias y recortes. Nada que arme un mazo debería usarla; para
-     *  eso están [palabrasDeHistorias] y [palabrasDeRecortes]. Hoy no tiene callers
-     *  de producción, solo su test. */
-    @Query("SELECT * FROM palabras_tocadas")
-    suspend fun todasPalabras(): List<PalabraTocada>
-
-    /** El prefijo `recorte:` separa las palabras tocadas en recortes de las tocadas
+     *  Acá NO hay una query sin filtrar: la había (`todasPalabras()`) y se borró al
+     *  partir la tabla, porque mezclaba historias con recortes y era justo el atajo
+     *  que metía el vocabulario de los recortes en el mazo de las historias. Si
+     *  alguna vez hace falta leer todo junto, reponerla es una línea — y quien la
+     *  reponga va a tener que pensar en el filtro en ese momento, que es el punto.
+     *
+     *  El prefijo `recorte:` separa las palabras tocadas en recortes de las tocadas
      *  en historias, sin migración de Room (idHistoria ya es TEXT). Un id de historia
      *  nunca puede contener `:` porque ImportadorHistoria.generarId() lo sanea, así
      *  que el LIKE no puede confundir una historia con un recorte (con `-` sí pasaría:

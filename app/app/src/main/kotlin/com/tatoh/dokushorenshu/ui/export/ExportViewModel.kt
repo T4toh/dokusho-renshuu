@@ -75,8 +75,8 @@ class ExportViewModel(
         viewModelScope.launch {
             try {
                 val (nuevosContadores, resumen) = withContext(ioDispatcher) {
-                    // palabrasDeHistorias/palabrasDeRecortes y NO todasPalabras: el
-                    // contador tiene que decir lo mismo que va a exportar cada botón.
+                    // Dos queries y no una sin filtrar: el contador tiene que decir
+                    // lo mismo que va a exportar cada botón.
                     val words = progresoDao.palabrasDeHistorias().map { it.termino }.distinct().size
                     val scans = progresoDao.palabrasDeRecortes().map { it.termino }.distinct().size
                     val kanjis = progresoDao.kanjisTaggeados().size
@@ -137,7 +137,9 @@ class ExportViewModel(
                                     ),
                                 ),
                             )
-                            "${notas.size} words"
+                            // "scan words" y no "words": mismo vocabulario que el
+                            // contador de la pantalla, que dice "N scan words".
+                            "${notas.size} scan words"
                         }
                         TipoExport.STORIES -> {
                             val resultadoHistorias = armadorMazos.armarHistorias(seleccion = _seleccionadas.value)

@@ -63,14 +63,6 @@ class ProgresoDaoTest {
         assertEquals(1, dao.kanjisPorDificultad("hard").size)  // una sola fila, no duplicada
     }
 
-    @Test
-    fun `todasPalabras devuelve las filas de todas las historias sin filtrar`() = runTest {
-        val dao = db().dao()
-        dao.registrarPalabra(PalabraTocada("momotaro", "犬", timestamp = 1L))
-        dao.registrarPalabra(PalabraTocada("urashima_taro", "亀", timestamp = 2L))
-        assertEquals(2, dao.todasPalabras().size)
-    }
-
     /** El LIKE de verdad, contra SQLite: el fake de los tests de ArmadorMazos reproduce
      *  este filtro con `startsWith`, así que si el SQL se rompiera (un `%` de menos, un
      *  `-` en vez de `:`) ningún test de dominio lo notaría. Las dos queries tienen que
@@ -90,7 +82,8 @@ class ProgresoDaoTest {
         // como set: el SELECT no lleva ORDER BY, el orden de filas no es parte del contrato
         assertEquals(setOf("犬", "亀"), dao.palabrasDeHistorias().map { it.termino }.toSet())
         assertEquals(listOf("稲妻"), dao.palabrasDeRecortes().map { it.termino })
-        assertEquals(dao.todasPalabras().size, dao.palabrasDeHistorias().size + dao.palabrasDeRecortes().size)
+        // complementarias: las 3 filas caen en exactamente una de las dos queries
+        assertEquals(3, dao.palabrasDeHistorias().size + dao.palabrasDeRecortes().size)
     }
 
     @Test
