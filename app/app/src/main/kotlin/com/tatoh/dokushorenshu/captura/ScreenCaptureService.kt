@@ -516,9 +516,9 @@ class ScreenCaptureService : Service() {
                 // levanta cuando ML Kit suelta la referencia.
                 if (ocrOk) recortado.recycle()
 
-                // Un texto vacío NO se entrega: entregarTexto() trae la app al frente y abre
-                // Import con el campo en blanco, pisando lo que el usuario estuviera editando
-                // de una captura anterior. Avisar y desarmar es lo correcto.
+                // Un texto vacío NO se entrega: entregarTexto() trae la app al frente, y del
+                // otro lado crear() rechaza el texto en blanco — el usuario vería la app
+                // saltar y un error, en vez de nada. Avisar y desarmar es lo correcto.
                 if (texto.isBlank()) {
                     android.util.Log.w("ScreenCapture", "OCR sin texto: no se abre la app")
                     avisar("No text found in the selected area")
