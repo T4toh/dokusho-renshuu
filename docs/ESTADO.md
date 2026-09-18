@@ -187,8 +187,15 @@
 - **El riesgo #1 del spec no se materializó**: media hora con la burbuja encendida y la
   sesión abierta sin capturar, y HyperOS **no** mató el Service — mismo pid a los 30
   minutos, y el tap siguiente capturó sin pedir consentimiento ni rearmar el espejo.
-- **Pendiente de smoke a mano**: rotar el teléfono entre capturas (el ROM ignora
-  `user_rotation` por adb) y frenar la proyección desde el panel del sistema.
+- **Rotación verificada en hardware (2026-09-18, tablet Redmi Pad SE / Android 15)**: con el
+  espejo armado en horizontal y la tablet girada a vertical, `La pantalla rotó: 1920x1200 ->
+  1200x1920`, el `VirtualDisplay` se redimensionó, el `ImageReader` se reemplazó y el recorte
+  salió coherente. El primer frame post-resize llegó dentro de los 200 ms. El Poco no sirve
+  para esto: su ROM ignora `user_rotation` por adb.
+- **Sigue sin ejercitarse el escalado con factor ≠ 1**: ni el Poco ni la tablet tienen un
+  overlay más chico que el bitmap (miden igual en las dos orientaciones), así que
+  `escalarRecorte` siempre corrió 1:1 en hardware. Cubierto sólo por los 8 tests JVM.
+- **Pendiente de smoke a mano**: frenar la proyección desde el panel del sistema.
 
 ## Backlog diferido (Plan F recortes/notas — review final, no bloqueante)
 

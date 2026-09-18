@@ -74,10 +74,7 @@ display por captura, no importa lo tentador que sea liberarlo al terminar.
    viva. Y lo que importa de verdad: el tap siguiente entró **directo al overlay, con 0
    diálogos de consentimiento**, y capturó (`Espejo despierto` → `OCR devolvió 30 chars`)
    sin un `Espejo armado` nuevo: la sesión original seguía siendo la misma.
-5. **Rotar entre capturas: SIN CORRER.** El ROM ignora `settings put system user_rotation`
-   incluso con una app rotable adelante (`mRotation=ROTATION_0` siempre), así que hay que
-   girar el teléfono con la mano. Verifica el `resize()` + reemplazo del `ImageReader` que
-   el modelo grabador obligó a agregar.
+5. **Rotar entre capturas: PASA** — corrido en una **tablet**, no en el Poco (ver abajo).
 6. **Una sola notificación: PASA.** `id=1002`, única (antes había dos Services con una cada
    uno).
 7. **`Capture now` sin burbuja: PASA.** Durante la captura hay overlay y notificación; al
@@ -106,6 +103,46 @@ capturar, y **5 capturas seguidas sin una sola falla**, alternando `Espejo despi
 `OCR devolvió` → `Espejo dormido`. El riesgo que quedaba —que el primer frame tras despertar
 no llegara dentro de los 200 ms y la captura fallara— no se materializó en ninguna de las
 cinco.
+
+### Corrida en tablet (Redmi Pad SE, Android 15): rotación y horizontal
+
+El Poco no sirve para probar rotación —su ROM ignora `settings put system user_rotation`
+incluso con una app rotable adelante— así que esto se corrió en una **tablet 23073RPBFL,
+1200x1920, Android 15**, que además es el primer dispositivo distinto en el que se prueba
+la feature.
+
+- **Horizontal: PASA.** La app arranca en `ROTATION_90` y el flujo entero funciona:
+  burbuja, consentimiento, overlay, selección y `OCR devolvió 125 chars`.
+- **Android 15 cambia los textos del diálogo del sistema**, algo a tener en cuenta al
+  automatizar: el selector dice `A single app` / `Entire screen` (no `Share one app` /
+  `Share entire screen`) y el botón de confirmación es `Start` (no `Share screen`).
+- **Rotar entre capturas: PASA, y es la primera verificación en hardware de este camino.**
+  Con el espejo armado en horizontal y la tablet girada a vertical:
+
+  ```
+  La pantalla rotó: 1920x1200 -> 1200x1920
+  Bitmap creado: 1200x1920
+  Selección: Rect(200, 400 - 896, 897), overlay: 1200x1920, recorte escalado: Recorte(left=200, top=400, ancho=696, alto=497)
+  OCR devolvió 66 chars
+  ```
+
+  El `VirtualDisplay` se redimensionó, el `ImageReader` se reemplazó, y el recorte salió
+  coherente con la selección. **El primer frame después del resize llegó dentro de los
+  200 ms**, que era el riesgo anotado como límite conocido: no se materializó. La captura
+  siguiente salió sin re-ajustar, sin armar sesión nueva y con 0 consentimientos.
+
+**Lo que esta tablet NO cerró:** el escalado con factor ≠ 1. Acá el overlay también mide lo
+mismo que el bitmap (1920x1200 en horizontal, 1200x1920 en vertical), así que
+`escalarRecorte` volvió a correr 1:1. El camino que produjo el bug histórico del recorte
+corrido sigue cubierto sólo por los 8 tests JVM de `TextoOcrTest`. Haría falta un
+dispositivo donde la ventana del overlay no cubra las barras de sistema.
+
+**Nota de instalación:** en HyperOS/MIUI el `installDebug` puede fallar con
+`INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`. Es el ajuste "Instalar vía USB"
+de opciones de desarrollador, no un problema del build. Los permisos de overlay y
+notificaciones sí se pueden conceder por adb, sin pasar por Ajustes:
+`adb shell pm grant <pkg> android.permission.POST_NOTIFICATIONS` y
+`adb shell appops set <pkg> SYSTEM_ALERT_WINDOW allow`.
 
 ### Notas de método para la próxima corrida
 
