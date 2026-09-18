@@ -55,6 +55,13 @@ display por captura, no importa lo tentador que sea liberarlo al terminar.
 1. **Cinco capturas seguidas con un solo consentimiento: PASA.** 5 × `OCR devolvió`, un
    único `Espejo armado: 1220x2712`, 0 `FATAL EXCEPTION`, 0 pedidos de consentimiento
    después del primero. Es el objetivo del cambio.
+1bis. **Captura en frío (paso 18 del checklist viejo, re-corrido sobre esta arquitectura):
+   PASA.** `adb reboot` a las ~11:55, captura a las **11:59:43**, a la primera:
+   `Espejo armado: 1220x2712` → `Espejo despierto` → `OCR devolvió 81 chars`. Sin
+   reintentos, sin `Screen capture failed`, sin `SecurityException`. O sea armar la sesión
+   entera (proyección + display + reader) con el sistema recién arrancado no necesita
+   esperas extra.
+
 2. **Frenar la proyección desde el panel del sistema: SIN CORRER.** No hay forma de
    dispararlo por adb (`cmd media_projection` no existe en este ROM y el Service es
    `exported="false"`). Queda para hacer a mano.
@@ -75,17 +82,25 @@ display por captura, no importa lo tentador que sea liberarlo al terminar.
    **segundo toque separado**, `Tap en la ✕: se cierra todo` (11:13:45) → 0 ventanas, 0
    notificaciones. A los 3 s sin tocarla, la ✕ revierte sola y el tap vuelve a ser captura.
 
-### Costo medido que conviene tener presente
+### El espejo duerme entre capturas
 
-Con la sesión abierta, el espejo compone frames **continuamente**, esté capturando o no:
+La primera versión del modelo grabador tenía un costo medido feo: con la sesión abierta, el
+espejo componía frames **continuamente**, capturara o no.
 
 ```
 VDS-ScreenCapture SINK ... queueBuffer: fps=54.57
 ```
 
-~55 fps mientras la burbuja esté encendida. Es el precio del modelo grabador. Mitigación
-posible y no implementada: `virtualDisplay.setSurface(null)` entre capturas para dormir el
-productor, re-enganchando antes de capturar.
+~55 fps mientras la burbuja estuviera encendida. Se resolvió desenganchando el productor
+entre capturas (`virtualDisplay.setSurface(null)`) y re-enganchándolo al arrancar la
+captura, antes de los delays que ya existían. La sesión no se toca, así que el
+consentimiento sigue siendo uno solo.
+
+Medido después del cambio: **0 frames en 6 segundos** con la burbuja encendida y sin
+capturar, y **5 capturas seguidas sin una sola falla**, alternando `Espejo despierto` →
+`OCR devolvió` → `Espejo dormido`. El riesgo que quedaba —que el primer frame tras despertar
+no llegara dentro de los 200 ms y la captura fallara— no se materializó en ninguna de las
+cinco.
 
 ### Notas de método para la próxima corrida
 
