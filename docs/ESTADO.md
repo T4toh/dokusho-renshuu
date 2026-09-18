@@ -201,6 +201,11 @@
   que no armaba la ventana así. Los 8 tests JVM de `TextoOcrTest` son la cobertura correcta;
   **no hay que seguir buscando hardware**. Sólo volvería a ser posible si alguien cambia esos
   flags o saca el `getRealMetrics()`.
+- **Límite conocido**: si se revoca el permiso de overlay desde Ajustes, el sistema deja de
+  dibujar la burbuja pero la app no se entera (ventana registrada, Service vivo, notificación
+  arriba). El botón `Stop floating button` sigue habilitado a propósito en ese estado —
+  apagar no necesita permisos— y es la única salida, porque en algunos ROM la notificación de
+  la app no aparece en la bandeja.
 - **Pendiente de smoke a mano**: frenar la proyección desde el panel del sistema.
 
 ## Backlog diferido (Plan F recortes/notas — review final, no bloqueante)

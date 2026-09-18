@@ -168,6 +168,27 @@ notificaciones sí se pueden conceder por adb, sin pasar por Ajustes:
 `adb shell pm grant <pkg> android.permission.POST_NOTIFICATIONS` y
 `adb shell appops set <pkg> SYSTEM_ALERT_WINDOW allow`.
 
+### Revocar el permiso de overlay desde Ajustes: un agujero que el paso 20 no veía
+
+El paso 20 revoca el permiso con `appops` y se conforma con "no crashea". Revocándolo **a
+mano desde Ajustes del sistema**, en la tablet, apareció algo que ese criterio dejaba pasar:
+
+- El sistema **deja de dibujar** la burbuja (`isReadyForDisplay()=false`) pero no avisa a la
+  app: la ventana sigue registrada, el Service vivo (mismo pid) y la notificación arriba.
+  Hasta acá es uno de los desenlaces que el paso da por aceptables.
+- **Pero `Stop floating button` quedaba deshabilitado**, porque su `enabled` exigía los dos
+  permisos. O sea: burbuja invisible, notificación colgada, y el único control para bajarla,
+  muerto. Apagar no necesita permisos; sólo encender.
+- La salida de emergencia tampoco estaba: la notificación de la app **no aparece en la
+  bandeja** de esta tablet, aunque `dumpsys notification` la cuenta. Sin el botón, quedaba
+  forzar la detención de la app.
+
+Arreglado: `enabled = bubbleActivo || listo`. Verificado en dispositivo — con el permiso
+revocado, el botón responde y deja 0 ventanas, 0 notificaciones y el rótulo en `Start`.
+
+**Para la próxima corrida del paso 20: revocarlo desde Ajustes, no sólo con `appops`, y
+después intentar apagar la burbuja desde la app.** "No crashea" no alcanza como criterio.
+
 ### Notas de método para la próxima corrida
 
 - **Contar ventanas por tamaño, no por nombre.** `grep -c 'Window{... u0 <pkg>}$'` da

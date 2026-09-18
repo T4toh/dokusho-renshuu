@@ -173,7 +173,12 @@ fun CapturaScreen(onCerrar: () -> Unit) {
                         ContextCompat.startForegroundService(context, intent)
                     }
                 },
-                enabled = listo,
+                // Apagar NO necesita permisos; encender sí. Si se exigieran los dos para
+                // las dos acciones, revocar el permiso de overlay desde Ajustes del sistema
+                // dejaba este botón deshabilitado con la burbuja todavía encendida: el
+                // sistema deja de dibujarla (isReadyForDisplay=false) pero el Service sigue
+                // vivo con su notificación, y el único control para bajarlo quedaba muerto.
+                enabled = bubbleActivo || listo,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (bubbleActivo) "Stop floating button" else "Start floating button") }
 
