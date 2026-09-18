@@ -67,8 +67,12 @@ class FloatingBubbleService : Service() {
                     } else {
                         startForeground(NOTIFICATION_ID, createNotification())
                     }
-                    burbuja = BurbujaFlotante(this, windowManager!!, ::onBubbleClicked).also { it.mostrar() }
-                    isRunning = true
+                    burbuja = BurbujaFlotante(this, windowManager!!, ::onBubbleClicked)
+                    if (burbuja?.mostrar() == false) {
+                        stopSelf()
+                    } else {
+                        isRunning = true
+                    }
                 }
             }
             ACTION_STOP_BUBBLE -> {

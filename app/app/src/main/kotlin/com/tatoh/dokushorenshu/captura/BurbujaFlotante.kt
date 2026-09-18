@@ -31,7 +31,9 @@ class BurbujaFlotante(
     private val DRAG_THRESHOLD = 10 // pixels
     private val BUBBLE_SIZE = 56 // dp - tamaño estándar de FAB en Material Design
 
-    fun mostrar() {
+    /** @return false si falló al agregar la ventana al WindowManager (el Service decide
+     *  qué hacer, por ejemplo detenerse); true si la burbuja quedó puesta. */
+    fun mostrar(): Boolean {
         val bubbleSize = (BUBBLE_SIZE * context.resources.displayMetrics.density).toInt()
 
         // Configurar parámetros del bubble
@@ -196,11 +198,9 @@ class BurbujaFlotante(
         } catch (e: Exception) {
             android.util.Log.e("FloatingBubble", "ERROR al añadir bubble a WindowManager", e)
             e.printStackTrace()
-            // La clase no es dueña del ciclo de vida del Service que la hospeda: si el
-            // context es un Service (como en producción), lo detenemos igual que hacía
-            // el showBubble() original con su propio stopSelf().
-            (context as? android.app.Service)?.stopSelf()
+            return false
         }
+        return true
     }
 
     private fun snapToEdge(params: WindowManager.LayoutParams) {
