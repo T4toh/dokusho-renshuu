@@ -131,11 +131,35 @@ la feature.
   200 ms**, que era el riesgo anotado como límite conocido: no se materializó. La captura
   siguiente salió sin re-ajustar, sin armar sesión nueva y con 0 consentimientos.
 
-**Lo que esta tablet NO cerró:** el escalado con factor ≠ 1. Acá el overlay también mide lo
-mismo que el bitmap (1920x1200 en horizontal, 1200x1920 en vertical), así que
-`escalarRecorte` volvió a correr 1:1. El camino que produjo el bug histórico del recorte
-corrido sigue cubierto sólo por los 8 tests JVM de `TextoOcrTest`. Haría falta un
-dispositivo donde la ventana del overlay no cubra las barras de sistema.
+### El escalado con factor ≠ 1 es inalcanzable por construcción (no es un hueco de hardware)
+
+Durante meses esto quedó anotado como "falta un dispositivo donde el overlay no cubra las
+barras de sistema". Se probaron cuatro configuraciones y **todas dieron 1:1**:
+
+| Configuración | overlay | bitmap |
+| --- | --- | --- |
+| Poco, vertical | 1220x2712 | 1220x2712 |
+| Tablet, horizontal | 1920x1200 | 1920x1200 |
+| Tablet, vertical | 1200x1920 | 1200x1920 |
+| Tablet, **pantalla dividida** (la app ocupaba 948x1200) | 1920x1200 | 1920x1200 |
+
+La razón está en el código, no en los dispositivos. `showOverlay()` arma la ventana con el
+alto de `getRealMetrics()` —que **incluye** las barras de sistema— y con
+`FLAG_LAYOUT_IN_SCREEN or FLAG_LAYOUT_NO_LIMITS`, que le dicen al sistema que ignore los
+insets; y el `VirtualDisplay` se crea con esas mismas métricas. O sea overlay y bitmap están
+**atados a medir lo mismo**, haya gestos o botones, esté la app en split o no.
+
+El bug histórico del recorte corrido viene de la app vieja en Flutter, que no armaba la
+ventana así. **Con esta implementación el camino ≠ 1 no es un hueco de cobertura pendiente:
+es código defensivo para una condición que no se puede producir desde afuera.** Los 8 tests
+JVM de `TextoOcrTest` son la cobertura correcta y suficiente — no hay que seguir buscando
+hardware.
+
+Lo único que podría reintroducir la diferencia es cambiar esos flags o dejar de usar
+`getRealMetrics()` en `showOverlay()`. Si algún día pasa, este es el párrafo a releer.
+
+**Verificado de paso:** capturar con la app en pantalla dividida funciona
+(`OCR devolvió 142 chars`).
 
 **Nota de instalación:** en HyperOS/MIUI el `installDebug` puede fallar con
 `INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`. Es el ajuste "Instalar vía USB"

@@ -192,9 +192,15 @@
   1200x1920`, el `VirtualDisplay` se redimensionó, el `ImageReader` se reemplazó y el recorte
   salió coherente. El primer frame post-resize llegó dentro de los 200 ms. El Poco no sirve
   para esto: su ROM ignora `user_rotation` por adb.
-- **Sigue sin ejercitarse el escalado con factor ≠ 1**: ni el Poco ni la tablet tienen un
-  overlay más chico que el bitmap (miden igual en las dos orientaciones), así que
-  `escalarRecorte` siempre corrió 1:1 en hardware. Cubierto sólo por los 8 tests JVM.
+- **El escalado con factor ≠ 1 es inalcanzable por construcción, no un hueco de cobertura.**
+  Cuatro configuraciones probadas (Poco vertical, tablet horizontal, tablet vertical, tablet
+  en pantalla dividida): overlay y bitmap midieron igual en las cuatro. La causa está en
+  `showOverlay()`, que arma la ventana con el alto de `getRealMetrics()` (incluye las barras)
+  y con `FLAG_LAYOUT_IN_SCREEN or FLAG_LAYOUT_NO_LIMITS`, mientras el `VirtualDisplay` usa
+  esas mismas métricas. El bug histórico del recorte corrido venía de la app Flutter vieja,
+  que no armaba la ventana así. Los 8 tests JVM de `TextoOcrTest` son la cobertura correcta;
+  **no hay que seguir buscando hardware**. Sólo volvería a ser posible si alguien cambia esos
+  flags o saca el `getRealMetrics()`.
 - **Pendiente de smoke a mano**: frenar la proyección desde el panel del sistema.
 
 ## Backlog diferido (Plan F recortes/notas — review final, no bloqueante)
