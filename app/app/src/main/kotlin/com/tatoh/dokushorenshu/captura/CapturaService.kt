@@ -30,24 +30,32 @@ import java.io.File
 import java.nio.ByteBuffer
 
 class CapturaService : Service() {
-    
+
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
     private var selectionView: SelectionOverlayView? = null
-    
+    private var burbuja: BurbujaFlotante? = null
+
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
-    
+
     private var resultCode: Int = 0
     private var resultData: Intent? = null
-    
+
     private var isCapturing = false
-    
+
     companion object {
-        const val NOTIFICATION_ID = 1001
-        const val CHANNEL_ID = "screen_capture_channel"
-        const val ACTION_START_CAPTURE = "com.tatoh.dokushorenshu.captura.START_CAPTURE"
+        const val NOTIFICATION_ID = 1002
+        const val CHANNEL_ID = "captura_channel"
+
+        /** Encender la burbuja (desde la pantalla Scan). No trae credenciales. */
+        const val ACTION_INICIAR = "com.tatoh.dokushorenshu.captura.INICIAR"
+        /** Abrir la sesión de MediaProjection con el resultado del consentimiento. */
+        const val ACTION_ABRIR_SESION = "com.tatoh.dokushorenshu.captura.ABRIR_SESION"
+        /** Apagar todo: sesión, burbuja y Service. */
+        const val ACTION_DETENER = "com.tatoh.dokushorenshu.captura.DETENER"
+
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_RESULT_DATA = "result_data"
 
@@ -60,6 +68,12 @@ class CapturaService : Service() {
         /** Ruta absoluta del JPEG de la captura. Ausente si el guardado falló —
          *  perder la imagen nunca puede costar el texto. */
         const val EXTRA_RUTA_IMAGEN = "ruta_imagen"
+        /** Lo que el Service le manda a MainActivity cuando hace falta consentimiento. */
+        const val ACTION_PEDIR_PERMISO = "com.tatoh.dokushorenshu.captura.PEDIR_PERMISO"
+
+        /** Lo lee la pantalla Scan para el rótulo del botón. */
+        @Volatile var isRunning: Boolean = false
+            private set
     }
     
     override fun onCreate() {
@@ -69,74 +83,117 @@ class CapturaService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        android.util.Log.d("ScreenCapture", "=== onStartCommand INICIADO ===")
-        android.util.Log.d("ScreenCapture", "intent.action = ${intent?.action}")
-        android.util.Log.d("ScreenCapture", "isCapturing = $isCapturing")
-        
-        if (intent?.action == ACTION_START_CAPTURE) {
-            // Evitar inicios duplicados
-            if (isCapturing) {
-                android.util.Log.w("ScreenCapture", "Ya hay una captura en curso, ignorando")
-                return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_INICIAR -> {
+                if (burbuja == null) {
+                    arrancarEnForeground(conProyeccion = false)
+                    val nuevaBurbuja = BurbujaFlotante(this, windowManager!!, ::onTapBurbuja)
+                    // isRunning sólo pasa a true si la ventana quedó efectivamente puesta:
+                    // ponerlo siempre (aunque addView() falle) dejaba mintiendo el rótulo
+                    // del botón en la pantalla Scan.
+                    if (nuevaBurbuja.mostrar()) {
+                        burbuja = nuevaBurbuja
+                        isRunning = true
+                    } else {
+                        stopSelf()
+                    }
+                }
             }
-            
-            isCapturing = true
-            resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
-            resultData = intent.getParcelableExtra(EXTRA_RESULT_DATA)
-            
-            android.util.Log.d("ScreenCapture", "resultCode = $resultCode")
-            android.util.Log.d("ScreenCapture", "resultData = $resultData")
-            
-            // Combinar MEDIA_PROJECTION (requerido) y SPECIAL_USE (para evitar restricciones)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(
-                    NOTIFICATION_ID,
-                    createNotification(),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION or 
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-                )
-                android.util.Log.d("ScreenCapture", "startForeground() llamado con tipos múltiples")
-            } else {
-                startForeground(NOTIFICATION_ID, createNotification())
-                android.util.Log.d("ScreenCapture", "startForeground() llamado (API < 34)")
+            ACTION_ABRIR_SESION -> {
+                if (isCapturing) {
+                    android.util.Log.w("ScreenCapture", "Ya hay una captura en curso, ignorando")
+                    return START_NOT_STICKY
+                }
+                isCapturing = true
+                resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
+                resultData = intent.getParcelableExtra(EXTRA_RESULT_DATA)
+                arrancarEnForeground(conProyeccion = true)
+                showOverlay()
             }
-            
-            android.util.Log.d("ScreenCapture", "Llamando a showOverlay()...")
-            showOverlay()
+            ACTION_DETENER -> detenerTodo()
         }
-        
-        android.util.Log.d("ScreenCapture", "=== onStartCommand FINALIZADO ===")
+        // START_NOT_STICKY y no START_STICKY: en un reinicio el sistema reentrega un
+        // intent null, que no cae en ninguna de las ramas — o sea el Service revivía
+        // sin foreground y sin burbuja, un fantasma. Mejor no revivir.
         return START_NOT_STICKY
     }
-    
+
     override fun onBind(intent: Intent?): IBinder? = null
-    
+
+    /** El tipo de foreground no es cosmético: getMediaProjection() EXIGE que ya esté
+     *  corriendo un FGS de tipo mediaProjection. Se arranca sin él (la burbuja sola no
+     *  proyecta nada) y se promueve antes de crear la sesión. */
+    private fun arrancarEnForeground(conProyeccion: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val tipos = if (conProyeccion) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION or
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            } else {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            }
+            startForeground(NOTIFICATION_ID, createNotification(), tipos)
+        } else {
+            startForeground(NOTIFICATION_ID, createNotification())
+        }
+    }
+
+    /** Se tocó la burbuja. En esta tarea no hay sesión de larga vida: siempre pide
+     *  consentimiento de nuevo (la tarea 5 agrega el camino directo). */
+    private fun onTapBurbuja() {
+        startActivity(Intent(this, MainActivity::class.java).apply {
+            action = ACTION_PEDIR_PERMISO
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP
+        })
+    }
+
+    /** Apaga sesión, burbuja y Service. Único punto de baja completa: lo dispara tanto
+     *  el botón "Stop" de la notificación como ACTION_DETENER desde la pantalla Scan. */
+    private fun detenerTodo() {
+        cleanup()
+        burbuja?.ocultar()
+        burbuja = null
+        isRunning = false
+        isCapturing = false
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Screen capture",
+            "Quick capture",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Screen capture service is running"
+            description = "Floating button and screen capture status"
+            setShowBadge(false)
         }
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
     }
-    
+
     private fun createNotification(): Notification {
+        val detener = PendingIntent.getService(
+            this, 0,
+            Intent(this, CapturaService::class.java).apply { action = ACTION_DETENER },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Screen capture active")
-            .setContentText("Select the area to capture")
+            .setContentTitle("Quick capture active")
+            .setContentText("Tap the floating button to capture")
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", detener)
             .build()
     }
-    
+
     private fun showOverlay() {
         android.util.Log.d("ScreenCapture", "=== showOverlay() INICIADO ===")
         
-        // IMPORTANTE: Ocultar el bubble flotante mientras se muestra el overlay de captura
-        FloatingBubbleService.setBubbleVisible(false)
+        // IMPORTANTE: Ocultar la burbuja flotante mientras se muestra el overlay de captura
+        burbuja?.visible(false)
         
         // Primero obtener las métricas reales de la pantalla
         val metrics = DisplayMetrics()
@@ -256,16 +313,16 @@ class CapturaService : Service() {
         // addView puede lanzar BadTokenException: permiso de overlay revocado a mitad de
         // sesión, o MIUI negando un popup desde background — justo los teléfonos para los
         // que existen los workarounds de acá arriba. Sin atrapar, la excepción sale por
-        // onStartCommand y mata el proceso DESPUÉS del hideBubble() de más arriba, o sea
-        // se lleva puesto el bubble también. El hermano de FloatingBubbleService ya lo
-        // envuelve por esta misma razón.
+        // onStartCommand y mata el proceso DESPUÉS de ocultar la burbuja de más arriba, o
+        // sea se la lleva puesta también. BurbujaFlotante.mostrar() ya envuelve su propio
+        // addView por esta misma razón.
         try {
             windowManager?.addView(overlayView, layoutParams)
         } catch (e: Exception) {
             android.util.Log.e("ScreenCapture", "Error añadiendo el overlay a WindowManager", e)
             overlayView = null
             selectionView = null
-            FloatingBubbleService.setBubbleVisible(true)
+            burbuja?.visible(true)
             avisar("Could not show the capture overlay")
             terminarServicio()
             return
@@ -402,11 +459,9 @@ class CapturaService : Service() {
                 }, 200)
             } catch (e: SecurityException) {
                 android.util.Log.e("ScreenCapture", "SecurityException - Token de MediaProjection expirado o inválido", e)
-                // Android 14+ invalida el token después de cada sesión. Se borran las
-                // credenciales guardadas: el próximo tap del bubble abrirá la app para
-                // pedirlo de nuevo, que es exactamente lo que hace falta.
-                FloatingBubbleService.captureResultCode = 0
-                FloatingBubbleService.captureResultData = null
+                // Android 14+ invalida el token después de cada sesión. En esta tarea no
+                // hay credenciales guardadas que limpiar: el próximo tap de la burbuja
+                // vuelve a pedir consentimiento siempre (onTapBurbuja()).
                 stopOverlay()
             } catch (e: Exception) {
                 android.util.Log.e("ScreenCapture", "Error creando MediaProjection", e)
@@ -662,8 +717,8 @@ class CapturaService : Service() {
      *  Idempotente: processCapture() la llama antes del OCR y después el stopOverlay()
      *  final vuelve a pasar por acá, así que la baja de la vista va guardada. */
     private fun liberarVentanaOverlay() {
-        // Mostrar el bubble de nuevo
-        FloatingBubbleService.setBubbleVisible(true)
+        // Mostrar la burbuja de nuevo
+        burbuja?.visible(true)
 
         val vista = overlayView ?: return
         try {
@@ -683,12 +738,6 @@ class CapturaService : Service() {
      *  todavía le falta reconocer el texto y abrir la app con el resultado. */
     private fun terminarServicio() {
         cleanup()
-
-        // cleanup() (arriba) borra las credenciales sólo si hubo sesión de
-        // MediaProjection: tras una captura real el token ya está quemado y el próximo
-        // tap del bubble tiene que volver a pedir permiso, pero si esto es un Cancel las
-        // credenciales siguen sirviendo y se conservan.
-
         isCapturing = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -704,26 +753,13 @@ class CapturaService : Service() {
     }
 
     private fun cleanup() {
-        // Android 14+ quema el token al usarlo, así que después de una sesión real hay
-        // que borrar las credenciales: el próximo tap del bubble pide el permiso de
-        // nuevo. Pero cancelar el overlay NO abre ninguna sesión —acá mediaProjection
-        // es null— y borrarlas ahí obligaba a re-consentir de gusto: cada Cancel dejaba
-        // al bubble abriendo la app sin capturar. Si aun así el token quedara rancio,
-        // captureScreen() atrapa la SecurityException y las limpia ahí.
-        val huboSesion = mediaProjection != null
-
         virtualDisplay?.release()
         imageReader?.close()
         mediaProjection?.stop()
-        
+
         virtualDisplay = null
         imageReader = null
         mediaProjection = null
-
-        if (huboSesion) {
-            FloatingBubbleService.captureResultCode = 0
-            FloatingBubbleService.captureResultData = null
-        }
     }
     
     override fun onDestroy() {

@@ -20,7 +20,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.tatoh.dokushorenshu.captura.FloatingBubbleService
 import com.tatoh.dokushorenshu.captura.CapturaService
 import com.tatoh.dokushorenshu.ui.acerca.AcercaScreen
 import com.tatoh.dokushorenshu.ui.biblioteca.BibliotecaScreen
@@ -240,7 +239,7 @@ class MainActivity : ComponentActivity() {
             CapturaService.ACTION_TEXTO_OCR ->
                 capturaPendiente.value = intent.getStringExtra(CapturaService.EXTRA_TEXTO_OCR)
                     ?.let { it to intent.getStringExtra(CapturaService.EXTRA_RUTA_IMAGEN) }
-            FloatingBubbleService.ACTION_PEDIR_PERMISO -> pedirPermisoPendiente.value = true
+            CapturaService.ACTION_PEDIR_PERMISO -> pedirPermisoPendiente.value = true
             else -> return
         }
         intent.action = null

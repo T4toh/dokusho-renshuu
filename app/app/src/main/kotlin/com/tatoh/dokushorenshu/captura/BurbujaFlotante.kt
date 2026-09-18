@@ -11,8 +11,8 @@ import kotlin.math.abs
 
 /**
  * Ventana flotante (bubble) sobre otras apps, con drag, snap al borde y detección de tap.
- * Extraída de FloatingBubbleService (que la hospeda) para que en la tarea 4 pueda vivir
- * dentro de otro Service sin duplicar este código.
+ * Extraída de FloatingBubbleService en la tarea 2 para que CapturaService pudiera
+ * hospedarla desde la tarea 4 sin duplicar este código (FloatingBubbleService ya no existe).
  */
 class BurbujaFlotante(
     private val context: Context,
