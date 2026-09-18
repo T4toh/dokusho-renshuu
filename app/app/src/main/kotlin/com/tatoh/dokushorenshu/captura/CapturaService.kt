@@ -733,14 +733,26 @@ class CapturaService : Service() {
         selectionView = null
     }
 
-    /** Cierra el Service. Va aparte de liberarVentanaOverlay() porque mientras corre
+    /** Cierra la captura. Va aparte de liberarVentanaOverlay() porque mientras corre
      *  el OCR la ventana ya está desmontada pero el Service tiene que seguir vivo:
-     *  todavía le falta reconocer el texto y abrir la app con el resultado. */
+     *  todavía le falta reconocer el texto y abrir la app con el resultado.
+     *
+     *  Con burbuja viva el Service NO se apaga acá: la burbuja vive en esta misma
+     *  instancia desde la tarea 4 (antes vivía en otro Service, y apagar éste no se la
+     *  llevaba puesta). Si acá hiciéramos stopSelf() con la burbuja arriba, su ventana
+     *  queda pegada al WindowManager sin dueño — se sigue viendo y tocando, pero ya no
+     *  hay Service para atenderla ni forma de sacarla desde la UI. Sólo se apaga cuando
+     *  NO hay burbuja: el camino de "Capture now" desde la pantalla Scan, donde nadie va
+     *  a tocar una burbuja después. */
     private fun terminarServicio() {
         cleanup()
         isCapturing = false
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        if (burbuja == null) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        } else {
+            burbuja?.visible(true)
+        }
     }
 
     private fun stopOverlay() {
@@ -765,6 +777,14 @@ class CapturaService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         cleanup()
+        // Si el sistema mata el Service con la burbuja arriba (o si detenerTodo() no
+        // corrió, p.ej. onDestroy directo), no puede quedar una ventana flotante sin
+        // dueño ni el rótulo del botón de Scan mintiendo "Stop floating button". El
+        // FloatingBubbleService viejo garantizaba esto con onDestroy → stopBubble(); la
+        // fusión de la tarea 4 lo había perdido.
+        burbuja?.ocultar()
+        burbuja = null
+        isRunning = false
         try {
             overlayView?.let {
                 windowManager?.removeView(it)
