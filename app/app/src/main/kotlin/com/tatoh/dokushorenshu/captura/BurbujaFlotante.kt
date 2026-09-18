@@ -37,7 +37,14 @@ class BurbujaFlotante(
     // Modo ✕: long-press convierte la burbuja en botón de cierre (tarea 5c).
     private var modoCerrar = false
     private val handler = Handler(Looper.getMainLooper())
-    private val detectarLongPress = Runnable { entrarModoCerrar() }
+    /** El long-press que arma la ✕ y el tap que la cierra son gestos separados: el
+     *  ACTION_UP que termina el long-press no puede ser también el toque que cierra.
+     *  Se pone en true apenas dispara el long-press y se resetea en cada ACTION_DOWN. */
+    private var gestoConsumido = false
+    private val detectarLongPress = Runnable {
+        entrarModoCerrar()
+        gestoConsumido = true
+    }
     /** Vuelve sola a la burbuja normal: un long-press accidental no puede dejar una ✕
      *  armada esperando el próximo toque. */
     private val revertir = Runnable { salirModoCerrar() }
@@ -142,6 +149,7 @@ class BurbujaFlotante(
                             initialTouchY = event.rawY
                             moved = false
                             isDragging = false
+                            gestoConsumido = false
                             alpha = 1.0f
 
                             handler.postDelayed(detectarLongPress, ViewConfiguration.getLongPressTimeout().toLong())
@@ -186,11 +194,18 @@ class BurbujaFlotante(
                             handler.removeCallbacks(detectarLongPress)
                             when {
                                 moved -> {
-                                    // Fue arrastre: el snap ya corrió, nada más.
+                                    // Fue arrastre (con o sin long-press de por medio): snap
+                                    // al borde, nada más.
                                     if (isDragging) {
                                         snapToEdge(layoutParams)
                                     }
                                 }
+                                // El ACTION_UP que termina el long-press no es un toque nuevo:
+                                // sólo arma la ✕, no la dispara. Recién un próximo gesto la
+                                // cierra. Cubre también la carrera con el revertir de 3 s: si
+                                // corrió mientras el dedo seguía apoyado, modoCerrar ya volvió
+                                // a false pero este ACTION_UP tampoco debe disparar onTap().
+                                gestoConsumido -> { /* nada */ }
                                 modoCerrar -> {
                                     android.util.Log.d("FloatingBubble", "Tap en la ✕: se cierra todo")
                                     salirModoCerrar()
@@ -214,6 +229,7 @@ class BurbujaFlotante(
                             alpha = 0.9f
                             isDragging = false
                             handler.removeCallbacks(detectarLongPress)
+                            salirModoCerrar()
                             return true
                         }
 
