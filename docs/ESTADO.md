@@ -205,6 +205,17 @@
 - `ui/comun` sigue importando de `ui.lector` los tres símbolos de furigana (`GrupoFurigana`/`TextoConFurigana`/`calcularGruposFurigana`), y aparte `ui/recortes` importa `PalabraSheet` de `ui.lector`. Es exactamente la dirección de dependencia que el KDoc de `ui/comun` dice existir para eliminar — la promoción quedó por la mitad (se movieron `OracionPlana`/`ItemOracion`/`aplanar` y `SeleccionTexto`/`BarraSeleccion`/`buscarEnWeb`, no estos). Cosmético: no hay ciclo ni bug, solo el módulo común dependiendo del específico.
 - El borrador de edición vive en `RecorteViewModel`, así que sobrevive a rotación pero NO a muerte de proceso: no hay `SavedStateHandle` (mismo agujero que `ImportViewModel`). Importa más en HyperOS, que mata procesos en background con ganas: dejar la nota a medio editar, irse a otra app y volver puede devolver el texto viejo sin ningún aviso.
 
+## Backlog feedback de uso (2026-09-18)
+
+- **Autoupdates: que la app se actualice sola.** Hoy cada versión nueva se baja a mano de
+  la release de GitHub y se instala encima (ver "Release app vigente" en Datos operativos),
+  así que en la práctica el usuario se queda con la que tenga hasta que se acuerde de mirar.
+  Alcance a definir cuando se agarre: si alcanza con avisar que hay versión nueva y abrir la
+  release, o si la app baja e instala el APK sola (eso pide `REQUEST_INSTALL_PACKAGES` y el
+  permiso de "instalar apps desconocidas", que en HyperOS es su propio laberinto). Ojo con
+  no confundirlo con el Update que YA existe: ese actualiza el **contenido** (historias del
+  catálogo, PR #13), no la app.
+
 ## Backlog feedback de uso (2026-09-17 — smoke de recortes en el Poco)
 
 Cuatro pedidos salidos de usar la feature en dispositivo (POCO / HyperOS / Android 16).
