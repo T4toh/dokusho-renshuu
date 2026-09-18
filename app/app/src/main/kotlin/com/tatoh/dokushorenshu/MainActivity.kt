@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
      *  (launchMode singleTop). */
     private val capturaPendiente = mutableStateOf<Pair<String, String?>?>(null)
 
-    /** El bubble se tocó sin credenciales de MediaProjection: hay que abrir la
+    /** El bubble se tocó sin sesión de MediaProjection: hay que abrir la
      *  pantalla de captura pidiendo el permiso. Mismo ciclo de vida que el de arriba. */
     private val pedirPermisoPendiente = mutableStateOf(false)
 

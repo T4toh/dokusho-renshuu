@@ -165,14 +165,19 @@
 - **El espejo (VirtualDisplay + ImageReader) vive con la sesión, no con la captura**, y esto
   NO es opcional: un `MediaProjection` admite un solo `createVirtualDisplay`, el segundo tira
   `SecurityException` y **mata el proceso**. Lo aprendimos crasheando en la segunda captura.
-- **Costo medido:** el espejo compone ~55 fps continuos mientras la burbuja esté encendida
-  (`VDS-ScreenCapture SINK ... queueBuffer: fps=54.57`). Mitigación conocida y no
-  implementada: `setSurface(null)` entre capturas.
-- **La sesión muere en tres lugares y sólo en tres**: `detenerTodo()`, `onDestroy()` y el
+- **Costo medido y mitigado:** el espejo componía ~55 fps continuos mientras la burbuja
+  estuviera encendida (`VDS-ScreenCapture SINK ... queueBuffer: fps=54.57`). Se resolvió
+  con `setSurface(null)` entre capturas (el espejo "duerme") y re-enganchando el productor
+  al arrancar cada captura. Medido en dispositivo (`docs/smoke-captura-ocr.md`, "El espejo
+  duerme entre capturas"): **0 frames en 6 segundos** con la burbuja encendida y sin
+  capturar, y **5 capturas seguidas sin una sola falla**.
+- **La sesión muere en cinco lugares**: `detenerTodo()`, `onDestroy()`, el
   `MediaProjection.Callback.onStop()` (con chequeo de identidad, porque el callback de una
-  proyección vieja llega DESPUÉS de que el campo ya apunta a la nueva y si no la anula).
-  Cuando muere sola, la burbuja sigue viva y el próximo tap pide consentimiento: el
-  comportamiento de antes quedó como camino de recuperación.
+  proyección vieja llega DESPUÉS de que el campo ya apunta a la nueva y si no la anula),
+  `abrirSesion()` al reemplazar la sesión vieja por una nueva (`CapturaService.kt:200`), y
+  el camino de falla de `armarEspejo()` (`CapturaService.kt:230`). Cuando muere sola, la
+  burbuja sigue viva y el próximo tap pide consentimiento: el comportamiento de antes quedó
+  como camino de recuperación.
 - **Cerrar la burbuja sin entrar a la app**: long-press la convierte en ✕, un segundo toque
   cierra todo, y a los 3 s revierte sola. El gesto que arma la ✕ no puede además cerrarla
   (bug encontrado en dispositivo: colapsaba las dos interacciones en una).
@@ -180,8 +185,8 @@
   redimensiona y se reemplaza el `ImageReader`. **Sin verificar en dispositivo**: el ROM
   ignora `user_rotation` por adb, hay que girar el teléfono a mano.
 - **Pendiente de smoke a mano**: rotación, media hora con la burbuja encendida (el riesgo #1:
-  que HyperOS mate el foreground service de vida larga), frenar la proyección desde el panel
-  del sistema, y la captura en frío tras reiniciar.
+  que HyperOS mate el foreground service de vida larga), y frenar la proyección desde el
+  panel del sistema.
 
 ## Backlog diferido (Plan F recortes/notas — review final, no bloqueante)
 

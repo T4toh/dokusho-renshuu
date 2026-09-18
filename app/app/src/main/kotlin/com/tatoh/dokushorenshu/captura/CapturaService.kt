@@ -57,6 +57,18 @@ class CapturaService : Service() {
 
     private var isCapturing = false
 
+    /** Se incrementa cada vez que arranca una captura. captureScreen() encola dos
+     *  runnables con delay (100 ms y otros 200 ms más); si el usuario cancela y vuelve
+     *  a tocar la burbuja antes de que corran, el guard de isCapturing solo no alcanza:
+     *  para cuando el runnable viejo se ejecuta, isCapturing ya está en true de nuevo
+     *  porque arrancó una captura NUEVA, y el runnable viejo actuaría sobre ella con
+     *  datos de la captura vieja — en el peor caso, acquireLatestImage() devuelve un
+     *  frame de la pantalla en el momento del Cancel y arma una nota basura. Cada
+     *  runnable captura por valor la generación vigente al encolarse y se compara
+     *  contra la actual antes de actuar, ADEMÁS del chequeo de isCapturing que ya
+     *  existe, no en su lugar. */
+    private var generacionCaptura = 0
+
     companion object {
         const val NOTIFICATION_ID = 1002
         const val CHANNEL_ID = "captura_channel"
@@ -90,9 +102,6 @@ class CapturaService : Service() {
          *  desde afuera (la ✕, el Stop de la notificación, o el sistema matando el Service)
          *  dejaba el rótulo diciendo "Stop floating button" con la burbuja ya apagada. */
         val corriendo: StateFlow<Boolean> = _corriendo.asStateFlow()
-
-        /** Lectura puntual para quien no observa (código que no es Compose). */
-        val isRunning: Boolean get() = _corriendo.value
     }
     
     override fun onCreate() {
@@ -105,9 +114,15 @@ class CapturaService : Service() {
         when (intent?.action) {
             ACTION_INICIAR -> {
                 if (burbuja == null) {
-                    arrancarEnForeground(conProyeccion = false)
+                    // No puede ser `false` fijo: "Capture now" sin burbuja puede dejar una
+                    // sesión viva (el overlay ya se soltó, la burbuja volvió) y el usuario
+                    // llega a Scan y toca "Start floating button" con esa sesión todavía
+                    // abierta. Arrancar sin el tipo MEDIA_PROJECTION en ese caso le saca el
+                    // tipo a un foreground service con proyección activa, que Android 14+
+                    // corta.
+                    arrancarEnForeground(conProyeccion = sesion != null)
                     val nuevaBurbuja = BurbujaFlotante(this, windowManager!!, ::onTapBurbuja, ::detenerTodo)
-                    // isRunning sólo pasa a true si la ventana quedó efectivamente puesta:
+                    // _corriendo sólo pasa a true si la ventana quedó efectivamente puesta:
                     // ponerlo siempre (aunque addView() falle) dejaba mintiendo el rótulo
                     // del botón en la pantalla Scan.
                     if (nuevaBurbuja.mostrar()) {
@@ -145,6 +160,7 @@ class CapturaService : Service() {
                     return START_NOT_STICKY
                 }
                 isCapturing = true
+                generacionCaptura++
                 showOverlay()
             }
             ACTION_DETENER -> detenerTodo()
@@ -306,6 +322,7 @@ class CapturaService : Service() {
                     return
                 }
                 isCapturing = true
+                generacionCaptura++
                 showOverlay()
             }
             AccionTap.PedirConsentimiento -> startActivity(
@@ -549,6 +566,13 @@ class CapturaService : Service() {
     private fun captureScreen() {
         android.util.Log.d("ScreenCapture", "=== captureScreen() INICIADO ===")
 
+        // Generación de ESTA captura, capturada por valor: si el usuario cancela y
+        // vuelve a tocar la burbuja antes de que corran los runnables de abajo,
+        // generacionCaptura ya avanzó (onTapBurbuja / ACTION_ABRIR_SESION la
+        // incrementan al arrancar la captura nueva) y el chequeo de más abajo lo
+        // detecta aunque isCapturing vuelva a estar en true por la captura nueva.
+        val miGeneracion = generacionCaptura
+
         // Re-enganchar el productor lo antes posible: cuanto más margen tenga el
         // VirtualDisplay para componer el primer frame, menos chance de que
         // acquireLatestImage() llegue tarde y devuelva null.
@@ -563,7 +587,12 @@ class CapturaService : Service() {
             // Este trabajo ya estaba encolado cuando el usuario pudo haber cancelado: el
             // overlay queda INVISIBLE pero adjunto y con el foco, así que Back durante esta
             // ventana de ~300 ms dispara stopOverlay() y el Service se da de baja.
-            if (!isCapturing) {
+            // El chequeo de generación es ADEMÁS del de isCapturing, no en su lugar: si
+            // hubo un cancel + re-tap dentro de la ventana, isCapturing ya volvió a estar
+            // en true por la captura NUEVA, y sin comparar la generación este runnable
+            // viejo seguiría de largo y actuaría sobre la sesión de la captura nueva con
+            // el estado (selección, overlay) de la vieja.
+            if (!isCapturing || generacionCaptura != miGeneracion) {
                 android.util.Log.d("ScreenCapture", "Captura cancelada antes del delay: no se arma la captura")
                 return@postDelayed
             }
@@ -587,8 +616,12 @@ class CapturaService : Service() {
                 // NO hay nada que liberar — el espejo es de la sesión, no de la captura —
                 // sólo hay que dormirlo y no seguir procesando. NO se llama a cleanup() ni
                 // a liberarEspejo(): el punto entero de la tarea 5 es que un Cancel de una
-                // captura puntual no se lleve puesta la sesión completa.
-                if (!isCapturing) {
+                // captura puntual no se lleve puesta la sesión completa. Mismo chequeo de
+                // generación que en el runnable de arriba y por la misma razón: si no,
+                // acquireLatestImage() en processCapture() podría devolver un frame viejo
+                // (el de la pantalla al momento del Cancel) y crear una nota basura sobre
+                // la captura nueva.
+                if (!isCapturing || generacionCaptura != miGeneracion) {
                     android.util.Log.d("ScreenCapture", "Captura cancelada antes de procesar: se duerme el espejo")
                     dormirEspejo()
                     return@postDelayed
@@ -886,9 +919,16 @@ class CapturaService : Service() {
     }
 
     /** Cierra la captura, no la sesión: el VirtualDisplay y el ImageReader son de la
-     *  sesión (tarea 5b) y siguen vivos para la próxima captura. Sólo vuelve a mostrar la
-     *  burbuja. Sin burbuja (camino de `Capture now`) no hay nada que sostener y el
-     *  Service se apaga, como siempre. */
+     *  sesión (tarea 5b) y siguen vivos para la próxima captura. Duerme el espejo
+     *  (`dormirEspejo()`) y vuelve a mostrar la burbuja. Sin burbuja (camino de
+     *  `Capture now`) no hay nada que sostener y el Service se apaga, como siempre.
+     *
+     *  Nota para quien toque esto después: `detenerTodo()` apaga `isCapturing` por su
+     *  cuenta, sin pasar por acá — no hace falta que pase por acá para dejar el espejo
+     *  bien dormido, porque ese camino llama `cleanup()` → `liberarEspejo()`, que es más
+     *  fuerte que `dormirEspejo()` (suelta el VirtualDisplay y el ImageReader en vez de
+     *  sólo desengancharles la Surface). O sea nunca queda el espejo despierto sin una
+     *  sesión que lo sostenga. */
     private fun terminarCaptura() {
         isCapturing = false
         dormirEspejo()

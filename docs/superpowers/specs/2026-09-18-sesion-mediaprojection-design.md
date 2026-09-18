@@ -64,8 +64,10 @@ al elegir esta opción en el brainstorming ("VirtualDisplay + ImageReader reteni
 - **La `SecurityException` de `createVirtualDisplay` tiene que estar atrapada.** Sin
   atrapar mató el proceso entero con la burbuja adentro.
 
-El resto del diseño —un solo Service, la sesión atada a la vida de la burbuja, los tres
-lugares donde muere, el camino de recuperación cuando se cae— **no cambia**.
+El resto del diseño —un solo Service, la sesión atada a la vida de la burbuja, el camino de
+recuperación cuando se cae— **no cambia**. Los lugares donde muere la sesión sí crecen de
+tres a cinco como consecuencia directa de este cambio: ver la sección "Ciclo de la sesión"
+más abajo, anulada y corregida en el mismo sentido.
 
 ## Decisión
 
@@ -136,6 +138,11 @@ Sin burbuja, una captura = una sesión, como hasta ahora.
 burbuja. **No toca la sesión ni apaga el Service** — salvo en el camino sin burbuja de
 arriba, que es el único lugar donde sigue haciendo `stopSelf()`.
 
+**Anulado por la Corrección del 2026-09-18 de más arriba.** `terminarCaptura()` no libera
+el `VirtualDisplay` ni el `ImageReader` — ese es justamente el punto del cambio: el espejo
+vive con la sesión, no con la captura. Lo que hace hoy es dormirlo (`setSurface(null)`) y
+volver a mostrar la burbuja; ver `CapturaService.kt`.
+
 ### Estado
 
 ```kotlin
@@ -149,7 +156,12 @@ estática de las credenciales: el token se consume al abrirla y no se guarda.
 
 ### Ciclo de la sesión
 
-Se abre una vez por vida de burbuja. Muere en exactamente tres lugares:
+Se abre una vez por vida de burbuja. **Anulado por la Corrección del 2026-09-18 de más
+arriba: no muere en tres lugares, muere en cinco.** A los tres de abajo se suman
+`abrirSesion()` al reemplazar la sesión vieja por una nueva (`CapturaService.kt:200`) y el
+camino de falla de `armarEspejo()` (`CapturaService.kt:230`) — ambos existen porque el
+espejo (`VirtualDisplay` + `ImageReader`) ahora vive con la sesión, así que abrir una sesión
+nueva tiene que soltar el espejo de la vieja antes de pisarla.
 
 1. `DETENER` (el usuario apaga la burbuja o toca `Stop`),
 2. `onDestroy` del Service,
@@ -227,8 +239,23 @@ vida del Service, que es justamente lo que cambia.
 
 ## Fuera de alcance
 
-- Mantener el `VirtualDisplay` vivo entre capturas (no hace falta y cuesta CPU y memoria).
+- ~~Mantener el `VirtualDisplay` vivo entre capturas (no hace falta y cuesta CPU y
+  memoria).~~ **Anulado por la Corrección del 2026-09-18:** es literalmente lo que se
+  construyó — el espejo vive con la sesión y duerme entre capturas (`setSurface(null)`).
 - Revivir el Service si el sistema lo mata (`START_STICKY`): con la sesión muerta, revivir
   no sirve de nada.
 - El resto del backlog de OCR: Quick Settings Tile, zoom en el overlay, contraste/brillo
   pre-OCR, títulos editables en las notas, y la cascada de `palabras_tocadas` al borrar.
+
+## Lo que se sumó después y este spec no menciona
+
+- **Cerrar la burbuja con long-press** sin entrar a la app: un long-press la convierte en
+  ✕, un segundo toque separado cierra todo, y a los 3 s sin tocarla revierte sola.
+- **El rótulo del botón de la pantalla Scan sigue un `StateFlow`** (`CapturaService.corriendo`)
+  y no un `Boolean` suelto: así no queda mintiendo "Stop floating button" cuando la burbuja
+  se apaga por su cuenta (la ✕, el `Stop` de la notificación, o el sistema matando el
+  Service).
+- **El espejo duerme entre capturas** (`setSurface(null)` / re-enganche en
+  `despertarEspejo()`), que es la mitigación del costo de ~55 fps continuos que esta misma
+  corrección introdujo — ver `docs/ESTADO.md` y `docs/smoke-captura-ocr.md` para el
+  resultado medido.

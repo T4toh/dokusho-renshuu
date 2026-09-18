@@ -178,7 +178,7 @@ fun CapturaScreen(onCerrar: () -> Unit) {
             ) { Text(if (bubbleActivo) "Stop floating button" else "Start floating button") }
 
             Text(
-                "On Android 14 and newer, Android asks for capture permission every time — that is an OS rule, not a bug.",
+                "Android asks for capture permission once per session of the floating button — while it's on, the system keeps its screen recording indicator showing.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
