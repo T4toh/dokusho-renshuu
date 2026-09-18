@@ -75,6 +75,27 @@ viejo mentiría). Cuatro acciones:
 Una sola notificación persistente: la actual de la burbuja ("Quick capture active", con su
 acción `Stop`). La segunda notificación, la de captura, desaparece.
 
+### El camino sin burbuja: `Capture now`
+
+La pantalla Scan permite capturar sin encender la burbuja, y ese camino **no tiene sesión
+que sostener**: nadie va a tocar una burbuja después. Se resuelve con las mismas acciones,
+sin caso especial nuevo:
+
+- `Capture now` pide consentimiento y manda `ABRIR_SESION` igual que siempre. El Service
+  arranca sin haber recibido `INICIAR`, así que no hay burbuja: `burbuja == null`.
+- Al terminar esa captura, como no hay burbuja, el Service **cierra la sesión y se apaga**
+  — exactamente el comportamiento de hoy.
+
+O sea la regla es una sola y se lee del estado: **la sesión vive mientras viva la burbuja**.
+Sin burbuja, una captura = una sesión, como hasta ahora.
+
+### Qué pasa al terminar una captura
+
+`terminarServicio()` pasa a llamarse `terminarCaptura()` y cambia de alcance: libera el
+`VirtualDisplay` y el `ImageReader`, pone `isCapturing = false` y vuelve a mostrar la
+burbuja. **No toca la sesión ni apaga el Service** — salvo en el camino sin burbuja de
+arriba, que es el único lugar donde sigue haciendo `stopSelf()`.
+
 ### Estado
 
 ```kotlin
@@ -147,6 +168,8 @@ vida del Service, que es justamente lo que cambia.
 5. Rotar el teléfono entre dos capturas → el recorte no sale corrido. Hoy no está cubierto;
    el `VirtualDisplay` fresco debería arreglarlo, pero hay que verlo.
 6. Una sola notificación persistente, y su `Stop` apaga todo (sesión, burbuja y Service).
+7. **`Capture now` sin burbuja encendida**: captura una vez, y al terminar el Service se
+   apaga solo — sin notificación colgada ni indicador de grabación permanente.
 
 ## Riesgos
 
