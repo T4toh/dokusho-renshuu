@@ -24,6 +24,9 @@ import androidx.core.app.NotificationCompat
 import com.tatoh.dokushorenshu.App
 import com.tatoh.dokushorenshu.MainActivity
 import com.tatoh.dokushorenshu.datos.RecortesRepo
+import com.tatoh.dokushorenshu.dominio.captura.AccionTap
+import com.tatoh.dokushorenshu.dominio.captura.apagarTrasCaptura
+import com.tatoh.dokushorenshu.dominio.captura.decidirTap
 import com.tatoh.dokushorenshu.dominio.ocr.Recorte
 import com.tatoh.dokushorenshu.dominio.ocr.escalarRecorte
 import java.io.File
@@ -36,12 +39,12 @@ class CapturaService : Service() {
     private var selectionView: SelectionOverlayView? = null
     private var burbuja: BurbujaFlotante? = null
 
-    private var mediaProjection: MediaProjection? = null
+    /** La sesión de MediaProjection, viva mientras la burbuja exista. Sobrevive a cada
+     *  captura individual — ese es el punto de la tarea 5 — y sólo muere en
+     *  detenerTodo(), onDestroy() o el Callback.onStop() de más abajo. */
+    private var sesion: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
-
-    private var resultCode: Int = 0
-    private var resultData: Intent? = null
 
     private var isCapturing = false
 
@@ -104,10 +107,20 @@ class CapturaService : Service() {
                     android.util.Log.w("ScreenCapture", "Ya hay una captura en curso, ignorando")
                     return START_NOT_STICKY
                 }
+                // La promoción del tipo de foreground puede ser rechazada por el sistema
+                // (ForegroundServiceStartNotAllowedException y parientes). Sin este runCatching
+                // la excepción sale del onStartCommand y se lleva puesto el proceso, con la
+                // burbuja adentro; atrapada, cae en el mismo camino que un token inválido.
+                val promovido = runCatching { arrancarEnForeground(conProyeccion = true) }
+                if (promovido.isFailure) {
+                    android.util.Log.e("ScreenCapture", "El sistema rechazó el foreground de proyección", promovido.exceptionOrNull())
+                    avisar("Screen capture failed. Please try again")
+                    return START_NOT_STICKY
+                }
+                val codigo = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
+                val datos: Intent? = intent.getParcelableExtra(EXTRA_RESULT_DATA)
+                if (!abrirSesion(codigo, datos)) return START_NOT_STICKY
                 isCapturing = true
-                resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
-                resultData = intent.getParcelableExtra(EXTRA_RESULT_DATA)
-                arrancarEnForeground(conProyeccion = true)
                 showOverlay()
             }
             ACTION_DETENER -> detenerTodo()
@@ -137,15 +150,55 @@ class CapturaService : Service() {
         }
     }
 
-    /** Se tocó la burbuja. En esta tarea no hay sesión de larga vida: siempre pide
-     *  consentimiento de nuevo (la tarea 5 agrega el camino directo). */
+    /** Consume el token y deja la sesión viva para las capturas que vengan. El token sirve
+     *  para UNA llamada a getMediaProjection(); el MediaProjection que sale de ahí sirve
+     *  para muchas. Devuelve false si el token no servía. */
+    private fun abrirSesion(codigo: Int, datos: Intent?): Boolean {
+        if (codigo == 0 || datos == null) return false
+        val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        return try {
+            val proyeccion = manager.getMediaProjection(codigo, datos) ?: return false
+            proyeccion.registerCallback(object : MediaProjection.Callback() {
+                override fun onStop() {
+                    super.onStop()
+                    // El usuario frenó la proyección desde el panel del sistema, o el
+                    // sistema la cortó. La burbuja NO se apaga: el próximo tap pide
+                    // consentimiento de nuevo, que es el camino de recuperación.
+                    android.util.Log.d("ScreenCapture", "La sesión se cerró desde afuera")
+                    sesion = null
+                }
+            }, Handler(Looper.getMainLooper()))
+            sesion = proyeccion
+            true
+        } catch (e: SecurityException) {
+            android.util.Log.e("ScreenCapture", "Token inválido al abrir la sesión", e)
+            sesion = null
+            avisar("Screen capture failed. Please try again")
+            false
+        }
+    }
+
+    /** Se tocó la burbuja: si hay sesión viva, va directo al overlay; si no, hay que
+     *  pedirle consentimiento de nuevo al usuario. */
     private fun onTapBurbuja() {
-        startActivity(Intent(this, MainActivity::class.java).apply {
-            action = ACTION_PEDIR_PERMISO
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP
-        })
+        when (decidirTap(haySesion = sesion != null)) {
+            AccionTap.MostrarOverlay -> {
+                if (isCapturing) {
+                    android.util.Log.w("ScreenCapture", "Ya hay una captura en curso, ignorando")
+                    return
+                }
+                isCapturing = true
+                showOverlay()
+            }
+            AccionTap.PedirConsentimiento -> startActivity(
+                Intent(this, MainActivity::class.java).apply {
+                    action = ACTION_PEDIR_PERMISO
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+            )
+        }
     }
 
     /** Apaga sesión, burbuja y Service. Único punto de baja completa: lo dispara tanto
@@ -322,9 +375,8 @@ class CapturaService : Service() {
             android.util.Log.e("ScreenCapture", "Error añadiendo el overlay a WindowManager", e)
             overlayView = null
             selectionView = null
-            burbuja?.visible(true)
             avisar("Could not show the capture overlay")
-            terminarServicio()
+            terminarCaptura()
             return
         }
         // Después de addView: sólo una vista adjunta puede tomar el foco de teclas, que es
@@ -387,86 +439,61 @@ class CapturaService : Service() {
         Handler(Looper.getMainLooper()).postDelayed({
             // Este trabajo ya estaba encolado cuando el usuario pudo haber cancelado: el
             // overlay queda INVISIBLE pero adjunto y con el foco, así que Back durante esta
-            // ventana de ~300 ms dispara stopOverlay() y el Service se da de baja. Sin esta
-            // guarda el runnable seguía adelante, rearmaba MediaProjection sobre un Service
-            // ya parado (el campo resultData nunca se anula, sólo los estáticos) y terminaba
-            // abriendo la app con el texto que el usuario acababa de cancelar.
+            // ventana de ~300 ms dispara stopOverlay() y el Service se da de baja.
             if (!isCapturing) {
-                android.util.Log.d("ScreenCapture", "Captura cancelada antes del delay: no se arma MediaProjection")
+                android.util.Log.d("ScreenCapture", "Captura cancelada antes del delay: no se arma la captura")
                 return@postDelayed
             }
 
-            android.util.Log.d("ScreenCapture", "Iniciando creación de MediaProjection...")
-            
             val metrics = DisplayMetrics()
             windowManager?.defaultDisplay?.getRealMetrics(metrics)
             val width = metrics.widthPixels
             val height = metrics.heightPixels
             val density = metrics.densityDpi
-            
+
+            val proyeccion = sesion
+            if (proyeccion == null) {
+                // La sesión murió entre el tap y el disparo (el usuario la frenó desde el panel).
+                android.util.Log.w("ScreenCapture", "Sin sesión al capturar: se pide consentimiento")
+                avisar("Screen capture failed. Please try again")
+                stopOverlay()
+                return@postDelayed
+            }
             android.util.Log.d("ScreenCapture", "Creando ImageReader: ${width}x${height}, density=$density")
             imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-            
-            val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-            
-            // Crear NUEVO MediaProjection cada vez (Android no permite reusar el mismo)
-            // IMPORTANTE: esto invalida el token anterior
-            mediaProjection?.stop()
-            mediaProjection = null
-            
-            try {
-                android.util.Log.d("ScreenCapture", "Obteniendo MediaProjection con resultCode=$resultCode")
-                mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, resultData!!)
-                android.util.Log.d("ScreenCapture", "MediaProjection obtenido: $mediaProjection")
-                
-                // Registrar callback requerido en Android 14+
-                mediaProjection?.registerCallback(object : MediaProjection.Callback() {
-                    override fun onStop() {
-                        super.onStop()
-                        android.util.Log.d("ScreenCapture", "MediaProjection.Callback.onStop() llamado")
-                    }
-                }, Handler(Looper.getMainLooper()))
-                
-                android.util.Log.d("ScreenCapture", "Creando VirtualDisplay...")
-                virtualDisplay = mediaProjection?.createVirtualDisplay(
-                    "ScreenCapture",
-                    width,
-                    height,
-                    density,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                    imageReader?.surface,
-                    null,
-                    null
-                )
-                android.util.Log.d("ScreenCapture", "VirtualDisplay creado: $virtualDisplay")
-                
-                // Esperar un poco más para que la captura se complete
-                android.util.Log.d("ScreenCapture", "Esperando 200ms antes de procesar captura...")
-                Handler(Looper.getMainLooper()).postDelayed({
-                    // Misma historia: si cancelaron entre medio, esto ya estaba encolado.
-                    // Acá además hay que soltar lo que el runnable anterior alcanzó a crear
-                    // —VirtualDisplay, ImageReader y el MediaProjection— porque se armaron
-                    // DESPUÉS del cleanup() de la baja y si no quedarían vivos con el
-                    // Service muerto (indicador de grabación incluido).
-                    if (!isCapturing) {
-                        android.util.Log.d("ScreenCapture", "Captura cancelada antes de procesar: se libera y se sale")
-                        cleanup()
-                        return@postDelayed
-                    }
+            virtualDisplay = proyeccion.createVirtualDisplay(
+                "ScreenCapture",
+                width,
+                height,
+                density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader?.surface,
+                null,
+                null
+            )
+            android.util.Log.d("ScreenCapture", "VirtualDisplay creado: $virtualDisplay")
 
-                    android.util.Log.d("ScreenCapture", "Llamando a processCapture()...")
-                    processCapture()
-                }, 200)
-            } catch (e: SecurityException) {
-                android.util.Log.e("ScreenCapture", "SecurityException - Token de MediaProjection expirado o inválido", e)
-                // Android 14+ invalida el token después de cada sesión. En esta tarea no
-                // hay credenciales guardadas que limpiar: el próximo tap de la burbuja
-                // vuelve a pedir consentimiento siempre (onTapBurbuja()).
-                stopOverlay()
-            } catch (e: Exception) {
-                android.util.Log.e("ScreenCapture", "Error creando MediaProjection", e)
-                stopOverlay()
-            }
+            // Esperar un poco más para que la captura se complete
+            android.util.Log.d("ScreenCapture", "Esperando 200ms antes de procesar captura...")
+            Handler(Looper.getMainLooper()).postDelayed({
+                // Misma historia: si cancelaron entre medio, esto ya estaba encolado.
+                // Acá hay que soltar lo que el runnable anterior alcanzó a crear —
+                // VirtualDisplay e ImageReader— porque se armaron DESPUÉS de que Cancel
+                // ya haya corrido terminarCaptura(). OJO: NO se llama a cleanup() acá,
+                // que además pararía la sesión — el punto entero de la tarea 5 es que un
+                // Cancel de una captura puntual no se lleve puesta la sesión completa.
+                if (!isCapturing) {
+                    android.util.Log.d("ScreenCapture", "Captura cancelada antes de procesar: se libera y se sale")
+                    virtualDisplay?.release()
+                    imageReader?.close()
+                    virtualDisplay = null
+                    imageReader = null
+                    return@postDelayed
+                }
+
+                android.util.Log.d("ScreenCapture", "Llamando a processCapture()...")
+                processCapture()
+            }, 200)
         }, 100)
         
         android.util.Log.d("ScreenCapture", "=== captureScreen() configuración completada, esperando delay ===")
@@ -582,13 +609,13 @@ class CapturaService : Service() {
                 }
             } catch (e: Throwable) {
                 // Sin este catch, cualquier excepción acá adentro mata el proceso: corre en un
-                // hilo propio, nadie la atrapa, y terminarServicio() nunca se ejecuta (Service
-                // en foreground colgado + credenciales sin limpiar). El caso concreto es
+                // hilo propio, nadie la atrapa, y terminarCaptura() nunca se ejecuta (Service
+                // en foreground colgado + captura sin cerrar). El caso concreto es
                 // startActivity() lanzando si revocaron SYSTEM_ALERT_WINDOW mientras tanto.
                 android.util.Log.e("ScreenCapture", "Fallo no controlado en el hilo de OCR", e)
                 avisar("Capture failed")
             } finally {
-                Handler(Looper.getMainLooper()).post { terminarServicio() }
+                Handler(Looper.getMainLooper()).post { terminarCaptura() }
             }
         }.start()
     }
@@ -733,45 +760,40 @@ class CapturaService : Service() {
         selectionView = null
     }
 
-    /** Cierra la captura. Va aparte de liberarVentanaOverlay() porque mientras corre
-     *  el OCR la ventana ya está desmontada pero el Service tiene que seguir vivo:
-     *  todavía le falta reconocer el texto y abrir la app con el resultado.
-     *
-     *  Con burbuja viva el Service NO se apaga acá: la burbuja vive en esta misma
-     *  instancia desde la tarea 4 (antes vivía en otro Service, y apagar éste no se la
-     *  llevaba puesta). Si acá hiciéramos stopSelf() con la burbuja arriba, su ventana
-     *  queda pegada al WindowManager sin dueño — se sigue viendo y tocando, pero ya no
-     *  hay Service para atenderla ni forma de sacarla desde la UI. Sólo se apaga cuando
-     *  NO hay burbuja: el camino de "Capture now" desde la pantalla Scan, donde nadie va
-     *  a tocar una burbuja después. */
-    private fun terminarServicio() {
-        cleanup()
+    /** Cierra la captura, no la sesión: suelta el VirtualDisplay y el ImageReader, que se
+     *  crean de nuevo en la próxima, y vuelve a mostrar la burbuja. La sesión sigue viva —
+     *  ese es el punto del plan. Sin burbuja (camino de `Capture now`) no hay nada que
+     *  sostener y el Service se apaga, como siempre. */
+    private fun terminarCaptura() {
+        virtualDisplay?.release()
+        imageReader?.close()
+        virtualDisplay = null
+        imageReader = null
         isCapturing = false
-        if (burbuja == null) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-        } else {
-            burbuja?.visible(true)
-        }
+        burbuja?.visible(true)
+        if (apagarTrasCaptura(hayBurbuja = burbuja != null)) detenerTodo()
     }
 
     private fun stopOverlay() {
         android.util.Log.d("ScreenCapture", "=== stopOverlay() INICIADO ===")
 
         liberarVentanaOverlay()
-        terminarServicio()
+        terminarCaptura()
 
         android.util.Log.d("ScreenCapture", "=== stopOverlay() FINALIZADO ===")
     }
 
+    /** Apagado de verdad: acá sí se cierra la sesión. Corre desde detenerTodo() (que
+     *  terminarCaptura() puede disparar), y otra vez desde onDestroy() por si el sistema
+     *  mata el Service directo. */
     private fun cleanup() {
         virtualDisplay?.release()
         imageReader?.close()
-        mediaProjection?.stop()
+        sesion?.stop()
 
         virtualDisplay = null
         imageReader = null
-        mediaProjection = null
+        sesion = null
     }
     
     override fun onDestroy() {
