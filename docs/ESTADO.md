@@ -184,9 +184,11 @@
 - **Rotación**: el `VirtualDisplay` conserva el tamaño con el que nació, así que al rotar se
   redimensiona y se reemplaza el `ImageReader`. **Sin verificar en dispositivo**: el ROM
   ignora `user_rotation` por adb, hay que girar el teléfono a mano.
-- **Pendiente de smoke a mano**: rotación, media hora con la burbuja encendida (el riesgo #1:
-  que HyperOS mate el foreground service de vida larga), y frenar la proyección desde el
-  panel del sistema.
+- **El riesgo #1 del spec no se materializó**: media hora con la burbuja encendida y la
+  sesión abierta sin capturar, y HyperOS **no** mató el Service — mismo pid a los 30
+  minutos, y el tap siguiente capturó sin pedir consentimiento ni rearmar el espejo.
+- **Pendiente de smoke a mano**: rotar el teléfono entre capturas (el ROM ignora
+  `user_rotation` por adb) y frenar la proyección desde el panel del sistema.
 
 ## Backlog diferido (Plan F recortes/notas — review final, no bloqueante)
 

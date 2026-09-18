@@ -67,8 +67,13 @@ display por captura, no importa lo tentador que sea liberarlo al terminar.
    `exported="false"`). Queda para hacer a mano.
 3. **Apagar y encender la burbuja: PASA.** Cerrarla con la ✕ y volver a encenderla pide
    consentimiento de nuevo: la sesión muere con la burbuja, como manda el diseño.
-4. **Media hora con la burbuja encendida: SIN CORRER.** Es el riesgo #1 del spec (que
-   HyperOS mate el foreground service de vida larga). Hay que hacerlo a mano.
+4. **Media hora con la burbuja encendida: PASA.** Era el riesgo #1 del spec — que HyperOS
+   matara el foreground service de vida larga— y no se materializó. Burbuja encendida con
+   la sesión abierta a las 12:01, sin capturar nada. A los 30 minutos: **mismo pid**
+   (15377, o sea el proceso nunca se reinició), burbuja en pantalla y su notificación
+   viva. Y lo que importa de verdad: el tap siguiente entró **directo al overlay, con 0
+   diálogos de consentimiento**, y capturó (`Espejo despierto` → `OCR devolvió 30 chars`)
+   sin un `Espejo armado` nuevo: la sesión original seguía siendo la misma.
 5. **Rotar entre capturas: SIN CORRER.** El ROM ignora `settings put system user_rotation`
    incluso con una app rotable adelante (`mRotation=ROTATION_0` siempre), así que hay que
    girar el teléfono con la mano. Verifica el `resize()` + reemplazo del `ImageReader` que
