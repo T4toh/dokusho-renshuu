@@ -20,6 +20,85 @@
 > quemaba el permiso de MediaProjection y el segundo pedido no mostraba el diálogo — ver
 > la corrida de la tarde.
 
+## Corrida del 2026-09-18: una sesión por vida de la burbuja
+
+Sobre el branch `feat/sesion-mediaprojection` (commit `babc9c0`), mismo POCO. Este cambio
+toca el ciclo de vida del Service entero, así que se re-corrieron los pasos que dependen de
+él y se agregaron los que sólo tienen sentido con sesión larga.
+
+**El hallazgo que redefinió el plan.** La primera versión mantenía viva la sesión y creaba
+un `VirtualDisplay` por captura. La segunda captura murió así:
+
+```
+java.lang.SecurityException: Don't re-use the resultData to retrieve the same projection
+instance, and don't use a token that has timed out. Don't take multiple captures by invoking
+MediaProjection#createVirtualDisplay multiple times on the same instance.
+FATAL EXCEPTION: main
+```
+
+O sea **un `MediaProjection` admite UN solo `createVirtualDisplay`**. Lo que entrega N
+frames es el `VirtualDisplay`, así que el espejo (display + `ImageReader`) pasó a vivir con
+la sesión, modelo grabador de pantalla. Si alguien vuelve a tocar esto: no intentes crear un
+display por captura, no importa lo tentador que sea liberarlo al terminar.
+
+### Pasos re-corridos (todos PASAN)
+
+| Paso | Evidencia |
+| ---- | --------- |
+| 16 — salidas del overlay | Back → `Back en el overlay: se trata como Cancel`; botón `Cancel` → `stopOverlay()`. En los dos casos vuelve la burbuja **y la sesión sobrevive**: el tap siguiente entra directo al overlay |
+| 17 — área sin texto | `OCR devolvió 0 chars` → `OCR sin texto: no se abre la app`; 44 archivos en `files/recortes/` antes y después |
+| 19 — segundo tap durante el OCR | `Click detectado` 11:20:12.147 → `Ya hay una captura en curso, ignorando` 11:20:12.197 → `OCR devolvió 209 chars` 11:20:12.350. Ahora es **fácil** de enganchar: el segundo tap ya no cuesta un diálogo de consentimiento |
+| 20 — revocar overlay en caliente | sin crash, proceso vivo, 0 `FATAL`. **Cambió respecto de la arquitectura vieja:** las ventanas ya creadas sobreviven a la revocación (Android sólo bloquea las nuevas); antes la burbuja desaparecía sola. Además, revocar y restaurar el permiso **no** mata la sesión de proyección |
+
+### Pasos nuevos
+
+1. **Cinco capturas seguidas con un solo consentimiento: PASA.** 5 × `OCR devolvió`, un
+   único `Espejo armado: 1220x2712`, 0 `FATAL EXCEPTION`, 0 pedidos de consentimiento
+   después del primero. Es el objetivo del cambio.
+2. **Frenar la proyección desde el panel del sistema: SIN CORRER.** No hay forma de
+   dispararlo por adb (`cmd media_projection` no existe en este ROM y el Service es
+   `exported="false"`). Queda para hacer a mano.
+3. **Apagar y encender la burbuja: PASA.** Cerrarla con la ✕ y volver a encenderla pide
+   consentimiento de nuevo: la sesión muere con la burbuja, como manda el diseño.
+4. **Media hora con la burbuja encendida: SIN CORRER.** Es el riesgo #1 del spec (que
+   HyperOS mate el foreground service de vida larga). Hay que hacerlo a mano.
+5. **Rotar entre capturas: SIN CORRER.** El ROM ignora `settings put system user_rotation`
+   incluso con una app rotable adelante (`mRotation=ROTATION_0` siempre), así que hay que
+   girar el teléfono con la mano. Verifica el `resize()` + reemplazo del `ImageReader` que
+   el modelo grabador obligó a agregar.
+6. **Una sola notificación: PASA.** `id=1002`, única (antes había dos Services con una cada
+   uno).
+7. **`Capture now` sin burbuja: PASA.** Durante la captura hay overlay y notificación; al
+   terminar (`OCR devolvió 83 chars`) queda todo en cero — el Service se apaga solo, que es
+   lo que corresponde cuando no hay burbuja que sostener.
+8. **Cerrar la burbuja con long-press: PASA.** `Modo cerrar activado` (11:13:44) y, con un
+   **segundo toque separado**, `Tap en la ✕: se cierra todo` (11:13:45) → 0 ventanas, 0
+   notificaciones. A los 3 s sin tocarla, la ✕ revierte sola y el tap vuelve a ser captura.
+
+### Costo medido que conviene tener presente
+
+Con la sesión abierta, el espejo compone frames **continuamente**, esté capturando o no:
+
+```
+VDS-ScreenCapture SINK ... queueBuffer: fps=54.57
+```
+
+~55 fps mientras la burbuja esté encendida. Es el precio del modelo grabador. Mitigación
+posible y no implementada: `virtualDisplay.setSurface(null)` entre capturas para dormir el
+productor, re-enganchando antes de capturar.
+
+### Notas de método para la próxima corrida
+
+- **Contar ventanas por tamaño, no por nombre.** `grep -c 'Window{... u0 <pkg>}$'` da
+  inflado porque `dumpsys` repite la línea en varias secciones. La burbuja es
+  `Requested w=182 h=182`; el overlay, `w=1220 h=2712`.
+- **`adb am start-foreground-service` no sirve** para disparar acciones de este Service:
+  `exported="false"` → `Requires permission not exported from uid`. Hay que ir por la UI.
+- Tocar elementos por texto en vez de por coordenadas ahorra muchísimo tiempo: las
+  coordenadas se corren en cuanto la pantalla cambia de estado.
+- Para la burbuja, `input swipe x y x y <ms>`; para la UI de Compose, `input tap`. Y un
+  `swipe` de 900 ms sobre la burbuja es un long-press (abre el modo ✕).
+
 ## Corrida del 2026-09-17, cierre: pasos 18, 19 y 20
 
 Build debug de `main` `da92143` (post PR #21), mismo POCO. Conducida por adb salvo donde
