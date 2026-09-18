@@ -901,6 +901,71 @@ arrastre siga funcionando— la corre el controlador.
 
 ---
 
+### Task 5d: El rótulo del botón deja de mentir
+
+Reportado en uso real: la pantalla Scan dice `Stop floating button` con la burbuja
+apagada. `CapturaScreen.kt:77` hace `remember { mutableStateOf(CapturaService.isRunning) }`
+—una foto del flag al componerse— y `:174` toca una copia local. Cualquier cambio desde
+**afuera** de esa pantalla deja el rótulo mintiendo: cerrar con la ✕ (que la tarea 5c acaba
+de agregar), el `Stop` de la notificación, o que el sistema mate el Service.
+
+**Files:**
+- Modify: `app/app/src/main/kotlin/com/tatoh/dokushorenshu/captura/CapturaService.kt`
+- Modify: `app/app/src/main/kotlin/com/tatoh/dokushorenshu/ui/captura/CapturaScreen.kt`
+
+- [ ] **Step 1: El estado se publica, no se copia**
+
+En el `companion object` de `CapturaService`, `isRunning` pasa de `@Volatile var` a un
+`StateFlow`. **No** se usa `mutableStateOf` de Compose: el Service no tiene por qué
+depender del runtime de UI, y `kotlinx.coroutines` ya es dependencia del módulo.
+
+```kotlin
+private val _corriendo = MutableStateFlow(false)
+
+/** Si la burbuja está en pantalla. Es un StateFlow y no un Boolean suelto porque la
+ *  pantalla Scan lo muestra en el rótulo de su botón: con un Boolean, cerrar la burbuja
+ *  desde afuera (la ✕, el Stop de la notificación, o el sistema matando el Service)
+ *  dejaba el rótulo diciendo "Stop floating button" con la burbuja ya apagada. */
+val corriendo: StateFlow<Boolean> = _corriendo.asStateFlow()
+
+/** Lectura puntual para quien no observa (código que no es Compose). */
+val isRunning: Boolean get() = _corriendo.value
+```
+
+Los tres lugares que hoy escriben `isRunning` (`:105` al mostrar la burbuja, `:299` en
+`detenerTodo()`, `:900` en `onDestroy()`) pasan a escribir `_corriendo.value`.
+
+- [ ] **Step 2: La pantalla observa en vez de copiar**
+
+En `CapturaScreen.kt`, se borra el estado local y su toggle:
+
+```kotlin
+// antes: var bubbleActivo by remember { mutableStateOf(CapturaService.isRunning) }
+val bubbleActivo by CapturaService.corriendo.collectAsState()
+```
+
+Y en el `onClick` del botón se borra la línea `bubbleActivo = !bubbleActivo`: el rótulo
+ahora sale del Service, que es quien sabe la verdad. El resto del `onClick` (el
+`startService` vs `startForegroundService`, con su comentario) **no se toca**.
+
+- [ ] **Step 3: Compilar y correr los tests**
+
+Run: `cd app && ./gradlew testDebugUnitTest`
+Expected: BUILD SUCCESSFUL, 308 tests, 0 failures.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "fix(captura): el rótulo del botón sigue el estado real de la burbuja"
+```
+
+Verificación en dispositivo (la corre el controlador): con la pantalla Scan abierta y la
+burbuja encendida, cerrarla con la ✕ desde afuera y volver a la pantalla — el botón tiene
+que decir `Start floating button` sin necesidad de salir y entrar.
+
+---
+
 ### Task 6: Smoke de dispositivo y documentación
 
 **Files:**
