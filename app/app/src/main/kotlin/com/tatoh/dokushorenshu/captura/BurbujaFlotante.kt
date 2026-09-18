@@ -3,6 +3,8 @@ package com.tatoh.dokushorenshu.captura
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
 import android.view.*
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
@@ -17,7 +19,8 @@ import kotlin.math.abs
 class BurbujaFlotante(
     private val context: Context,
     private val windowManager: WindowManager,
-    private val onTap: () -> Unit
+    private val onTap: () -> Unit,
+    private val onCerrar: () -> Unit
 ) {
 
     private var bubbleView: View? = null
@@ -30,6 +33,39 @@ class BurbujaFlotante(
     private var isDragging = false
     private val DRAG_THRESHOLD = 10 // pixels
     private val BUBBLE_SIZE = 56 // dp - tamaño estándar de FAB en Material Design
+
+    // Modo ✕: long-press convierte la burbuja en botón de cierre (tarea 5c).
+    private var modoCerrar = false
+    private val handler = Handler(Looper.getMainLooper())
+    private val detectarLongPress = Runnable { entrarModoCerrar() }
+    /** Vuelve sola a la burbuja normal: un long-press accidental no puede dejar una ✕
+     *  armada esperando el próximo toque. */
+    private val revertir = Runnable { salirModoCerrar() }
+
+    private fun entrarModoCerrar() {
+        if (modoCerrar) return
+        modoCerrar = true
+        bubbleView?.let { vista ->
+            (vista as ImageView).setImageDrawable(
+                ContextCompat.getDrawable(context, android.R.drawable.ic_menu_close_clear_cancel)
+            )
+            (vista.background as GradientDrawable).setColor(Color.parseColor("#E57373")) // rojo suave
+        }
+        handler.postDelayed(revertir, 3000)
+        android.util.Log.d("FloatingBubble", "Modo cerrar activado")
+    }
+
+    private fun salirModoCerrar() {
+        if (!modoCerrar) return
+        modoCerrar = false
+        handler.removeCallbacks(revertir)
+        bubbleView?.let { vista ->
+            (vista as ImageView).setImageDrawable(
+                ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+            )
+            (vista.background as GradientDrawable).setColor(Color.parseColor("#9FA8DA"))
+        }
+    }
 
     /** @return false si falló al agregar la ventana al WindowManager (el Service decide
      *  qué hacer, por ejemplo detenerse); true si la burbuja quedó puesta. */
@@ -91,7 +127,6 @@ class BurbujaFlotante(
 
             // Configurar listeners para drag y click
             setOnTouchListener(object : View.OnTouchListener {
-                private var downTime: Long = 0
                 private var moved = false
 
                 override fun onTouch(v: View, event: MotionEvent): Boolean {
@@ -105,10 +140,11 @@ class BurbujaFlotante(
                             initialY = layoutParams.y
                             initialTouchX = event.rawX
                             initialTouchY = event.rawY
-                            downTime = System.currentTimeMillis()
                             moved = false
                             isDragging = false
                             alpha = 1.0f
+
+                            handler.postDelayed(detectarLongPress, ViewConfiguration.getLongPressTimeout().toLong())
 
                             // IMPORTANTE: Devolver true para reclamar el evento
                             return true
@@ -120,6 +156,10 @@ class BurbujaFlotante(
 
                             // Determinar si se movió lo suficiente para considerar drag
                             if (abs(deltaX) > DRAG_THRESHOLD || abs(deltaY) > DRAG_THRESHOLD) {
+                                if (!moved) {
+                                    handler.removeCallbacks(detectarLongPress)
+                                    salirModoCerrar()
+                                }
                                 moved = true
                                 isDragging = true
                             }
@@ -142,19 +182,27 @@ class BurbujaFlotante(
                         MotionEvent.ACTION_UP -> {
                             android.util.Log.d("FloatingBubble", "ACTION_UP recibido, moved=$moved")
                             alpha = 0.9f
-                            val upTime = System.currentTimeMillis()
-                            val pressDuration = upTime - downTime
 
-                            // Si no se movió y fue un toque corto, es un click
-                            if (!moved && pressDuration < 500) {
-                                android.util.Log.d("FloatingBubble", "Click detectado! Ejecutando onTap()")
-                                // Pequeño delay para evitar conflictos con el sistema
-                                v.postDelayed({
-                                    onTap()
-                                }, 50)
-                            } else if (isDragging) {
-                                // Si fue drag, snap al borde
-                                snapToEdge(layoutParams)
+                            handler.removeCallbacks(detectarLongPress)
+                            when {
+                                moved -> {
+                                    // Fue arrastre: el snap ya corrió, nada más.
+                                    if (isDragging) {
+                                        snapToEdge(layoutParams)
+                                    }
+                                }
+                                modoCerrar -> {
+                                    android.util.Log.d("FloatingBubble", "Tap en la ✕: se cierra todo")
+                                    salirModoCerrar()
+                                    onCerrar()
+                                }
+                                else -> {
+                                    android.util.Log.d("FloatingBubble", "Click detectado! Ejecutando onTap()")
+                                    // Pequeño delay para evitar conflictos con el sistema
+                                    v.postDelayed({
+                                        onTap()
+                                    }, 50)
+                                }
                             }
 
                             return true
@@ -165,12 +213,14 @@ class BurbujaFlotante(
                             // El sistema canceló el toque - resetear estado
                             alpha = 0.9f
                             isDragging = false
+                            handler.removeCallbacks(detectarLongPress)
                             return true
                         }
 
                         MotionEvent.ACTION_OUTSIDE -> {
                             android.util.Log.d("FloatingBubble", "ACTION_OUTSIDE recibido")
-                            // Toque fuera del bubble - ignorar
+                            // Toque fuera de la burbuja: si estaba armada la ✕, se desarma.
+                            salirModoCerrar()
                             return false
                         }
                     }
@@ -219,6 +269,9 @@ class BurbujaFlotante(
     }
 
     fun ocultar() {
+        handler.removeCallbacks(detectarLongPress)
+        handler.removeCallbacks(revertir)
+
         try {
             bubbleView?.let {
                 windowManager.removeView(it)

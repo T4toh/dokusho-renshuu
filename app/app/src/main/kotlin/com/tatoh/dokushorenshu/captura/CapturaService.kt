@@ -96,7 +96,7 @@ class CapturaService : Service() {
             ACTION_INICIAR -> {
                 if (burbuja == null) {
                     arrancarEnForeground(conProyeccion = false)
-                    val nuevaBurbuja = BurbujaFlotante(this, windowManager!!, ::onTapBurbuja)
+                    val nuevaBurbuja = BurbujaFlotante(this, windowManager!!, ::onTapBurbuja, ::detenerTodo)
                     // isRunning sólo pasa a true si la ventana quedó efectivamente puesta:
                     // ponerlo siempre (aunque addView() falle) dejaba mintiendo el rótulo
                     // del botón en la pantalla Scan.
