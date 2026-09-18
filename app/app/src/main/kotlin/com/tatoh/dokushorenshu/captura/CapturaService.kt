@@ -46,6 +46,12 @@ class CapturaService : Service() {
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
 
+    /** Geometría con la que se armó el espejo actual. Se compara contra las métricas
+     *  reales en cada captura para detectar una rotación de pantalla. */
+    private var anchoEspejo = 0
+    private var altoEspejo = 0
+    private var densidadEspejo = 0
+
     private var isCapturing = false
 
     companion object {
@@ -197,6 +203,7 @@ class CapturaService : Service() {
                     // pisarla — si no, la P1 vieja anularía la P2 viva.
                     if (sesion === proyeccion) {
                         android.util.Log.d("ScreenCapture", "La sesión se cerró desde afuera")
+                        liberarEspejo()
                         sesion = null
                     } else {
                         android.util.Log.d("ScreenCapture", "onStop() de una sesión vieja: se ignora")
@@ -204,10 +211,43 @@ class CapturaService : Service() {
                 }
             }, Handler(Looper.getMainLooper()))
             sesion = proyeccion
+            if (!armarEspejo(proyeccion)) {
+                proyeccion.stop()
+                sesion = null
+                return false
+            }
             true
         } catch (e: SecurityException) {
             android.util.Log.e("ScreenCapture", "Token inválido al abrir la sesión", e)
             sesion = null
+            avisar("Screen capture failed. Please try again")
+            false
+        }
+    }
+
+    /** Arma el espejo de pantalla completo: proyección + ImageReader + VirtualDisplay, todo
+     *  de una y para toda la sesión. Un MediaProjection admite UN solo createVirtualDisplay
+     *  —Android tira SecurityException en el segundo— pero ese VirtualDisplay entrega frames
+     *  indefinidamente. Es el modelo de un grabador de pantalla, y es la única forma de
+     *  capturar varias veces con un solo consentimiento. */
+    private fun armarEspejo(proyeccion: MediaProjection): Boolean {
+        val metrics = DisplayMetrics()
+        windowManager?.defaultDisplay?.getRealMetrics(metrics)
+        anchoEspejo = metrics.widthPixels
+        altoEspejo = metrics.heightPixels
+        densidadEspejo = metrics.densityDpi
+        return try {
+            imageReader = ImageReader.newInstance(anchoEspejo, altoEspejo, PixelFormat.RGBA_8888, 2)
+            virtualDisplay = proyeccion.createVirtualDisplay(
+                "ScreenCapture", anchoEspejo, altoEspejo, densidadEspejo,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader?.surface, null, null,
+            )
+            android.util.Log.d("ScreenCapture", "Espejo armado: ${anchoEspejo}x$altoEspejo")
+            true
+        } catch (e: SecurityException) {
+            android.util.Log.e("ScreenCapture", "No se pudo armar el espejo", e)
+            liberarEspejo()
             avisar("Screen capture failed. Please try again")
             false
         }
@@ -465,11 +505,11 @@ class CapturaService : Service() {
     
     private fun captureScreen() {
         android.util.Log.d("ScreenCapture", "=== captureScreen() INICIADO ===")
-        
+
         // Primero ocultar el overlay y esperar un momento
         hideOverlayTemporarily()
         android.util.Log.d("ScreenCapture", "Overlay ocultado temporalmente")
-        
+
         // Delay para que el overlay se oculte completamente
         Handler(Looper.getMainLooper()).postDelayed({
             // Este trabajo ya estaba encolado cuando el usuario pudo haber cancelado: el
@@ -480,49 +520,27 @@ class CapturaService : Service() {
                 return@postDelayed
             }
 
-            val metrics = DisplayMetrics()
-            windowManager?.defaultDisplay?.getRealMetrics(metrics)
-            val width = metrics.widthPixels
-            val height = metrics.heightPixels
-            val density = metrics.densityDpi
-
             val proyeccion = sesion
-            if (proyeccion == null) {
-                // La sesión murió entre el tap y el disparo (el usuario la frenó desde el panel).
-                android.util.Log.w("ScreenCapture", "Sin sesión al capturar: se pide consentimiento")
+            if (proyeccion == null || virtualDisplay == null) {
+                // La sesión (o su espejo) murió entre el tap y el disparo: el usuario la
+                // frenó desde el panel del sistema, o armarEspejo() falló en abrirSesion().
+                android.util.Log.w("ScreenCapture", "Sin espejo al capturar: se pide consentimiento")
                 avisar("Screen capture failed. Please try again")
                 stopOverlay()
                 return@postDelayed
             }
-            android.util.Log.d("ScreenCapture", "Creando ImageReader: ${width}x${height}, density=$density")
-            imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-            virtualDisplay = proyeccion.createVirtualDisplay(
-                "ScreenCapture",
-                width,
-                height,
-                density,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                imageReader?.surface,
-                null,
-                null
-            )
-            android.util.Log.d("ScreenCapture", "VirtualDisplay creado: $virtualDisplay")
+            ajustarEspejoSiRotó()
 
             // Esperar un poco más para que la captura se complete
             android.util.Log.d("ScreenCapture", "Esperando 200ms antes de procesar captura...")
             Handler(Looper.getMainLooper()).postDelayed({
-                // Misma historia: si cancelaron entre medio, esto ya estaba encolado.
-                // Acá hay que soltar lo que el runnable anterior alcanzó a crear —
-                // VirtualDisplay e ImageReader— porque se armaron DESPUÉS de que Cancel
-                // ya haya corrido terminarCaptura(). OJO: NO se llama a cleanup() acá,
-                // que además pararía la sesión — el punto entero de la tarea 5 es que un
-                // Cancel de una captura puntual no se lleve puesta la sesión completa.
+                // Misma historia: si cancelaron entre medio, esto ya estaba encolado. Acá
+                // NO hay nada que liberar — el espejo es de la sesión, no de la captura —
+                // sólo hay que no seguir procesando. NO se llama a cleanup() ni a
+                // liberarEspejo(): el punto entero de la tarea 5 es que un Cancel de una
+                // captura puntual no se lleve puesta la sesión completa.
                 if (!isCapturing) {
-                    android.util.Log.d("ScreenCapture", "Captura cancelada antes de procesar: se libera y se sale")
-                    virtualDisplay?.release()
-                    imageReader?.close()
-                    virtualDisplay = null
-                    imageReader = null
+                    android.util.Log.d("ScreenCapture", "Captura cancelada antes de procesar: se sale sin tocar el espejo")
                     return@postDelayed
                 }
 
@@ -530,8 +548,30 @@ class CapturaService : Service() {
                 processCapture()
             }, 200)
         }, 100)
-        
+
         android.util.Log.d("ScreenCapture", "=== captureScreen() configuración completada, esperando delay ===")
+    }
+
+    /** Un VirtualDisplay conserva el tamaño con el que se creó. Al rotar, la pantalla real
+     *  cambia de geometría y los frames seguirían llegando con la vieja: el recorte saldría
+     *  corrido, que es exactamente el bug que esta feature arrastró desde el principio. Se
+     *  redimensiona el display y se reemplaza el ImageReader, que también tiene tamaño fijo. */
+    private fun ajustarEspejoSiRotó() {
+        val metrics = DisplayMetrics()
+        windowManager?.defaultDisplay?.getRealMetrics(metrics)
+        if (metrics.widthPixels == anchoEspejo && metrics.heightPixels == altoEspejo) return
+        android.util.Log.d(
+            "ScreenCapture",
+            "La pantalla rotó: ${anchoEspejo}x$altoEspejo -> ${metrics.widthPixels}x${metrics.heightPixels}",
+        )
+        anchoEspejo = metrics.widthPixels
+        altoEspejo = metrics.heightPixels
+        densidadEspejo = metrics.densityDpi
+        val anterior = imageReader
+        imageReader = ImageReader.newInstance(anchoEspejo, altoEspejo, PixelFormat.RGBA_8888, 2)
+        virtualDisplay?.resize(anchoEspejo, altoEspejo, densidadEspejo)
+        virtualDisplay?.surface = imageReader?.surface
+        anterior?.close()
     }
     
     private fun hideOverlayTemporarily() {
@@ -795,18 +835,24 @@ class CapturaService : Service() {
         selectionView = null
     }
 
-    /** Cierra la captura, no la sesión: suelta el VirtualDisplay y el ImageReader, que se
-     *  crean de nuevo en la próxima, y vuelve a mostrar la burbuja. La sesión sigue viva —
-     *  ese es el punto del plan. Sin burbuja (camino de `Capture now`) no hay nada que
-     *  sostener y el Service se apaga, como siempre. */
+    /** Cierra la captura, no la sesión: el VirtualDisplay y el ImageReader son de la
+     *  sesión (tarea 5b) y siguen vivos para la próxima captura. Sólo vuelve a mostrar la
+     *  burbuja. Sin burbuja (camino de `Capture now`) no hay nada que sostener y el
+     *  Service se apaga, como siempre. */
     private fun terminarCaptura() {
+        isCapturing = false
+        burbuja?.visible(true)
+        if (apagarTrasCaptura(hayBurbuja = burbuja != null)) detenerTodo()
+    }
+
+    /** Suelta el espejo. Va aparte de cleanup() porque el Callback.onStop() de la proyección
+     *  llega cuando la sesión YA murió por fuera: ahí hay que soltar display y reader sin
+     *  volver a llamar stop() sobre una proyección muerta. */
+    private fun liberarEspejo() {
         virtualDisplay?.release()
         imageReader?.close()
         virtualDisplay = null
         imageReader = null
-        isCapturing = false
-        burbuja?.visible(true)
-        if (apagarTrasCaptura(hayBurbuja = burbuja != null)) detenerTodo()
     }
 
     private fun stopOverlay() {
@@ -822,12 +868,8 @@ class CapturaService : Service() {
      *  terminarCaptura() puede disparar), y otra vez desde onDestroy() por si el sistema
      *  mata el Service directo. */
     private fun cleanup() {
-        virtualDisplay?.release()
-        imageReader?.close()
+        liberarEspejo()
         sesion?.stop()
-
-        virtualDisplay = null
-        imageReader = null
         sesion = null
     }
     
