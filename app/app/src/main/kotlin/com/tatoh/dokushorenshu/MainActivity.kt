@@ -21,7 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.tatoh.dokushorenshu.captura.FloatingBubbleService
-import com.tatoh.dokushorenshu.captura.ScreenCaptureService
+import com.tatoh.dokushorenshu.captura.CapturaService
 import com.tatoh.dokushorenshu.ui.acerca.AcercaScreen
 import com.tatoh.dokushorenshu.ui.biblioteca.BibliotecaScreen
 import com.tatoh.dokushorenshu.ui.biblioteca.BibliotecaViewModel
@@ -49,7 +49,7 @@ import java.io.File
 
 class MainActivity : ComponentActivity() {
 
-    /** Texto + ruta de la imagen que dejó ScreenCaptureService en el Intent,
+    /** Texto + ruta de la imagen que dejó CapturaService en el Intent,
      *  esperando a convertirse en recorte. La ruta es opcional: si el guardado del
      *  JPEG falló, el recorte se crea igual pero sin imagen. Es estado de la Activity
      *  y no del NavHost porque puede llegar por onNewIntent con la app ya abierta
@@ -237,14 +237,14 @@ class MainActivity : ComponentActivity() {
      *  la misma captura genera un recorte duplicado. */
     private fun leerIntent(intent: Intent?) {
         when (intent?.action) {
-            ScreenCaptureService.ACTION_TEXTO_OCR ->
-                capturaPendiente.value = intent.getStringExtra(ScreenCaptureService.EXTRA_TEXTO_OCR)
-                    ?.let { it to intent.getStringExtra(ScreenCaptureService.EXTRA_RUTA_IMAGEN) }
+            CapturaService.ACTION_TEXTO_OCR ->
+                capturaPendiente.value = intent.getStringExtra(CapturaService.EXTRA_TEXTO_OCR)
+                    ?.let { it to intent.getStringExtra(CapturaService.EXTRA_RUTA_IMAGEN) }
             FloatingBubbleService.ACTION_PEDIR_PERMISO -> pedirPermisoPendiente.value = true
             else -> return
         }
         intent.action = null
-        intent.removeExtra(ScreenCaptureService.EXTRA_TEXTO_OCR)
-        intent.removeExtra(ScreenCaptureService.EXTRA_RUTA_IMAGEN)
+        intent.removeExtra(CapturaService.EXTRA_TEXTO_OCR)
+        intent.removeExtra(CapturaService.EXTRA_RUTA_IMAGEN)
     }
 }

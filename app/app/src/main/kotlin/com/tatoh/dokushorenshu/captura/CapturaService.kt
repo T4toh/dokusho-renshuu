@@ -29,7 +29,7 @@ import com.tatoh.dokushorenshu.dominio.ocr.escalarRecorte
 import java.io.File
 import java.nio.ByteBuffer
 
-class ScreenCaptureService : Service() {
+class CapturaService : Service() {
     
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null

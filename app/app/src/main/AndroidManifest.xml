@@ -44,7 +44,7 @@
         <!-- El Service combina mediaProjection (requerido para capturar) con
              specialUse (evita restricciones de fabricantes tipo MIUI). -->
         <service
-            android:name=".captura.ScreenCaptureService"
+            android:name=".captura.CapturaService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection|specialUse">

@@ -36,7 +36,7 @@ class FloatingBubbleService : Service() {
         // Referencia estática para poder ocultar/mostrar el bubble desde otros servicios
         private var instance: FloatingBubbleService? = null
         
-        /** Oculta o devuelve el bubble ya creado (lo usa ScreenCaptureService mientras
+        /** Oculta o devuelve el bubble ya creado (lo usa CapturaService mientras
          *  el overlay de selección está arriba). NO se llama setBubbleVisible por gusto:
          *  el nombre showBubble ya lo usa el método de instancia que CREA la vista, y
          *  tener los dos colisionando era una trampa esperando a que alguien llame al
@@ -135,17 +135,17 @@ class FloatingBubbleService : Service() {
             android.util.Log.d("FloatingBubble", "Tenemos credenciales - iniciando captura SIN abrir app")
             
             // Iniciar servicio de captura DIRECTAMENTE sin abrir la app
-            val serviceIntent = Intent(this, ScreenCaptureService::class.java).apply {
-                action = ScreenCaptureService.ACTION_START_CAPTURE
-                putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, captureResultCode)
-                putExtra(ScreenCaptureService.EXTRA_RESULT_DATA, captureResultData)
+            val serviceIntent = Intent(this, CapturaService::class.java).apply {
+                action = CapturaService.ACTION_START_CAPTURE
+                putExtra(CapturaService.EXTRA_RESULT_CODE, captureResultCode)
+                putExtra(CapturaService.EXTRA_RESULT_DATA, captureResultData)
             }
             
             try {
                 startForegroundService(serviceIntent)
                 android.util.Log.d("FloatingBubble", "startForegroundService() llamado exitosamente")
             } catch (e: Exception) {
-                android.util.Log.e("FloatingBubble", "ERROR al iniciar ScreenCaptureService", e)
+                android.util.Log.e("FloatingBubble", "ERROR al iniciar CapturaService", e)
             }
         } else {
             android.util.Log.d("FloatingBubble", "NO hay credenciales - abriendo MainActivity para pedir permisos")

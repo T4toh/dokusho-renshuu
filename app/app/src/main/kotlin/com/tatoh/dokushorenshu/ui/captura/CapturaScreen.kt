@@ -35,7 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.tatoh.dokushorenshu.captura.FloatingBubbleService
-import com.tatoh.dokushorenshu.captura.ScreenCaptureService
+import com.tatoh.dokushorenshu.captura.CapturaService
 
 /** MediaProjection con recorte por overlay necesita Android 10+. minSdk sigue en
  *  26 porque el lector anda perfecto sin esto: la feature se deshabilita, no se
@@ -58,10 +58,10 @@ internal fun iniciarCaptura(context: Context, resultCode: Int, datos: Intent) {
     FloatingBubbleService.captureResultData = datos
     ContextCompat.startForegroundService(
         context,
-        Intent(context, ScreenCaptureService::class.java).apply {
-            action = ScreenCaptureService.ACTION_START_CAPTURE
-            putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, resultCode)
-            putExtra(ScreenCaptureService.EXTRA_RESULT_DATA, datos)
+        Intent(context, CapturaService::class.java).apply {
+            action = CapturaService.ACTION_START_CAPTURE
+            putExtra(CapturaService.EXTRA_RESULT_CODE, resultCode)
+            putExtra(CapturaService.EXTRA_RESULT_DATA, datos)
         },
     )
 }
