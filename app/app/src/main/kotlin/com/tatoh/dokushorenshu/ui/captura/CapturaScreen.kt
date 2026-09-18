@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,7 +75,7 @@ private fun leerPermisos(context: Context) = EstadoPermisos(
 fun CapturaScreen(onCerrar: () -> Unit) {
     val context = LocalContext.current
     var permisos by remember { mutableStateOf(leerPermisos(context)) }
-    var bubbleActivo by remember { mutableStateOf(CapturaService.isRunning) }
+    val bubbleActivo by CapturaService.corriendo.collectAsState()
 
     // El permiso de overlay se concede en Ajustes del sistema, no con un diálogo:
     // se lanza como Activity y se releen los permisos cuando el usuario vuelve.
@@ -171,7 +172,6 @@ fun CapturaScreen(onCerrar: () -> Unit) {
                         intent.action = CapturaService.ACTION_INICIAR
                         ContextCompat.startForegroundService(context, intent)
                     }
-                    bubbleActivo = !bubbleActivo
                 },
                 enabled = listo,
                 modifier = Modifier.fillMaxWidth(),

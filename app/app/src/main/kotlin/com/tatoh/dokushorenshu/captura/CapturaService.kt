@@ -29,6 +29,9 @@ import com.tatoh.dokushorenshu.dominio.captura.apagarTrasCaptura
 import com.tatoh.dokushorenshu.dominio.captura.decidirTap
 import com.tatoh.dokushorenshu.dominio.ocr.Recorte
 import com.tatoh.dokushorenshu.dominio.ocr.escalarRecorte
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.nio.ByteBuffer
 
@@ -80,9 +83,16 @@ class CapturaService : Service() {
         /** Lo que el Service le manda a MainActivity cuando hace falta consentimiento. */
         const val ACTION_PEDIR_PERMISO = "com.tatoh.dokushorenshu.captura.PEDIR_PERMISO"
 
-        /** Lo lee la pantalla Scan para el rótulo del botón. */
-        @Volatile var isRunning: Boolean = false
-            private set
+        private val _corriendo = MutableStateFlow(false)
+
+        /** Si la burbuja está en pantalla. Es un StateFlow y no un Boolean suelto porque la
+         *  pantalla Scan lo muestra en el rótulo de su botón: con un Boolean, cerrar la burbuja
+         *  desde afuera (la ✕, el Stop de la notificación, o el sistema matando el Service)
+         *  dejaba el rótulo diciendo "Stop floating button" con la burbuja ya apagada. */
+        val corriendo: StateFlow<Boolean> = _corriendo.asStateFlow()
+
+        /** Lectura puntual para quien no observa (código que no es Compose). */
+        val isRunning: Boolean get() = _corriendo.value
     }
     
     override fun onCreate() {
@@ -102,7 +112,7 @@ class CapturaService : Service() {
                     // del botón en la pantalla Scan.
                     if (nuevaBurbuja.mostrar()) {
                         burbuja = nuevaBurbuja
-                        isRunning = true
+                        _corriendo.value = true
                     } else {
                         stopSelf()
                     }
@@ -296,7 +306,7 @@ class CapturaService : Service() {
         cleanup()
         burbuja?.ocultar()
         burbuja = null
-        isRunning = false
+        _corriendo.value = false
         isCapturing = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -897,7 +907,7 @@ class CapturaService : Service() {
         // fusión de la tarea 4 lo había perdido.
         burbuja?.ocultar()
         burbuja = null
-        isRunning = false
+        _corriendo.value = false
         try {
             overlayView?.let {
                 windowManager?.removeView(it)
