@@ -62,9 +62,26 @@ display por captura, no importa lo tentador que sea liberarlo al terminar.
    entera (proyección + display + reader) con el sistema recién arrancado no necesita
    esperas extra.
 
-2. **Frenar la proyección desde el panel del sistema: SIN CORRER.** No hay forma de
-   dispararlo por adb (`cmd media_projection` no existe en este ROM y el Service es
-   `exported="false"`). Queda para hacer a mano.
+2. **Frenar la proyección desde el panel del sistema: NO SE PUEDE, y eso es el hallazgo.**
+   En la tablet (HyperOS / Android 15) **el sistema no ofrece ningún control para cortarla**:
+   no hay chip de grabación, no hay tarjeta de "transmitir" en ajustes rápidos, y la
+   notificación de la app tampoco figura en la bandeja aunque `dumpsys notification` la
+   cuente. Mientras tanto `dumpsys media_projection` sí lista la proyección como activa. Por
+   adb tampoco hay forma (`cmd media_projection` no existe y el Service es
+   `exported="false"`).
+
+   **El camino de código que este paso quería ejercitar sí quedó ejercitado**, sólo que
+   disparado de otra manera: al bajar la sesión por el camino normal, el `Callback.onStop()`
+   de la proyección llegó **tarde**, cuando `sesion` ya era null, y el chequeo de identidad
+   lo descartó (`onStop() de una sesión vieja: se ignora`). El tap siguiente pidió
+   consentimiento y capturó normal, o sea el estado de la app quedó consistente con el del
+   sistema. Es exactamente la carrera que la revisión de la tarea 5 había marcado como el
+   punto más difícil de la rama, ocurrida sola en uso real.
+
+   Si alguna vez se quiere el escenario exacto (el usuario corta la proyección con la sesión
+   VIGENTE), la forma realista es **arrancar la grabadora de pantalla del sistema**
+   (`com.miui.screenrecorder`): Android permite una sola proyección a la vez, así que la
+   nuestra se corta y el `onStop` llega con la sesión todavía vigente.
 3. **Apagar y encender la burbuja: PASA.** Cerrarla con la ✕ y volver a encenderla pide
    consentimiento de nuevo: la sesión muere con la burbuja, como manda el diseño.
 4. **Media hora con la burbuja encendida: PASA.** Era el riesgo #1 del spec — que HyperOS

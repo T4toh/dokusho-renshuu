@@ -206,7 +206,13 @@
   arriba). El botón `Stop floating button` sigue habilitado a propósito en ese estado —
   apagar no necesita permisos— y es la única salida, porque en algunos ROM la notificación de
   la app no aparece en la bandeja.
-- **Pendiente de smoke a mano**: frenar la proyección desde el panel del sistema.
+- **Frenar la proyección desde el panel del sistema: no se puede en estos ROM.** Ni el Poco
+  ni la tablet ofrecen un control para cortarla (sin chip, sin tarjeta en ajustes rápidos, y
+  la notificación de la app no figura en la bandeja), mientras `dumpsys media_projection` sí
+  la lista activa. El camino de código igual quedó ejercitado: el `Callback.onStop()` llegó
+  tarde, con `sesion` ya en null, y el chequeo de identidad lo descartó sin dejar estado
+  inconsistente. Para forzar el escenario exacto habría que arrancar la grabadora de pantalla
+  del sistema, que corta la proyección ajena.
 
 ## Backlog diferido (Plan F recortes/notas — review final, no bloqueante)
 
