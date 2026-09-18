@@ -115,11 +115,19 @@ class CapturaService : Service() {
                 if (promovido.isFailure) {
                     android.util.Log.e("ScreenCapture", "El sistema rechazó el foreground de proyección", promovido.exceptionOrNull())
                     avisar("Screen capture failed. Please try again")
+                    // Sin burbuja (camino "Capture now") nadie va a reintentar tocando
+                    // nada: sin este detenerTodo() el Service queda en foreground
+                    // promovido, con notificación, y sin forma de pararlo salvo el
+                    // botón "Stop" de la propia notificación.
+                    if (burbuja == null) detenerTodo()
                     return START_NOT_STICKY
                 }
                 val codigo = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
                 val datos: Intent? = intent.getParcelableExtra(EXTRA_RESULT_DATA)
-                if (!abrirSesion(codigo, datos)) return START_NOT_STICKY
+                if (!abrirSesion(codigo, datos)) {
+                    if (burbuja == null) detenerTodo()
+                    return START_NOT_STICKY
+                }
                 isCapturing = true
                 showOverlay()
             }
@@ -154,18 +162,45 @@ class CapturaService : Service() {
      *  para UNA llamada a getMediaProjection(); el MediaProjection que sale de ahí sirve
      *  para muchas. Devuelve false si el token no servía. */
     private fun abrirSesion(codigo: Int, datos: Intent?): Boolean {
-        if (codigo == 0 || datos == null) return false
+        if (codigo == 0 || datos == null) {
+            android.util.Log.e("ScreenCapture", "ACTION_ABRIR_SESION sin código o sin datos de resultado")
+            avisar("Screen capture failed. Please try again")
+            return false
+        }
         val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        // "Capture now" con la burbuja (y su sesión) ya viva llega hasta acá con
+        // isCapturing en false entre capturas: sin este stop() se apilaría una segunda
+        // proyección sobre la vieja, que quedaría huérfana (o la plataforma la para sola
+        // y el indicador de "grabando pantalla" no tiene con qué sincronizarse). stop()
+        // dispara el onStop() de la sesión vieja de forma asíncrona (posteado al main
+        // looper) — para cuando corra, `sesion` ya puede apuntar a la nueva; de ahí el
+        // chequeo de identidad de más abajo, sin el cual ese callback tardío pisaría la
+        // sesión recién creada.
+        sesion?.stop()
         return try {
-            val proyeccion = manager.getMediaProjection(codigo, datos) ?: return false
+            val proyeccion = manager.getMediaProjection(codigo, datos)
+            if (proyeccion == null) {
+                android.util.Log.e("ScreenCapture", "getMediaProjection() devolvió null")
+                avisar("Screen capture failed. Please try again")
+                sesion = null
+                return false
+            }
             proyeccion.registerCallback(object : MediaProjection.Callback() {
                 override fun onStop() {
                     super.onStop()
                     // El usuario frenó la proyección desde el panel del sistema, o el
                     // sistema la cortó. La burbuja NO se apaga: el próximo tap pide
                     // consentimiento de nuevo, que es el camino de recuperación.
-                    android.util.Log.d("ScreenCapture", "La sesión se cerró desde afuera")
-                    sesion = null
+                    // Chequeo de identidad: este callback quedó registrado sobre ESTA
+                    // proyección. Si para cuando corre (puede llegar tarde, posteado al
+                    // main looper) `sesion` ya apunta a una más nueva, no hay que
+                    // pisarla — si no, la P1 vieja anularía la P2 viva.
+                    if (sesion === proyeccion) {
+                        android.util.Log.d("ScreenCapture", "La sesión se cerró desde afuera")
+                        sesion = null
+                    } else {
+                        android.util.Log.d("ScreenCapture", "onStop() de una sesión vieja: se ignora")
+                    }
                 }
             }, Handler(Looper.getMainLooper()))
             sesion = proyeccion
