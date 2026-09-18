@@ -966,6 +966,79 @@ que decir `Start floating button` sin necesidad de salir y entrar.
 
 ---
 
+### Task 5e: El espejo duerme entre capturas
+
+Medido en dispositivo con la sesión abierta: el espejo compone frames **continuamente**,
+capture o no capture.
+
+```
+VDS-ScreenCapture SINK ... queueBuffer: fps=54.57
+```
+
+~55 fps mientras la burbuja esté encendida, o sea GPU y batería todo el tiempo para nada.
+Se desengancha el productor entre capturas con `setSurface(null)` y se re-engancha justo
+antes de capturar. La sesión NO se toca: el consentimiento único se mantiene.
+
+**Files:**
+- Modify: `app/app/src/main/kotlin/com/tatoh/dokushorenshu/captura/CapturaService.kt`
+
+- [ ] **Step 1: Dormir y despertar el espejo**
+
+```kotlin
+/** Desengancha el productor: el VirtualDisplay deja de componer frames. La sesión sigue
+ *  viva (el consentimiento no se vuelve a pedir), pero el espejo no gasta GPU ni batería
+ *  mientras nadie captura — medido en ~55 fps continuos antes de esto. */
+private fun dormirEspejo() {
+    virtualDisplay?.setSurface(null)
+    android.util.Log.d("ScreenCapture", "Espejo dormido")
+}
+
+/** Vuelve a enganchar el ImageReader. Se llama al ARRANQUE de captureScreen(), antes de
+ *  los delays que ya existen, para darle al productor el máximo tiempo posible de componer
+ *  el primer frame: si no llegara a tiempo, acquireLatestImage() devolvería null y la
+ *  captura fallaría con el aviso de siempre. */
+private fun despertarEspejo() {
+    val reader = imageReader ?: return
+    virtualDisplay?.setSurface(reader.surface)
+    android.util.Log.d("ScreenCapture", "Espejo despierto")
+}
+```
+
+- [ ] **Step 2: Cablearlas en el ciclo de la captura**
+
+- En `armarEspejo()`, después de crear el `VirtualDisplay`: `dormirEspejo()`. La sesión
+  arranca con el espejo dormido — al abrirla nadie está capturando todavía.
+- En `captureScreen()`, como **primera línea** (antes de `hideOverlayTemporarily()`):
+  `despertarEspejo()`.
+- En `terminarCaptura()`, antes de decidir el apagado: `dormirEspejo()`.
+- En el camino de cancelación del `postDelayed` interno (el `if (!isCapturing) return`) y en
+  el de "sin espejo": también `dormirEspejo()`, porque `despertarEspejo()` ya corrió al
+  entrar a `captureScreen()`. Dejar el espejo despierto tras un Cancel es exactamente el
+  gasto que esta tarea viene a eliminar.
+
+**Ojo con `ajustarEspejoSiRotó()`**: hace su propio `setSurface(nuevo)` y corre DESPUÉS de
+`despertarEspejo()`. No hay conflicto —termina dejando el reader nuevo enganchado— pero el
+orden importa: no muevas el `despertarEspejo()` después de ese llamado.
+
+- [ ] **Step 3: Compilar y correr los tests**
+
+Run: `cd app && ./gradlew testDebugUnitTest`
+Expected: BUILD SUCCESSFUL, 308 tests, 0 failures.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "perf(captura): el espejo duerme entre capturas"
+```
+
+Verificación en dispositivo (la corre el controlador): con la burbuja encendida y sin
+capturar, `adb logcat | grep queueBuffer` no debe mostrar frames; durante una captura sí. Y
+las cinco capturas seguidas con un solo consentimiento tienen que seguir funcionando — si el
+primer frame tras despertar no llega a tiempo, aparecería `Screen capture failed`.
+
+---
+
 ### Task 6: Smoke de dispositivo y documentación
 
 **Files:**
