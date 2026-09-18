@@ -268,6 +268,7 @@ class CapturaService : Service() {
                 return false
             }
             android.util.Log.d("ScreenCapture", "Espejo armado: ${anchoEspejo}x$altoEspejo")
+            dormirEspejo()
             true
         } catch (e: SecurityException) {
             android.util.Log.e("ScreenCapture", "No se pudo armar el espejo", e)
@@ -275,6 +276,24 @@ class CapturaService : Service() {
             avisar("Screen capture failed. Please try again")
             false
         }
+    }
+
+    /** Desengancha el productor: el VirtualDisplay deja de componer frames. La sesión sigue
+     *  viva (el consentimiento no se vuelve a pedir), pero el espejo no gasta GPU ni batería
+     *  mientras nadie captura — medido en ~55 fps continuos antes de esto. */
+    private fun dormirEspejo() {
+        virtualDisplay?.setSurface(null)
+        android.util.Log.d("ScreenCapture", "Espejo dormido")
+    }
+
+    /** Vuelve a enganchar el ImageReader. Se llama al ARRANQUE de captureScreen(), antes de
+     *  los delays que ya existen, para darle al productor el máximo tiempo posible de componer
+     *  el primer frame: si no llegara a tiempo, acquireLatestImage() devolvería null y la
+     *  captura fallaría con el aviso de siempre. */
+    private fun despertarEspejo() {
+        val reader = imageReader ?: return
+        virtualDisplay?.setSurface(reader.surface)
+        android.util.Log.d("ScreenCapture", "Espejo despierto")
     }
 
     /** Se tocó la burbuja: si hay sesión viva, va directo al overlay; si no, hay que
@@ -530,6 +549,11 @@ class CapturaService : Service() {
     private fun captureScreen() {
         android.util.Log.d("ScreenCapture", "=== captureScreen() INICIADO ===")
 
+        // Re-enganchar el productor lo antes posible: cuanto más margen tenga el
+        // VirtualDisplay para componer el primer frame, menos chance de que
+        // acquireLatestImage() llegue tarde y devuelva null.
+        despertarEspejo()
+
         // Primero ocultar el overlay y esperar un momento
         hideOverlayTemporarily()
         android.util.Log.d("ScreenCapture", "Overlay ocultado temporalmente")
@@ -550,6 +574,7 @@ class CapturaService : Service() {
                 // frenó desde el panel del sistema, o armarEspejo() falló en abrirSesion().
                 android.util.Log.w("ScreenCapture", "Sin espejo al capturar: se pide consentimiento")
                 avisar("Screen capture failed. Please try again")
+                dormirEspejo()
                 stopOverlay()
                 return@postDelayed
             }
@@ -560,11 +585,12 @@ class CapturaService : Service() {
             Handler(Looper.getMainLooper()).postDelayed({
                 // Misma historia: si cancelaron entre medio, esto ya estaba encolado. Acá
                 // NO hay nada que liberar — el espejo es de la sesión, no de la captura —
-                // sólo hay que no seguir procesando. NO se llama a cleanup() ni a
-                // liberarEspejo(): el punto entero de la tarea 5 es que un Cancel de una
+                // sólo hay que dormirlo y no seguir procesando. NO se llama a cleanup() ni
+                // a liberarEspejo(): el punto entero de la tarea 5 es que un Cancel de una
                 // captura puntual no se lleve puesta la sesión completa.
                 if (!isCapturing) {
-                    android.util.Log.d("ScreenCapture", "Captura cancelada antes de procesar: se sale sin tocar el espejo")
+                    android.util.Log.d("ScreenCapture", "Captura cancelada antes de procesar: se duerme el espejo")
+                    dormirEspejo()
                     return@postDelayed
                 }
 
@@ -865,6 +891,7 @@ class CapturaService : Service() {
      *  Service se apaga, como siempre. */
     private fun terminarCaptura() {
         isCapturing = false
+        dormirEspejo()
         burbuja?.visible(true)
         if (apagarTrasCaptura(hayBurbuja = burbuja != null)) detenerTodo()
     }
