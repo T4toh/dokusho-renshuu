@@ -44,23 +44,13 @@
         <!-- El Service combina mediaProjection (requerido para capturar) con
              specialUse (evita restricciones de fabricantes tipo MIUI). -->
         <service
-            android:name=".captura.ScreenCaptureService"
+            android:name=".captura.CapturaService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection|specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Screen capture for Japanese text OCR" />
-        </service>
-
-        <service
-            android:name=".captura.FloatingBubbleService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Floating overlay for quick text capture" />
         </service>
     </application>
 </manifest>

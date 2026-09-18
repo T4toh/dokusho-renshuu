@@ -15,7 +15,7 @@ class OcrJapones(
         TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build()),
 ) {
     /** Bloquea hasta tener el texto. ML Kit devuelve un Task asíncrono y Tasks.await()
-     *  LANZA si se llama desde el main thread — el llamador (ScreenCaptureService)
+     *  LANZA si se llama desde el main thread — el llamador (CapturaService)
      *  tiene que invocarlo desde un hilo de fondo.
      *  Timeout de 15 s: Tasks.await() lanza TimeoutException si el modelo se traba, o
      *  ExecutionException si el reconocimiento falla — esta función no las atrapa a

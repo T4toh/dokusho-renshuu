@@ -20,6 +20,204 @@
 > quemaba el permiso de MediaProjection y el segundo pedido no mostraba el diálogo — ver
 > la corrida de la tarde.
 
+## Corrida del 2026-09-18: una sesión por vida de la burbuja
+
+Sobre el branch `feat/sesion-mediaprojection` (commit `babc9c0`), mismo POCO. Este cambio
+toca el ciclo de vida del Service entero, así que se re-corrieron los pasos que dependen de
+él y se agregaron los que sólo tienen sentido con sesión larga.
+
+**El hallazgo que redefinió el plan.** La primera versión mantenía viva la sesión y creaba
+un `VirtualDisplay` por captura. La segunda captura murió así:
+
+```
+java.lang.SecurityException: Don't re-use the resultData to retrieve the same projection
+instance, and don't use a token that has timed out. Don't take multiple captures by invoking
+MediaProjection#createVirtualDisplay multiple times on the same instance.
+FATAL EXCEPTION: main
+```
+
+O sea **un `MediaProjection` admite UN solo `createVirtualDisplay`**. Lo que entrega N
+frames es el `VirtualDisplay`, así que el espejo (display + `ImageReader`) pasó a vivir con
+la sesión, modelo grabador de pantalla. Si alguien vuelve a tocar esto: no intentes crear un
+display por captura, no importa lo tentador que sea liberarlo al terminar.
+
+### Pasos re-corridos (todos PASAN)
+
+| Paso | Evidencia |
+| ---- | --------- |
+| 16 — salidas del overlay | Back → `Back en el overlay: se trata como Cancel`; botón `Cancel` → `stopOverlay()`. En los dos casos vuelve la burbuja **y la sesión sobrevive**: el tap siguiente entra directo al overlay |
+| 17 — área sin texto | `OCR devolvió 0 chars` → `OCR sin texto: no se abre la app`; 44 archivos en `files/recortes/` antes y después |
+| 19 — segundo tap durante el OCR | `Click detectado` 11:20:12.147 → `Ya hay una captura en curso, ignorando` 11:20:12.197 → `OCR devolvió 209 chars` 11:20:12.350. Ahora es **fácil** de enganchar: el segundo tap ya no cuesta un diálogo de consentimiento |
+| 20 — revocar overlay en caliente | sin crash, proceso vivo, 0 `FATAL`. **Cambió respecto de la arquitectura vieja:** las ventanas ya creadas sobreviven a la revocación (Android sólo bloquea las nuevas); antes la burbuja desaparecía sola. Además, revocar y restaurar el permiso **no** mata la sesión de proyección |
+
+### Pasos nuevos
+
+1. **Cinco capturas seguidas con un solo consentimiento: PASA.** 5 × `OCR devolvió`, un
+   único `Espejo armado: 1220x2712`, 0 `FATAL EXCEPTION`, 0 pedidos de consentimiento
+   después del primero. Es el objetivo del cambio.
+1bis. **Captura en frío (paso 18 del checklist viejo, re-corrido sobre esta arquitectura):
+   PASA.** `adb reboot` a las ~11:55, captura a las **11:59:43**, a la primera:
+   `Espejo armado: 1220x2712` → `Espejo despierto` → `OCR devolvió 81 chars`. Sin
+   reintentos, sin `Screen capture failed`, sin `SecurityException`. O sea armar la sesión
+   entera (proyección + display + reader) con el sistema recién arrancado no necesita
+   esperas extra.
+
+2. **Frenar la proyección desde el panel del sistema: NO SE PUEDE, y eso es el hallazgo.**
+   En la tablet (HyperOS / Android 15) **el sistema no ofrece ningún control para cortarla**:
+   no hay chip de grabación, no hay tarjeta de "transmitir" en ajustes rápidos, y la
+   notificación de la app tampoco figura en la bandeja aunque `dumpsys notification` la
+   cuente. Mientras tanto `dumpsys media_projection` sí lista la proyección como activa. Por
+   adb tampoco hay forma (`cmd media_projection` no existe y el Service es
+   `exported="false"`).
+
+   **El camino de código que este paso quería ejercitar sí quedó ejercitado**, sólo que
+   disparado de otra manera: al bajar la sesión por el camino normal, el `Callback.onStop()`
+   de la proyección llegó **tarde**, cuando `sesion` ya era null, y el chequeo de identidad
+   lo descartó (`onStop() de una sesión vieja: se ignora`). El tap siguiente pidió
+   consentimiento y capturó normal, o sea el estado de la app quedó consistente con el del
+   sistema. Es exactamente la carrera que la revisión de la tarea 5 había marcado como el
+   punto más difícil de la rama, ocurrida sola en uso real.
+
+   Si alguna vez se quiere el escenario exacto (el usuario corta la proyección con la sesión
+   VIGENTE), la forma realista es **arrancar la grabadora de pantalla del sistema**
+   (`com.miui.screenrecorder`): Android permite una sola proyección a la vez, así que la
+   nuestra se corta y el `onStop` llega con la sesión todavía vigente.
+3. **Apagar y encender la burbuja: PASA.** Cerrarla con la ✕ y volver a encenderla pide
+   consentimiento de nuevo: la sesión muere con la burbuja, como manda el diseño.
+4. **Media hora con la burbuja encendida: PASA.** Era el riesgo #1 del spec — que HyperOS
+   matara el foreground service de vida larga— y no se materializó. Burbuja encendida con
+   la sesión abierta a las 12:01, sin capturar nada. A los 30 minutos: **mismo pid**
+   (15377, o sea el proceso nunca se reinició), burbuja en pantalla y su notificación
+   viva. Y lo que importa de verdad: el tap siguiente entró **directo al overlay, con 0
+   diálogos de consentimiento**, y capturó (`Espejo despierto` → `OCR devolvió 30 chars`)
+   sin un `Espejo armado` nuevo: la sesión original seguía siendo la misma.
+5. **Rotar entre capturas: PASA** — corrido en una **tablet**, no en el Poco (ver abajo).
+6. **Una sola notificación: PASA.** `id=1002`, única (antes había dos Services con una cada
+   uno).
+7. **`Capture now` sin burbuja: PASA.** Durante la captura hay overlay y notificación; al
+   terminar (`OCR devolvió 83 chars`) queda todo en cero — el Service se apaga solo, que es
+   lo que corresponde cuando no hay burbuja que sostener.
+8. **Cerrar la burbuja con long-press: PASA.** `Modo cerrar activado` (11:13:44) y, con un
+   **segundo toque separado**, `Tap en la ✕: se cierra todo` (11:13:45) → 0 ventanas, 0
+   notificaciones. A los 3 s sin tocarla, la ✕ revierte sola y el tap vuelve a ser captura.
+
+### El espejo duerme entre capturas
+
+La primera versión del modelo grabador tenía un costo medido feo: con la sesión abierta, el
+espejo componía frames **continuamente**, capturara o no.
+
+```
+VDS-ScreenCapture SINK ... queueBuffer: fps=54.57
+```
+
+~55 fps mientras la burbuja estuviera encendida. Se resolvió desenganchando el productor
+entre capturas (`virtualDisplay.setSurface(null)`) y re-enganchándolo al arrancar la
+captura, antes de los delays que ya existían. La sesión no se toca, así que el
+consentimiento sigue siendo uno solo.
+
+Medido después del cambio: **0 frames en 6 segundos** con la burbuja encendida y sin
+capturar, y **5 capturas seguidas sin una sola falla**, alternando `Espejo despierto` →
+`OCR devolvió` → `Espejo dormido`. El riesgo que quedaba —que el primer frame tras despertar
+no llegara dentro de los 200 ms y la captura fallara— no se materializó en ninguna de las
+cinco.
+
+### Corrida en tablet (Redmi Pad SE, Android 15): rotación y horizontal
+
+El Poco no sirve para probar rotación —su ROM ignora `settings put system user_rotation`
+incluso con una app rotable adelante— así que esto se corrió en una **tablet 23073RPBFL,
+1200x1920, Android 15**, que además es el primer dispositivo distinto en el que se prueba
+la feature.
+
+- **Horizontal: PASA.** La app arranca en `ROTATION_90` y el flujo entero funciona:
+  burbuja, consentimiento, overlay, selección y `OCR devolvió 125 chars`.
+- **Android 15 cambia los textos del diálogo del sistema**, algo a tener en cuenta al
+  automatizar: el selector dice `A single app` / `Entire screen` (no `Share one app` /
+  `Share entire screen`) y el botón de confirmación es `Start` (no `Share screen`).
+- **Rotar entre capturas: PASA, y es la primera verificación en hardware de este camino.**
+  Con el espejo armado en horizontal y la tablet girada a vertical:
+
+  ```
+  La pantalla rotó: 1920x1200 -> 1200x1920
+  Bitmap creado: 1200x1920
+  Selección: Rect(200, 400 - 896, 897), overlay: 1200x1920, recorte escalado: Recorte(left=200, top=400, ancho=696, alto=497)
+  OCR devolvió 66 chars
+  ```
+
+  El `VirtualDisplay` se redimensionó, el `ImageReader` se reemplazó, y el recorte salió
+  coherente con la selección. **El primer frame después del resize llegó dentro de los
+  200 ms**, que era el riesgo anotado como límite conocido: no se materializó. La captura
+  siguiente salió sin re-ajustar, sin armar sesión nueva y con 0 consentimientos.
+
+### El escalado con factor ≠ 1 es inalcanzable por construcción (no es un hueco de hardware)
+
+Durante meses esto quedó anotado como "falta un dispositivo donde el overlay no cubra las
+barras de sistema". Se probaron cuatro configuraciones y **todas dieron 1:1**:
+
+| Configuración | overlay | bitmap |
+| --- | --- | --- |
+| Poco, vertical | 1220x2712 | 1220x2712 |
+| Tablet, horizontal | 1920x1200 | 1920x1200 |
+| Tablet, vertical | 1200x1920 | 1200x1920 |
+| Tablet, **pantalla dividida** (la app ocupaba 948x1200) | 1920x1200 | 1920x1200 |
+
+La razón está en el código, no en los dispositivos. `showOverlay()` arma la ventana con el
+alto de `getRealMetrics()` —que **incluye** las barras de sistema— y con
+`FLAG_LAYOUT_IN_SCREEN or FLAG_LAYOUT_NO_LIMITS`, que le dicen al sistema que ignore los
+insets; y el `VirtualDisplay` se crea con esas mismas métricas. O sea overlay y bitmap están
+**atados a medir lo mismo**, haya gestos o botones, esté la app en split o no.
+
+El bug histórico del recorte corrido viene de la app vieja en Flutter, que no armaba la
+ventana así. **Con esta implementación el camino ≠ 1 no es un hueco de cobertura pendiente:
+es código defensivo para una condición que no se puede producir desde afuera.** Los 8 tests
+JVM de `TextoOcrTest` son la cobertura correcta y suficiente — no hay que seguir buscando
+hardware.
+
+Lo único que podría reintroducir la diferencia es cambiar esos flags o dejar de usar
+`getRealMetrics()` en `showOverlay()`. Si algún día pasa, este es el párrafo a releer.
+
+**Verificado de paso:** capturar con la app en pantalla dividida funciona
+(`OCR devolvió 142 chars`).
+
+**Nota de instalación:** en HyperOS/MIUI el `installDebug` puede fallar con
+`INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`. Es el ajuste "Instalar vía USB"
+de opciones de desarrollador, no un problema del build. Los permisos de overlay y
+notificaciones sí se pueden conceder por adb, sin pasar por Ajustes:
+`adb shell pm grant <pkg> android.permission.POST_NOTIFICATIONS` y
+`adb shell appops set <pkg> SYSTEM_ALERT_WINDOW allow`.
+
+### Revocar el permiso de overlay desde Ajustes: un agujero que el paso 20 no veía
+
+El paso 20 revoca el permiso con `appops` y se conforma con "no crashea". Revocándolo **a
+mano desde Ajustes del sistema**, en la tablet, apareció algo que ese criterio dejaba pasar:
+
+- El sistema **deja de dibujar** la burbuja (`isReadyForDisplay()=false`) pero no avisa a la
+  app: la ventana sigue registrada, el Service vivo (mismo pid) y la notificación arriba.
+  Hasta acá es uno de los desenlaces que el paso da por aceptables.
+- **Pero `Stop floating button` quedaba deshabilitado**, porque su `enabled` exigía los dos
+  permisos. O sea: burbuja invisible, notificación colgada, y el único control para bajarla,
+  muerto. Apagar no necesita permisos; sólo encender.
+- La salida de emergencia tampoco estaba: la notificación de la app **no aparece en la
+  bandeja** de esta tablet, aunque `dumpsys notification` la cuenta. Sin el botón, quedaba
+  forzar la detención de la app.
+
+Arreglado: `enabled = bubbleActivo || listo`. Verificado en dispositivo — con el permiso
+revocado, el botón responde y deja 0 ventanas, 0 notificaciones y el rótulo en `Start`.
+
+**Para la próxima corrida del paso 20: revocarlo desde Ajustes, no sólo con `appops`, y
+después intentar apagar la burbuja desde la app.** "No crashea" no alcanza como criterio.
+
+### Notas de método para la próxima corrida
+
+- **Contar ventanas por tamaño, no por nombre.** `grep -c 'Window{... u0 <pkg>}$'` da
+  inflado porque `dumpsys` repite la línea en varias secciones. La burbuja es
+  `Requested w=182 h=182`; el overlay, `w=1220 h=2712`.
+- **`adb am start-foreground-service` no sirve** para disparar acciones de este Service:
+  `exported="false"` → `Requires permission not exported from uid`. Hay que ir por la UI.
+- Tocar elementos por texto en vez de por coordenadas ahorra muchísimo tiempo: las
+  coordenadas se corren en cuanto la pantalla cambia de estado.
+- Para la burbuja, `input swipe x y x y <ms>`; para la UI de Compose, `input tap`. Y un
+  `swipe` de 900 ms sobre la burbuja es un long-press (abre el modo ✕).
+
 ## Corrida del 2026-09-17, cierre: pasos 18, 19 y 20
 
 Build debug de `main` `da92143` (post PR #21), mismo POCO. Conducida por adb salvo donde

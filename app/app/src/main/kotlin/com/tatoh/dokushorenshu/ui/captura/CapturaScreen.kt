@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,8 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.tatoh.dokushorenshu.captura.FloatingBubbleService
-import com.tatoh.dokushorenshu.captura.ScreenCaptureService
+import com.tatoh.dokushorenshu.captura.CapturaService
 
 /** MediaProjection con recorte por overlay necesita Android 10+. minSdk sigue en
  *  26 porque el lector anda perfecto sin esto: la feature se deshabilita, no se
@@ -47,21 +47,16 @@ internal fun intentDeProyeccion(context: Context): Intent =
     (context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager)
         .createScreenCaptureIntent()
 
-/** Guarda las credenciales para el bubble y arranca el Service de captura.
+/** Arranca la sesión de MediaProjection con el resultado del consentimiento.
  *  Compartido entre el botón "Capture now" de esta pantalla y el pedido que dispara
- *  el tap del bubble, que se atiende en MainActivity. */
+ *  el tap de la burbuja, que se atiende en MainActivity. */
 internal fun iniciarCaptura(context: Context, resultCode: Int, datos: Intent) {
-    // El bubble guarda las credenciales para poder disparar capturas sin pasar por la
-    // Activity. Android 14+ las invalida después de cada sesión y el Service las limpia
-    // solo (sólo cuando la sesión existió de verdad: cancelar el overlay no las toca).
-    FloatingBubbleService.captureResultCode = resultCode
-    FloatingBubbleService.captureResultData = datos
     ContextCompat.startForegroundService(
         context,
-        Intent(context, ScreenCaptureService::class.java).apply {
-            action = ScreenCaptureService.ACTION_START_CAPTURE
-            putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, resultCode)
-            putExtra(ScreenCaptureService.EXTRA_RESULT_DATA, datos)
+        Intent(context, CapturaService::class.java).apply {
+            action = CapturaService.ACTION_ABRIR_SESION
+            putExtra(CapturaService.EXTRA_RESULT_CODE, resultCode)
+            putExtra(CapturaService.EXTRA_RESULT_DATA, datos)
         },
     )
 }
@@ -80,7 +75,7 @@ private fun leerPermisos(context: Context) = EstadoPermisos(
 fun CapturaScreen(onCerrar: () -> Unit) {
     val context = LocalContext.current
     var permisos by remember { mutableStateOf(leerPermisos(context)) }
-    var bubbleActivo by remember { mutableStateOf(FloatingBubbleService.isRunning) }
+    val bubbleActivo by CapturaService.corriendo.collectAsState()
 
     // El permiso de overlay se concede en Ajustes del sistema, no con un diálogo:
     // se lanza como Activity y se releen los permisos cuando el usuario vuelve.
@@ -159,32 +154,36 @@ fun CapturaScreen(onCerrar: () -> Unit) {
 
             OutlinedButton(
                 onClick = {
-                    val intent = Intent(context, FloatingBubbleService::class.java)
+                    val intent = Intent(context, CapturaService::class.java)
                     if (bubbleActivo) {
                         // startService, no startForegroundService: el flag bubbleActivo
                         // es solo un espejo del estado real del Service y puede
                         // desincronizarse (el Service puede morir solo, o el usuario
                         // puede pararlo desde el "Stop" de su propia notificación).
-                        // stopBubble() nunca promueve a foreground, así que si acá
+                        // detenerTodo() nunca promueve a foreground, así que si acá
                         // usáramos startForegroundService y el Service ya estuviera
                         // muerto, Android lo mata a los ~5s por no llamar
                         // startForeground() ("did not then call
                         // Service.startForeground()"). Con startService el peor caso
                         // es un no-op inofensivo.
-                        intent.action = FloatingBubbleService.ACTION_STOP_BUBBLE
+                        intent.action = CapturaService.ACTION_DETENER
                         context.startService(intent)
                     } else {
-                        intent.action = FloatingBubbleService.ACTION_START_BUBBLE
+                        intent.action = CapturaService.ACTION_INICIAR
                         ContextCompat.startForegroundService(context, intent)
                     }
-                    bubbleActivo = !bubbleActivo
                 },
-                enabled = listo,
+                // Apagar NO necesita permisos; encender sí. Si se exigieran los dos para
+                // las dos acciones, revocar el permiso de overlay desde Ajustes del sistema
+                // dejaba este botón deshabilitado con la burbuja todavía encendida: el
+                // sistema deja de dibujarla (isReadyForDisplay=false) pero el Service sigue
+                // vivo con su notificación, y el único control para bajarlo quedaba muerto.
+                enabled = bubbleActivo || listo,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (bubbleActivo) "Stop floating button" else "Start floating button") }
 
             Text(
-                "On Android 14 and newer, Android asks for capture permission every time — that is an OS rule, not a bug.",
+                "Android asks for capture permission once per session of the floating button — while it's on, the system keeps its screen recording indicator showing.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
