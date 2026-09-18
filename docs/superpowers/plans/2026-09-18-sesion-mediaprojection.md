@@ -775,6 +775,132 @@ rotación entre capturas— la corre el controlador.
 
 ---
 
+### Task 5c: Cerrar la burbuja sin entrar a la app
+
+Hoy la única forma de apagar la burbuja es el `Stop` de la notificación o entrar a la
+pantalla Scan. Pedido de uso: **long-press sobre la burbuja la convierte en una ✕, y tocar
+la ✕ cierra todo**.
+
+**Files:**
+- Modify: `app/app/src/main/kotlin/com/tatoh/dokushorenshu/captura/BurbujaFlotante.kt`
+- Modify: `app/app/src/main/kotlin/com/tatoh/dokushorenshu/captura/CapturaService.kt`
+
+**Interfaces:**
+- Consumes: nada nuevo.
+- Produces: el constructor de `BurbujaFlotante` suma un callback: `class BurbujaFlotante(context: Context, windowManager: WindowManager, onTap: () -> Unit, onCerrar: () -> Unit)`.
+
+**Comportamiento exacto, que es lo que hay que respetar:**
+
+- Long-press (umbral: `ViewConfiguration.getLongPressTimeout()`, el del sistema, **no** un número inventado) → la burbuja pasa a modo ✕: mismo tamaño, misma posición, misma ventana. No se crean ventanas nuevas ni menús.
+- Tap sobre la ✕ → `onCerrar()`. El Service lo cablea a `detenerTodo()`, que ya apaga sesión, burbuja, notificación y Service.
+- Tap en cualquier otro lado, o **3 segundos** sin tocarla → vuelve a la burbuja normal. Un long-press accidental no puede dejar una ✕ armada esperando.
+- Arrastrar sigue arrastrando y **cancela** el modo ✕. La distinción arrastre/tap que ya existe (`DRAG_THRESHOLD`, `moved`) no se toca.
+- Sin confirmación: apagar la burbuja se deshace en dos taps desde la pantalla Scan, y un diálogo sobre una ventana flotante en HyperOS es justo lo que dio problemas de foco antes.
+
+- [ ] **Step 1: El modo ✕ en `BurbujaFlotante`**
+
+Estado nuevo en la clase:
+
+```kotlin
+private var modoCerrar = false
+private val handler = Handler(Looper.getMainLooper())
+/** Vuelve sola a la burbuja normal: un long-press accidental no puede dejar una ✕
+ *  armada esperando el próximo toque. */
+private val revertir = Runnable { salirModoCerrar() }
+```
+
+La vista ya es un `ImageView` con el ícono de la app y fondo circular indigo
+(`BurbujaFlotante.kt:66-90`). El modo ✕ cambia sólo lo visual, sin tocar layout ni ventana:
+
+```kotlin
+private fun entrarModoCerrar() {
+    if (modoCerrar) return
+    modoCerrar = true
+    bubbleView?.let { vista ->
+        (vista as ImageView).setImageDrawable(
+            ContextCompat.getDrawable(context, android.R.drawable.ic_menu_close_clear_cancel)
+        )
+        (vista.background as GradientDrawable).setColor(Color.parseColor("#E57373")) // rojo suave
+    }
+    handler.postDelayed(revertir, 3000)
+    android.util.Log.d("FloatingBubble", "Modo cerrar activado")
+}
+
+private fun salirModoCerrar() {
+    if (!modoCerrar) return
+    modoCerrar = false
+    handler.removeCallbacks(revertir)
+    bubbleView?.let { vista ->
+        (vista as ImageView).setImageDrawable(
+            ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+        )
+        (vista.background as GradientDrawable).setColor(Color.parseColor("#9FA8DA"))
+    }
+}
+```
+
+- [ ] **Step 2: Detectar el long-press en el listener que ya existe**
+
+En `ACTION_DOWN` se programa el long-press; en `ACTION_MOVE` que supera `DRAG_THRESHOLD` se cancela (y se sale del modo ✕ si estaba); en `ACTION_UP` se cancela siempre.
+
+```kotlin
+// en ACTION_DOWN, junto a downTime / moved:
+handler.postDelayed(detectarLongPress, ViewConfiguration.getLongPressTimeout().toLong())
+```
+
+```kotlin
+private val detectarLongPress = Runnable { entrarModoCerrar() }
+```
+
+En `ACTION_UP`, la decisión pasa a ser de tres ramas en vez de dos:
+
+```kotlin
+handler.removeCallbacks(detectarLongPress)
+when {
+    moved -> { /* fue arrastre: el snap ya corrió, nada más */ }
+    modoCerrar -> {
+        android.util.Log.d("FloatingBubble", "Tap en la ✕: se cierra todo")
+        salirModoCerrar()
+        onCerrar()
+    }
+    else -> {
+        android.util.Log.d("FloatingBubble", "Click detectado! Ejecutando onTap()")
+        onTap()
+    }
+}
+```
+
+En `ACTION_MOVE`, cuando `moved` pasa a true: `handler.removeCallbacks(detectarLongPress)` y `salirModoCerrar()`.
+
+En `ACTION_OUTSIDE` (el toque cayó fuera de la burbuja): `salirModoCerrar()`. Eso cubre el "tap en cualquier otro lado".
+
+`ocultar()` tiene que hacer `handler.removeCallbacks(...)` de los dos runnables: si la ventana se va con un callback pendiente, el runnable toca una vista ya desmontada.
+
+- [ ] **Step 3: El Service cablea `onCerrar`**
+
+En `CapturaService`, donde hoy se construye la burbuja:
+
+```kotlin
+val nuevaBurbuja = BurbujaFlotante(this, windowManager!!, ::onTapBurbuja, ::detenerTodo)
+```
+
+- [ ] **Step 4: Compilar y correr los tests**
+
+Run: `cd app && ./gradlew testDebugUnitTest`
+Expected: BUILD SUCCESSFUL, 308 tests, 0 failures. (Esto es UI de ventana flotante: no es testeable en JVM plano, igual que el resto de la clase.)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add -A
+git commit -m "feat(captura): cerrar la burbuja con long-press sin entrar a la app"
+```
+
+La verificación en dispositivo —long-press, ✕, tap que cierra, el timeout de 3 s, y que el
+arrastre siga funcionando— la corre el controlador.
+
+---
+
 ### Task 6: Smoke de dispositivo y documentación
 
 **Files:**
