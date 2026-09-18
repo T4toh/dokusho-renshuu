@@ -181,7 +181,12 @@ class CapturaService : Service() {
         // dispara el onStop() de la sesión vieja de forma asíncrona (posteado al main
         // looper) — para cuando corra, `sesion` ya puede apuntar a la nueva; de ahí el
         // chequeo de identidad de más abajo, sin el cual ese callback tardío pisaría la
-        // sesión recién creada.
+        // sesión recién creada. Y como onStartCommand corre en el main thread, ese
+        // callback tardío SIEMPRE encuentra el chequeo en false una vez que `sesion` pasa
+        // a apuntar a la proyección nueva más abajo — o sea nunca libera el espejo de la
+        // vieja: liberarEspejo() acá es el único lugar que lo hace, antes de que
+        // armarEspejo() pise virtualDisplay/imageReader con los de la sesión nueva.
+        liberarEspejo()
         sesion?.stop()
         return try {
             val proyeccion = manager.getMediaProjection(codigo, datos)
@@ -242,7 +247,16 @@ class CapturaService : Service() {
                 "ScreenCapture", anchoEspejo, altoEspejo, densidadEspejo,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 imageReader?.surface, null, null,
-            )
+            ) ?: run {
+                // Documentado: createVirtualDisplay() puede devolver null en vez de
+                // lanzar. Sin este chequeo quedaba un ImageReader vivo colgado de ningún
+                // VirtualDisplay hasta el fin de la sesión, y el log de abajo mentía
+                // "Espejo armado" con el espejo a medias.
+                android.util.Log.e("ScreenCapture", "createVirtualDisplay() devolvió null")
+                liberarEspejo()
+                avisar("Screen capture failed. Please try again")
+                return false
+            }
             android.util.Log.d("ScreenCapture", "Espejo armado: ${anchoEspejo}x$altoEspejo")
             true
         } catch (e: SecurityException) {
