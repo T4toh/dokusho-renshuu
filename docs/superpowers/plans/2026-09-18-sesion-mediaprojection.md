@@ -627,6 +627,154 @@ git commit -m "feat(captura): una sesión de MediaProjection por vida de la burb
 
 ---
 
+### Task 5b: El VirtualDisplay vive con la sesión, no con la captura
+
+La prueba de aceptación de la tarea 5 falló en el dispositivo con `SecurityException: ...
+Don't take multiple captures by invoking MediaProjection#createVirtualDisplay multiple times
+on the same instance`, y el proceso murió. Un `MediaProjection` da UN `createVirtualDisplay`;
+lo que da N frames es el `VirtualDisplay`. Esta tarea mueve el `VirtualDisplay` y el
+`ImageReader` de la captura a la sesión. Ver la sección "Corrección del 2026-09-18" del spec.
+
+**Files:**
+- Modify: `app/app/src/main/kotlin/com/tatoh/dokushorenshu/captura/CapturaService.kt`
+
+**Interfaces:**
+- Consumes: lo mismo que la tarea 5 (`decidirTap`, `apagarTrasCaptura`, `BurbujaFlotante`).
+- Produces: nada nuevo hacia afuera.
+
+- [ ] **Step 1: La sesión arma el espejo completo**
+
+`abrirSesion()` pasa a crear, además del `MediaProjection`, el `ImageReader` y el
+`VirtualDisplay`, una sola vez, con las métricas del momento. **Con la `SecurityException`
+atrapada**: sin atrapar, mató el proceso con la burbuja adentro.
+
+```kotlin
+/** Arma el espejo de pantalla completo: proyección + ImageReader + VirtualDisplay, todo
+ *  de una y para toda la sesión. Un MediaProjection admite UN solo createVirtualDisplay
+ *  —Android tira SecurityException en el segundo— pero ese VirtualDisplay entrega frames
+ *  indefinidamente. Es el modelo de un grabador de pantalla, y es la única forma de
+ *  capturar varias veces con un solo consentimiento. */
+private fun armarEspejo(proyeccion: MediaProjection): Boolean {
+    val metrics = DisplayMetrics()
+    windowManager?.defaultDisplay?.getRealMetrics(metrics)
+    anchoEspejo = metrics.widthPixels
+    altoEspejo = metrics.heightPixels
+    densidadEspejo = metrics.densityDpi
+    return try {
+        imageReader = ImageReader.newInstance(anchoEspejo, altoEspejo, PixelFormat.RGBA_8888, 2)
+        virtualDisplay = proyeccion.createVirtualDisplay(
+            "ScreenCapture", anchoEspejo, altoEspejo, densidadEspejo,
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+            imageReader?.surface, null, null,
+        )
+        android.util.Log.d("ScreenCapture", "Espejo armado: ${anchoEspejo}x$altoEspejo")
+        true
+    } catch (e: SecurityException) {
+        android.util.Log.e("ScreenCapture", "No se pudo armar el espejo", e)
+        liberarEspejo()
+        avisar("Screen capture failed. Please try again")
+        false
+    }
+}
+```
+
+Campos nuevos: `private var anchoEspejo = 0`, `altoEspejo = 0`, `densidadEspejo = 0`.
+
+`abrirSesion()` llama a `armarEspejo(proyeccion)` justo después de registrar el callback, y
+si devuelve false cierra la sesión (`proyeccion.stop()`, `sesion = null`) y devuelve false.
+
+- [ ] **Step 2: La captura sólo saca un frame**
+
+En `captureScreen()`, todo el bloque que creaba `ImageReader` y `VirtualDisplay` desaparece.
+Queda: ocultar overlay → esperar el delay → **verificar que el espejo sigue vivo y que las
+métricas no cambiaron** → `processCapture()`.
+
+```kotlin
+val proyeccion = sesion
+if (proyeccion == null || virtualDisplay == null) {
+    android.util.Log.w("ScreenCapture", "Sin espejo al capturar: se pide consentimiento")
+    avisar("Screen capture failed. Please try again")
+    stopOverlay()
+    return@postDelayed
+}
+ajustarEspejoSiRotó()
+processCapture()
+```
+
+- [ ] **Step 3: La rotación redimensiona el espejo**
+
+El `VirtualDisplay` se creó con un tamaño fijo. Si el usuario rotó, el frame llega con la
+geometría vieja y el recorte sale corrido — el bug histórico de esta feature.
+
+```kotlin
+/** Un VirtualDisplay conserva el tamaño con el que se creó. Al rotar, la pantalla real
+ *  cambia de geometría y los frames seguirían llegando con la vieja: el recorte saldría
+ *  corrido, que es exactamente el bug que esta feature arrastró desde el principio. Se
+ *  redimensiona el display y se reemplaza el ImageReader, que también tiene tamaño fijo. */
+private fun ajustarEspejoSiRotó() {
+    val metrics = DisplayMetrics()
+    windowManager?.defaultDisplay?.getRealMetrics(metrics)
+    if (metrics.widthPixels == anchoEspejo && metrics.heightPixels == altoEspejo) return
+    android.util.Log.d(
+        "ScreenCapture",
+        "La pantalla rotó: ${anchoEspejo}x$altoEspejo -> ${metrics.widthPixels}x${metrics.heightPixels}",
+    )
+    anchoEspejo = metrics.widthPixels
+    altoEspejo = metrics.heightPixels
+    densidadEspejo = metrics.densityDpi
+    val anterior = imageReader
+    imageReader = ImageReader.newInstance(anchoEspejo, altoEspejo, PixelFormat.RGBA_8888, 2)
+    virtualDisplay?.resize(anchoEspejo, altoEspejo, densidadEspejo)
+    virtualDisplay?.surface = imageReader?.surface
+    anterior?.close()
+}
+```
+
+- [ ] **Step 4: Terminar una captura no desarma el espejo**
+
+`terminarCaptura()` deja de liberar `virtualDisplay`/`imageReader` —ahora son de la sesión—
+y se queda con `isCapturing = false`, la burbuja visible y el apagado del Service cuando no
+hay burbuja. El espejo se libera en un solo lugar nuevo:
+
+```kotlin
+/** Suelta el espejo. Va aparte de cleanup() porque el Callback.onStop() de la proyección
+ *  llega cuando la sesión YA murió por fuera: ahí hay que soltar display y reader sin
+ *  volver a llamar stop() sobre una proyección muerta. */
+private fun liberarEspejo() {
+    virtualDisplay?.release()
+    imageReader?.close()
+    virtualDisplay = null
+    imageReader = null
+}
+```
+
+`cleanup()` llama a `liberarEspejo()` y después `sesion?.stop()`, `sesion = null`. El
+`Callback.onStop()` llama a `liberarEspejo()` (no a `cleanup()`) además de su chequeo de
+identidad y el `sesion = null`.
+
+**Cuidado con el frame viejo:** el `ImageReader` puede tener un frame de antes de que se
+dibujara el overlay. `processCapture()` ya usa `acquireLatestImage()`, que devuelve el más
+nuevo y descarta los anteriores; verificá que la `Image` se cierre siempre (el `finally`
+que ya existe), porque con un reader de 2 buffers una `Image` sin cerrar tranca el productor
+a partir de la captura siguiente.
+
+- [ ] **Step 5: Compilar y correr los tests**
+
+Run: `cd app && ./gradlew testDebugUnitTest`
+Expected: BUILD SUCCESSFUL, 308 tests, 0 failures.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add -A
+git commit -m "fix(captura): el VirtualDisplay vive con la sesión, no con la captura"
+```
+
+La verificación en dispositivo —cinco capturas seguidas con un solo consentimiento, más una
+rotación entre capturas— la corre el controlador.
+
+---
+
 ### Task 6: Smoke de dispositivo y documentación
 
 **Files:**

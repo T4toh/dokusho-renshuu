@@ -27,6 +27,46 @@ Contraprueba ya registrada en dispositivo (`docs/smoke-captura-ocr.md`, corrida 
 siguiente obtiene su `MediaProjection` sin volver a consentir. El token sobrevive mientras
 nadie lo use; lo que hay que dejar de tirar es la sesión.
 
+## Corrección del 2026-09-18, tras la prueba en dispositivo
+
+**La premisa de la sección anterior es falsa en Android 16, y la prueba de aceptación lo
+demostró.** La primera captura funcionó y el segundo tap de la burbuja entró directo al
+overlay sin diálogo —la UX buscada es alcanzable— pero al disparar la segunda captura:
+
+```
+java.lang.SecurityException: Don't re-use the resultData to retrieve the same projection
+instance, and don't use a token that has timed out. Don't take multiple captures by invoking
+MediaProjection#createVirtualDisplay multiple times on the same instance.
+FATAL EXCEPTION: main
+```
+
+O sea: **un `MediaProjection` admite UN solo `createVirtualDisplay`**. No es que el token
+sea de un solo uso y la sesión no; la sesión también da una sola captura si cada captura
+crea su propio `VirtualDisplay`. Lo que sigue siendo cierto —y es lo que salva el plan— es
+que **un `VirtualDisplay` da N frames**: es el modelo de cualquier grabador de pantalla.
+
+### Lo que cambia
+
+El `VirtualDisplay` y el `ImageReader` **se crean una vez, al abrir la sesión, y viven hasta
+que la sesión muera**. Cada captura saca un frame del `ImageReader` que ya está corriendo
+(`acquireLatestImage()`, y se cierra la `Image` al terminar). La sección "Lo que NO se
+mantiene vivo" de más arriba queda **anulada**: era exactamente al revés.
+
+Consecuencias que hay que aceptar con los ojos abiertos, y que el usuario ya había aceptado
+al elegir esta opción en el brainstorming ("VirtualDisplay + ImageReader retenidos"):
+
+- **El espejado de pantalla corre continuo** mientras la burbuja esté encendida, no sólo
+  durante una captura. Es costo de CPU y batería permanente, no puntual.
+- **Vuelve el problema de la rotación**, que la versión anterior resolvía de arriba: el
+  `VirtualDisplay` se crea con un tamaño fijo. Al rotar hay que redimensionarlo
+  (`VirtualDisplay.resize()`) y reemplazar el `ImageReader` por uno del tamaño nuevo
+  (`VirtualDisplay.setSurface()`), o el recorte sale corrido.
+- **La `SecurityException` de `createVirtualDisplay` tiene que estar atrapada.** Sin
+  atrapar mató el proceso entero con la burbuja adentro.
+
+El resto del diseño —un solo Service, la sesión atada a la vida de la burbuja, los tres
+lugares donde muere, el camino de recuperación cuando se cae— **no cambia**.
+
 ## Decisión
 
 Una sesión de `MediaProjection` por **vida de la burbuja**: se consiente una vez —en el
