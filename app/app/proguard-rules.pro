@@ -17,3 +17,15 @@
 # nombre en tiempo de ejecución. Necesarias.
 -keep class com.atilika.kuromoji.** { *; }
 -dontwarn com.atilika.kuromoji.**
+
+# ML Kit (reconocimiento de texto japonés): mismo cuadro que Kuromoji, y encontrado
+# igual — sólo falla en release. Con R8 sin estas reglas, construir el TextRecognizer
+# tira "NullPointerException: Attempt to read from field 'g04 iz3.a' on a null object
+# reference in method 'void od1.<init>()'", donde iz3 es
+# com.google.mlkit.vision.text.internal.zzo y od1 es nuestro OcrJapones: R8 poda parte
+# de la inicialización estática que ML Kit resuelve por su cuenta. El síntoma en la app
+# NO es un crash —OcrJapones deja propagar y el Service sustituye por texto vacío— así
+# que se ve como "OCR devolvió 0 chars" en cada captura: la feature entera muda.
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_** { *; }
+-dontwarn com.google.mlkit.**
