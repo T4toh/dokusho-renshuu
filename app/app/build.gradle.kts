@@ -1,10 +1,28 @@
 import java.net.URI
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+}
+
+// Firma de release. El keystore es una copia del debug.keystore de la Mac principal
+// (el mismo que firmó las betas 1-4: cambiar de clave rompería la actualización de las
+// instaladas). Vive en app/key.properties, gitignored. Si falta, el build release
+// FALLA en vez de caer a debug: un APK con otra firma no sirve para distribuir.
+val propiedadesFirma = rootProject.file("key.properties")
+val firma = Properties().apply {
+    if (propiedadesFirma.exists()) propiedadesFirma.inputStream().use { load(it) }
+}
+gradle.taskGraph.whenReady {
+    if (!propiedadesFirma.exists() && allTasks.any { it.name == "packageRelease" || it.name == "assembleRelease" }) {
+        throw GradleException(
+            "Falta app/key.properties (storeFile, storePassword, keyAlias, keyPassword). " +
+                "Sin eso el APK release saldría con otra firma y las betas instaladas lo rechazarían."
+        )
+    }
 }
 
 android {
@@ -15,8 +33,10 @@ android {
         applicationId = "com.tatoh.dokushorenshu"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // Los dos suben juntos en cada release; el tag es "v$versionName". El updater
+        // compara versionName (semver con prerelease) y Android compara versionCode.
+        versionCode = 5
+        versionName = "0.1.0-beta.5"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -37,15 +57,22 @@ android {
             excludes += "/META-INF/{AUTHORS,CONTRIBUTORS,LICENSE,LICENSE.txt,NOTICE,NOTICE.txt,DEPENDENCIES}*"
         }
     }
+    signingConfigs {
+        create("release") {
+            if (propiedadesFirma.exists()) {
+                storeFile = file(firma.getProperty("storeFile"))
+                storePassword = firma.getProperty("storePassword")
+                keyAlias = firma.getProperty("keyAlias")
+                keyPassword = firma.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // App de uso personal (sin publicar en una store): se firma con el keystore
-            // de debug para poder instalar el release directamente vía adb, sin generar
-            // ni gestionar un keystore de producción.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

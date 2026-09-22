@@ -4,3 +4,7 @@ local.properties
 .idea/
 *.iml
 app/src/main/assets/
+
+# firma de release: keystore y passwords, nunca al repo
+key.properties
+*.jks
