@@ -10,7 +10,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -27,7 +29,11 @@ fun AcercaScreen() {
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
         ) {
-            Text("Dokusho Renshū 0.1.0", style = MaterialTheme.typography.headlineSmall)
+            val contexto = LocalContext.current
+            val version = remember {
+                contexto.packageManager.getPackageInfo(contexto.packageName, 0).versionName ?: "?"
+            }
+            Text("Dokusho Renshū $version", style = MaterialTheme.typography.headlineSmall)
 
             Text("Dictionary data", style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(top = 20.dp))

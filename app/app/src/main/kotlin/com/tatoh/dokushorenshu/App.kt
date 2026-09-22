@@ -15,6 +15,8 @@ import com.tatoh.dokushorenshu.dominio.Tokenizador
 import com.tatoh.dokushorenshu.dominio.anki.ArmadorMazos
 import com.tatoh.dokushorenshu.dominio.ocr.OcrJapones
 import com.tatoh.dokushorenshu.dominio.ocr.RecortadorOcrMlKit
+import com.tatoh.dokushorenshu.update.Instalador
+import com.tatoh.dokushorenshu.update.UpdateChecker
 import java.io.File
 
 /** DI manual. Todo lazy: el primer acceso a `diccionario` copia el db de assets
@@ -38,6 +40,12 @@ class Contenedor(private val app: Application) {
     // cache, no filesDir: el .apkg es descartable, se regenera en cada export
     // (mismo criterio que FileProvider — spec Plan 4a "sin permisos de storage").
     val dirExportMazos by lazy { File(app.cacheDir, "export").apply { mkdirs() } }
+    /** `versionName` del APK instalado (gradle `versionName`), lo que compara el updater. */
+    val versionName: String by lazy {
+        app.packageManager.getPackageInfo(app.packageName, 0).versionName ?: ""
+    }
+    val instalador by lazy { Instalador(app) }
+    val updateChecker by lazy { UpdateChecker(versionName, prefs) }
 }
 
 class App : Application() {
