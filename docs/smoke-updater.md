@@ -38,3 +38,22 @@ crea más viejo que la última release publicada:
 
 Revertir `versionCode`/`versionName` al valor real de la rama e instalar la beta.5:
 `./gradlew assembleRelease && adb install -r app/build/outputs/apk/release/app-release.apk`.
+
+## Resultado 2026-09-22 (POCO X7 Pro, HyperOS / Android 16)
+
+Build de prueba `0.1.0-beta.3` / `versionCode 1` instalado encima del debug de la rama,
+`pm clear`, apertura:
+
+- Banner "New version available: 0.1.0-beta.4" en ≤ 3 s, sin doble hueco de status bar.
+- Update → permiso de "Install unknown apps" → descarga de 83 MB en ~40 s → verificación →
+  instalador de Android → instalado. `dumpsys package` pasó de `0.1.0-beta.3` a `0.1.0`
+  (la beta.4). El usuario hizo los taps: "todo flama".
+- Logcat: sin líneas `Updater` de warning ni `AndroidRuntime`. Un `W DownloadManager:
+  Inserting private file ... is not allowed` del sistema al indexar el archivo privado en
+  MediaProvider: inofensivo, la descarga y la instalación siguieron.
+- Después: `./release.sh` (avisó que beta.4 no trae `versionCode.txt`, buildeó
+  `dokusho-renshuu-v0.1.0-beta.5.apk`, sha256 `8bc29cdd…cbe83`), `adb install -r`:
+  `versionCode=5`, `versionName=0.1.0-beta.5`. Sin banner al abrir (gate de 24 h ya armado
+  por el chequeo del smoke): correcto.
+- Pendiente de esta corrida: rotación durante la descarga y la fase Error no se
+  ejercitaron; el OCR de la beta.5 (R8 vs ML Kit) lo verifica el usuario con un Scan.
