@@ -27,11 +27,12 @@
 | F    | app/ — recortes/notas: la captura crea su propio tipo de contenido en vez de una historia | ✅ Completo (mergeado a `main` en `4892b14`, sin PR; **smoke de dispositivo COMPLETO el 2026-09-17**, ver `docs/smoke-recortes.md`) |
 | fix  | app/ — la burbuja no se queda con el foco (Back y toques muertos con la burbuja activa) + smoke de captura OCR cerrado | ✅ Completo ([PR #20](https://github.com/T4toh/dokusho-renshuu/pull/20)) |
 | fix  | app/ — cancelar la captura ya no quema el permiso de MediaProjection + el segundo pedido vuelve a mostrar el diálogo | ✅ Completo ([PR #21](https://github.com/T4toh/dokusho-renshuu/pull/21)) |
-| G    | app/ — una sesión de MediaProjection por vida de la burbuja: un solo Service, espejo persistente, cerrar la burbuja con long-press | ✅ Completo (PR pendiente — actualizar con #N al abrir; spec `docs/superpowers/specs/2026-09-18-sesion-mediaprojection-design.md`) |
+| G    | app/ — una sesión de MediaProjection por vida de la burbuja: un solo Service, espejo persistente, cerrar la burbuja con long-press | ✅ Completo ([PR #24](https://github.com/T4toh/dokusho-renshuu/pull/24); spec `docs/superpowers/specs/2026-09-18-sesion-mediaprojection-design.md`) |
+| fix  | release — keep rules de ML Kit: con R8 el OCR volvía vacío | ✅ Completo ([PR #25](https://github.com/T4toh/dokusho-renshuu/pull/25)); ver "OJO con el build release" abajo |
 
 ## Datos operativos
 
-- **Release app vigente**: [v0.1.0-beta.3](https://github.com/T4toh/dokusho-renshuu/releases/tag/v0.1.0-beta.3) (prerelease, APK release minificado R8 firmado con debug key, 42.7 MB, main f9c2377 post-PRs #13-#16 — backlog feedback de uso completo: Update por historia, nº de oración, selección+Search web, traducciones en catálogo y tarjetas, kun primero). El usuario la baja a mano de la release para validar el flujo completo. beta.2 y anteriores obsoletas.
+- **Release app vigente**: [v0.1.0-beta.4](https://github.com/T4toh/dokusho-renshuu/releases/tag/v0.1.0-beta.4) (prerelease del 2026-09-18, `dokusho-renshuu-v0.1.0-beta.4.apk`, 83 MB con el modelo de OCR embebido, main `1e0927c` post-PR #25: captura OCR + recortes/notas + sesión única de MediaProjection + Rescan area). Anterior: v0.1.0-beta.3 (42.7 MB, main f9c2377 post-PRs #13-#16 — backlog feedback de uso completo: Update por historia, nº de oración, selección+Search web, traducciones en catálogo y tarjetas, kun primero). El usuario la baja a mano de la release para validar el flujo completo. beta.2 y anteriores obsoletas.
 - **Release db vigente**: `db-v2` = `diccionario-v2.db` (73.3 MB, metadata version=2, glosas limpias: parser Jitendex descarta 23 marcadores de structured content; MAX_ORACIONES_POR_KANJI=30). db-v1 queda obsoleto.
 - **Fuentes** (URLs vigentes en `diccionario/README.md`): Jitendex ya NO distribuye por GitHub release assets; Tatoeba discontinuó el export directo de pares → `diccionario/fuentes_tatoeba.py` los arma desde exports por-idioma.
 - **Contrato para la app (Plan 3)**: `oracion_palabra` solo indexa términos de 2-6 chars; palabras de 1 kanji → fallback a `oracion_kanji`. Listas en el db = JSON arrays (`ensure_ascii=False`). Versión de esquema en tabla `metadata`.
@@ -245,7 +246,8 @@
 Cuatro pedidos salidos de usar la feature en dispositivo (POCO / HyperOS / Android 16).
 Ninguno es un bug de lo implementado: son huecos.
 
-- **Una sola autorización de MediaProjection por sesión del bubble.** Hoy pide permiso en
+- ~~**Una sola autorización de MediaProjection por sesión del bubble.**~~ Resuelto (Plan G,
+  PR #24, en beta.4). Lo que sigue es el diagnóstico que lo motivó. Hoy pide permiso en
   cada captura y molesta de verdad. **La justificación que quedó escrita en el spec del
   Plan E —"Android 14+ invalida el token después de cada sesión, no hay forma de
   evitarlo"— es incorrecta**: lo de un solo uso es el TOKEN (`resultCode`/`resultData`),

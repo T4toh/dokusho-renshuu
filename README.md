@@ -30,9 +30,12 @@ e instalalo. Android va a avisarte que viene de fuera de la tienda; es esperable
 
 Necesitás Android 8 o superior. La captura de pantalla pide Android 10 o superior.
 
-> **Ojo:** la release publicada hoy (`v0.1.0-beta.3`) es anterior a la captura de
-> pantalla y a las notas. Para probar eso hay que compilar desde el código — ver
-> [`app/README.md`](app/README.md).
+El APK pesa unos 83 MB porque el diccionario y el modelo de OCR van adentro: funciona sin
+internet y sin Google Play Services. Si venís de una beta anterior, instalá encima; tus
+historias y tu progreso quedan.
+
+La app todavía no se actualiza sola: cuando salga una versión nueva hay que volver a la
+release. Está en el backlog.
 
 ### Leer
 
@@ -61,8 +64,14 @@ Si el reconocimiento sale desordenado —pasa con texto vertical— tocá **Edit
 corregilo a mano; la furigana se regenera. Cada nota guarda también la captura
 original, colapsada arriba, por si necesitás ver el texto real.
 
-> Android va a pedirte autorización de grabación **en cada captura**. Es molesto y
-> está en el backlog: la sesión se puede mantener viva en vez de pedirla cada vez.
+Android pide la autorización de grabación **una vez por sesión de la burbuja**, no en
+cada captura. Mientras la burbuja esté encendida, el sistema muestra su indicador de
+grabación. Para apagarla sin entrar a la app, mantenela apretada: se convierte en una ✕
+y un segundo toque la cierra.
+
+Si el texto salió chico o el recorte quedó torcido, abrí la nota y tocá **Rescan area**
+sobre la imagen guardada: marcás un recuadro y el texto nuevo cae en el editor sin pisar
+lo que había hasta que toques **Save**.
 
 ### Exportar a Anki
 
