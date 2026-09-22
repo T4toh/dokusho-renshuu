@@ -4,10 +4,12 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.tatoh.dokushorenshu.datos.progreso.PrefsRepo
 import com.tatoh.dokushorenshu.datos.progreso.ProgresoDb
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -76,5 +78,16 @@ class UpdateCheckerTest {
         assertNull(checker(instalada = "0.1.0", fetch = { "[]" }).chequear())
         prefs.setUltimoChequeoUpdate(0)
         assertNull(checker(instalada = "lo que sea").chequear())
+    }
+
+    @Test
+    fun `cancellation se propaga`() = runTest {
+        val cancelado: suspend (String) -> String = { throw CancellationException("cancelado") }
+        try {
+            checker(fetch = cancelado).chequear()
+            throw AssertionError("debería haber lanzado CancellationException")
+        } catch (e: CancellationException) {
+            // esperado
+        }
     }
 }

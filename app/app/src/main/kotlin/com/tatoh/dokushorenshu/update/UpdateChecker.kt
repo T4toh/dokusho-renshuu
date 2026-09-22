@@ -2,13 +2,15 @@ package com.tatoh.dokushorenshu.update
 
 import android.util.Log
 import com.tatoh.dokushorenshu.datos.progreso.PrefsRepo
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URI
 
 /** Pregunta a GitHub si hay una release de la app más nueva que la instalada.
- *  Nunca lanza: sin red, rate limit, JSON raro o release sin digest → `null`. */
+ *  Nunca lanza: sin red, rate limit, JSON raro o release sin digest → `null`.
+ *  Excepción: `CancellationException` se propaga. */
 class UpdateChecker(
     private val versionInstalada: String,
     private val prefs: PrefsRepo,
@@ -28,14 +30,19 @@ class UpdateChecker(
         // Se graba ANTES del resultado: una falla también cuenta como intento y se
         // reintenta al día siguiente. Evita martillar la API sin red.
         prefs.setUltimoChequeoUpdate(t)
-        return runCatching {
+        return try {
             val info = ReleaseInfo.desdeReleases(fetch(URL))
             when {
                 info == null -> { Log.w(TAG, "ninguna release con .apk y digest"); null }
                 info.version > local -> info
                 else -> { Log.i(TAG, "sin novedades (${info.version} vs $local)"); null }
             }
-        }.onFailure { Log.w(TAG, "no se pudo chequear la release", it) }.getOrNull()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "no se pudo chequear la release", e)
+            null
+        }
     }
 
     companion object {
