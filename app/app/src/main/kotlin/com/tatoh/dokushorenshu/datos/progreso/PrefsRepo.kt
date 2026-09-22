@@ -16,8 +16,16 @@ class PrefsRepo(private val dao: ProgresoDao) {
         dao.guardarPref(Pref(CLAVE_KATAKANA, if (activa) "on" else "off"))
     }
 
+    /** Epoch millis del último chequeo de update de la app (gate de 24 h del updater). */
+    suspend fun ultimoChequeoUpdate(): Long? = dao.pref(CLAVE_UPDATE_CHECK)?.toLongOrNull()
+
+    suspend fun setUltimoChequeoUpdate(millis: Long) {
+        dao.guardarPref(Pref(CLAVE_UPDATE_CHECK, millis.toString()))
+    }
+
     private companion object {
         const val CLAVE_FURIGANA = "furigana"
         const val CLAVE_KATAKANA = "katakana"
+        const val CLAVE_UPDATE_CHECK = "update_last_check"
     }
 }

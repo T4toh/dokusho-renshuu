@@ -10,10 +10,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -41,6 +48,8 @@ import com.tatoh.dokushorenshu.ui.recortes.RecorteScreen
 import com.tatoh.dokushorenshu.ui.recortes.RecorteViewModel
 import com.tatoh.dokushorenshu.ui.recortes.RecortesViewModel
 import com.tatoh.dokushorenshu.ui.tema.TemaDokusho
+import com.tatoh.dokushorenshu.update.UpdateBanner
+import com.tatoh.dokushorenshu.update.UpdateViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.withContext
@@ -74,6 +83,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             TemaDokusho {
                 val nav = rememberNavController()
+                // A nivel Activity, no dentro del NavHost: el banner es global y su estado
+                // (descarga en curso) tiene que sobrevivir a la navegación y a rotar.
+                val updateVm: UpdateViewModel = viewModel(factory = viewModelFactory {
+                    initializer { UpdateViewModel(contenedor.updateChecker, contenedor.instalador) }
+                })
                 val pedirPermiso by pedirPermisoPendiente
                 // Llegó una captura: se vuelve recorte y se abre. singleTop para no apilar
                 // pantallas si llegan varias capturas.
@@ -132,94 +146,106 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                NavHost(navController = nav, startDestination = "biblioteca") {
-                    composable("biblioteca") {
-                        val vm: BibliotecaViewModel = viewModel(factory = viewModelFactory {
-                            initializer { BibliotecaViewModel(contenedor.historias, contenedor.progresoDb.dao(), contenedor.diccionario) }
-                        })
-                        val recortesVm: RecortesViewModel = viewModel(factory = viewModelFactory {
-                            initializer { RecortesViewModel(contenedor.recortes) }
-                        })
-                        // BibliotecaScreen dispara vm.cargar() con LaunchedEffect (Task 9).
-                        BibliotecaScreen(
-                            vm = vm,
-                            onAbrirHistoria = { id -> nav.navigate("lector/$id") },
-                            onAcerca = { nav.navigate("acerca") },
-                            onVerKanji = { k -> nav.navigate("kanji/$k") },
-                            onExport = { nav.navigate("export") },
-                            onImportar = { nav.navigate("importar") },
-                            contenidoNotas = {
-                                ListaRecortesScreen(
-                                    vm = recortesVm,
-                                    onAbrirRecorte = { id -> nav.navigate("recorte/$id") },
-                                    onScan = { nav.navigate("captura") },
-                                )
-                            },
-                        )
-                    }
-                    composable("lector/{id}") { entrada ->
-                        val id = entrada.arguments!!.getString("id")!!
-                        val vm: LectorViewModel = viewModel(factory = viewModelFactory {
-                            initializer {
-                                LectorViewModel(
-                                    id, contenedor.historias, contenedor.progresoDb.dao(),
-                                    contenedor.prefs, contenedor.tokenizador, contenedor.buscador,
-                                )
-                            }
-                        })
-                        // LectorScreen dispara vm.cargar() con LaunchedEffect (Task 10).
-                        LectorScreen(vm = vm, onVerKanji = { k -> nav.navigate("kanji/$k") })
-                    }
-                    composable("recorte/{id}") { entrada ->
-                        val id = entrada.arguments!!.getString("id")!!
-                        val vm: RecorteViewModel = viewModel(factory = viewModelFactory {
-                            initializer {
-                                RecorteViewModel(
-                                    id, contenedor.recortes, contenedor.creadorRecortes,
-                                    contenedor.tokenizador, contenedor.buscador,
-                                    contenedor.progresoDb.dao(), contenedor.recortadorOcr,
+                val bannerVisible = updateVm.info != null && updateVm.fase != UpdateViewModel.Fase.OCULTO
+                Column(Modifier.fillMaxSize()) {
+                    UpdateBanner(updateVm)
+                    // Con el banner arriba, él ya absorbió el inset de la status bar: las
+                    // pantallas de abajo no tienen que volver a padear (evita el doble hueco).
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .consumeWindowInsets(if (bannerVisible) WindowInsets.statusBars else WindowInsets(0, 0, 0, 0))
+                    ) {
+                        NavHost(navController = nav, startDestination = "biblioteca") {
+                            composable("biblioteca") {
+                                val vm: BibliotecaViewModel = viewModel(factory = viewModelFactory {
+                                    initializer { BibliotecaViewModel(contenedor.historias, contenedor.progresoDb.dao(), contenedor.diccionario) }
+                                })
+                                val recortesVm: RecortesViewModel = viewModel(factory = viewModelFactory {
+                                    initializer { RecortesViewModel(contenedor.recortes) }
+                                })
+                                // BibliotecaScreen dispara vm.cargar() con LaunchedEffect (Task 9).
+                                BibliotecaScreen(
+                                    vm = vm,
+                                    onAbrirHistoria = { id -> nav.navigate("lector/$id") },
+                                    onAcerca = { nav.navigate("acerca") },
+                                    onVerKanji = { k -> nav.navigate("kanji/$k") },
+                                    onExport = { nav.navigate("export") },
+                                    onImportar = { nav.navigate("importar") },
+                                    contenidoNotas = {
+                                        ListaRecortesScreen(
+                                            vm = recortesVm,
+                                            onAbrirRecorte = { id -> nav.navigate("recorte/$id") },
+                                            onScan = { nav.navigate("captura") },
+                                        )
+                                    },
                                 )
                             }
-                        })
-                        // RecorteScreen dispara vm.cargar() con LaunchedEffect (mismo patrón).
-                        RecorteScreen(
-                            vm = vm,
-                            onVerKanji = { k -> nav.navigate("kanji/$k") },
-                            onCerrar = { nav.popBackStack() },
-                        )
-                    }
-                    composable("kanji/{kanji}") { entrada ->
-                        val kanji = entrada.arguments!!.getString("kanji")!!
-                        val vm: DetalleKanjiViewModel = viewModel(factory = viewModelFactory {
-                            initializer {
-                                DetalleKanjiViewModel(kanji, contenedor.diccionario, contenedor.progresoDb.dao())
+                            composable("lector/{id}") { entrada ->
+                                val id = entrada.arguments!!.getString("id")!!
+                                val vm: LectorViewModel = viewModel(factory = viewModelFactory {
+                                    initializer {
+                                        LectorViewModel(
+                                            id, contenedor.historias, contenedor.progresoDb.dao(),
+                                            contenedor.prefs, contenedor.tokenizador, contenedor.buscador,
+                                        )
+                                    }
+                                })
+                                // LectorScreen dispara vm.cargar() con LaunchedEffect (Task 10).
+                                LectorScreen(vm = vm, onVerKanji = { k -> nav.navigate("kanji/$k") })
                             }
-                        })
-                        // DetalleKanjiScreen dispara vm.cargar() con LaunchedEffect (mismo patrón).
-                        DetalleKanjiScreen(vm)
-                    }
-                    composable("export") {
-                        val vm: ExportViewModel = viewModel(factory = viewModelFactory {
-                            initializer {
-                                ExportViewModel(contenedor.progresoDb.dao(), contenedor.armadorMazos, contenedor.dirExportMazos)
+                            composable("recorte/{id}") { entrada ->
+                                val id = entrada.arguments!!.getString("id")!!
+                                val vm: RecorteViewModel = viewModel(factory = viewModelFactory {
+                                    initializer {
+                                        RecorteViewModel(
+                                            id, contenedor.recortes, contenedor.creadorRecortes,
+                                            contenedor.tokenizador, contenedor.buscador,
+                                            contenedor.progresoDb.dao(), contenedor.recortadorOcr,
+                                        )
+                                    }
+                                })
+                                // RecorteScreen dispara vm.cargar() con LaunchedEffect (mismo patrón).
+                                RecorteScreen(
+                                    vm = vm,
+                                    onVerKanji = { k -> nav.navigate("kanji/$k") },
+                                    onCerrar = { nav.popBackStack() },
+                                )
                             }
-                        })
-                        ExportScreen(vm = vm, onCerrar = { nav.popBackStack() })
+                            composable("kanji/{kanji}") { entrada ->
+                                val kanji = entrada.arguments!!.getString("kanji")!!
+                                val vm: DetalleKanjiViewModel = viewModel(factory = viewModelFactory {
+                                    initializer {
+                                        DetalleKanjiViewModel(kanji, contenedor.diccionario, contenedor.progresoDb.dao())
+                                    }
+                                })
+                                // DetalleKanjiScreen dispara vm.cargar() con LaunchedEffect (mismo patrón).
+                                DetalleKanjiScreen(vm)
+                            }
+                            composable("export") {
+                                val vm: ExportViewModel = viewModel(factory = viewModelFactory {
+                                    initializer {
+                                        ExportViewModel(contenedor.progresoDb.dao(), contenedor.armadorMazos, contenedor.dirExportMazos)
+                                    }
+                                })
+                                ExportScreen(vm = vm, onCerrar = { nav.popBackStack() })
+                            }
+                            composable("importar") {
+                                val vm: ImportViewModel = viewModel(factory = viewModelFactory {
+                                    initializer { ImportViewModel(contenedor.importador) }
+                                })
+                                ImportScreen(
+                                    vm = vm,
+                                    onImportado = { nav.popBackStack() },
+                                    onCerrar = { nav.popBackStack() },
+                                )
+                            }
+                            composable("captura") {
+                                CapturaScreen(onCerrar = { nav.popBackStack() })
+                            }
+                            composable("acerca") { AcercaScreen() }
+                        }
                     }
-                    composable("importar") {
-                        val vm: ImportViewModel = viewModel(factory = viewModelFactory {
-                            initializer { ImportViewModel(contenedor.importador) }
-                        })
-                        ImportScreen(
-                            vm = vm,
-                            onImportado = { nav.popBackStack() },
-                            onCerrar = { nav.popBackStack() },
-                        )
-                    }
-                    composable("captura") {
-                        CapturaScreen(onCerrar = { nav.popBackStack() })
-                    }
-                    composable("acerca") { AcercaScreen() }
                 }
             }
         }

@@ -32,7 +32,8 @@
 
 ## Datos operativos
 
-- **Release app vigente**: [v0.1.0-beta.4](https://github.com/T4toh/dokusho-renshuu/releases/tag/v0.1.0-beta.4) (prerelease del 2026-09-18, `dokusho-renshuu-v0.1.0-beta.4.apk`, 83 MB con el modelo de OCR embebido, main `1e0927c` post-PR #25: captura OCR + recortes/notas + sesión única de MediaProjection + Rescan area). Anterior: v0.1.0-beta.3 (42.7 MB, main f9c2377 post-PRs #13-#16 — backlog feedback de uso completo: Update por historia, nº de oración, selección+Search web, traducciones en catálogo y tarjetas, kun primero). El usuario la baja a mano de la release para validar el flujo completo. beta.2 y anteriores obsoletas.
+- **Release app vigente**: [v0.1.0-beta.4](https://github.com/T4toh/dokusho-renshuu/releases/tag/v0.1.0-beta.4) (prerelease del 2026-09-18, `dokusho-renshuu-v0.1.0-beta.4.apk`, 83 MB con el modelo de OCR embebido, main `1e0927c` post-PR #25: captura OCR + recortes/notas + sesión única de MediaProjection + Rescan area). Anterior: v0.1.0-beta.3 (42.7 MB, main f9c2377 post-PRs #13-#16 — backlog feedback de uso completo: Update por historia, nº de oración, selección+Search web, traducciones en catálogo y tarjetas, kun primero). El usuario la baja a mano de la release para validar el flujo completo. beta.2 y anteriores obsoletas. Desde la beta.5 el APK se genera con `app/release.sh` y la app se actualiza sola; las
+  releases llevan `versionCode.txt` como asset para que el script verifique el bump.
 - **Release db vigente**: `db-v2` = `diccionario-v2.db` (73.3 MB, metadata version=2, glosas limpias: parser Jitendex descarta 23 marcadores de structured content; MAX_ORACIONES_POR_KANJI=30). db-v1 queda obsoleto.
 - **Fuentes** (URLs vigentes en `diccionario/README.md`): Jitendex ya NO distribuye por GitHub release assets; Tatoeba discontinuó el export directo de pares → `diccionario/fuentes_tatoeba.py` los arma desde exports por-idioma.
 - **Contrato para la app (Plan 3)**: `oracion_palabra` solo indexa términos de 2-6 chars; palabras de 1 kanji → fallback a `oracion_kanji`. Listas en el db = JSON arrays (`ensure_ascii=False`). Versión de esquema en tabla `metadata`.
@@ -232,14 +233,12 @@
 
 ## Backlog feedback de uso (2026-09-18)
 
-- **Autoupdates: que la app se actualice sola.** Hoy cada versión nueva se baja a mano de
-  la release de GitHub y se instala encima (ver "Release app vigente" en Datos operativos),
-  así que en la práctica el usuario se queda con la que tenga hasta que se acuerde de mirar.
-  Alcance a definir cuando se agarre: si alcanza con avisar que hay versión nueva y abrir la
-  release, o si la app baja e instala el APK sola (eso pide `REQUEST_INSTALL_PACKAGES` y el
-  permiso de "instalar apps desconocidas", que en HyperOS es su propio laberinto). Ojo con
-  no confundirlo con el Update que YA existe: ese actualiza el **contenido** (historias del
-  catálogo, PR #13), no la app.
+- ~~**Autoupdates: que la app se actualice sola.**~~ ✅ Hecho en la beta.5 (spec
+  `docs/superpowers/specs/2026-09-22-updater-app-design.md`): banner arriba de la
+  biblioteca, descarga con DownloadManager, sha256, instalador. Requirió versionar de
+  verdad (`versionName`/`versionCode` estaban clavados en 0.1.0/1 desde la beta.1) y fijar
+  la firma (`app/key.properties` → copia del debug.keystore que firmó las betas). Sigue
+  siendo distinto del Update de **contenido** (historias, PR #13).
 
 ## Backlog feedback de uso (2026-09-17 — smoke de recortes en el Poco)
 

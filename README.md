@@ -34,8 +34,10 @@ El APK pesa unos 83 MB porque el diccionario y el modelo de OCR van adentro: fun
 internet y sin Google Play Services. Si venís de una beta anterior, instalá encima; tus
 historias y tu progreso quedan.
 
-La app todavía no se actualiza sola: cuando salga una versión nueva hay que volver a la
-release. Está en el backlog.
+Desde la beta.5 la app avisa cuando hay una versión nueva y la instala desde un aviso
+arriba de la biblioteca (una vez por día chequea la release de GitHub, verifica el hash
+del APK y abre el instalador de Android; la primera vez pide el permiso de "instalar apps
+desconocidas"). Si tenés la beta.4 o anterior, esa última vez la bajás a mano.
 
 ### Leer
 

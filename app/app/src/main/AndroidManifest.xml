@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Updater: lanzar el instalador de Android con el APK descargado. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Captura con overlay: SYSTEM_ALERT_WINDOW lo concede el usuario desde
          Ajustes (no hay diálogo runtime) y de paso exime a la app del bloqueo de
