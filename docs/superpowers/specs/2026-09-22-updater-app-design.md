@@ -92,21 +92,24 @@ Port de `UpdaterPlugin.kt` sin MethodChannel. Clase con `Context`, mismas cinco 
 
 Sin FileProvider: DownloadManager ya expone `content://`.
 
-### `UpdateBanner.kt`
+### `UpdateViewModel.kt` + `UpdateBanner.kt`
 
-Composable `UpdateBanner(info, instalador, onCerrar)`, textos en inglés como el resto de la
-UI. Mismas fases que Pulpero: `Aviso`, `SinPermiso`, `Descargando`, `Verificando`, `Listo`,
-`Error`.
+La máquina de estados vive en `UpdateViewModel` (a nivel Activity, `viewModelScope` para
+el chequeo y el polling): rotar durante la descarga no resetea el banner ni re-encola
+(`encolarDescarga` borra el `update.apk` en curso). El composable `UpdateBanner(vm)` solo
+pinta. Textos en inglés como el resto de la UI. Mismas fases que Pulpero más `Oculto`:
+`Aviso`, `SinPermiso`, `Descargando`, `Verificando`, `Listo`, `Error`. Cerrar ("Not now",
+botón de texto: el repo no usa material-icons) oculta hasta el próximo chequeo.
 
-- Aviso: "New version available: 0.1.0-beta.5" · `Update` · ✕.
+- Aviso: "New version available: 0.1.0-beta.5" · `Update` · `Not now`.
 - SinPermiso: "To update, allow \"Install unknown apps\" for Dokusho." · `Open Settings`.
   `LifecycleResumeEffect`: al volver de Ajustes en esta fase, reintenta solo.
 - Descargando/Verificando: `LinearProgressIndicator` (determinado si hay total).
   Polling con `LaunchedEffect(downloadId) { while (isActive) { consultar; delay(1s) } }`:
   el loop es secuencial, así que no hace falta la guarda `_consultando` de Pulpero. Sí se
   mantiene la guarda contra doble tap en `Update`/`Retry`.
-- Listo: "Update ready to install." · `Install` (reintenta el instalador sin re-descargar) · ✕.
-- Error: mensaje · `Retry` · ✕. Mensajes: "Download failed.", "The download was corrupted,
+- Listo: "Update ready to install." · `Install` (reintenta el instalador sin re-descargar) · `Not now`.
+- Error: mensaje · `Retry` · `Not now`. Mensajes: "Download failed.", "The download was corrupted,
   try again.", "Could not open Settings."
 - Colores: `MaterialTheme.colorScheme.primaryContainer` / `onPrimaryContainer`.
 
@@ -114,9 +117,9 @@ UI. Mismas fases que Pulpero: `Aviso`, `SinPermiso`, `Descargando`, `Verificando
 
 - `Contenedor`: `val instalador by lazy { Instalador(app) }`,
   `val updateChecker by lazy { UpdateChecker(versionName del package, prefs) }`.
-- `MainActivity`, dentro de `TemaDokusho`: `Column { if (update != null) UpdateBanner(...); NavHost(...) }`.
-  `LaunchedEffect(Unit) { update = contenedor.updateChecker.chequear() }`. Cerrar el banner
-  lo oculta hasta el próximo chequeo (24 h).
+- `MainActivity`, dentro de `TemaDokusho`: `UpdateViewModel` vía `viewModel(factory)` a nivel
+  Activity; `Column { UpdateBanner(vm); Box(consumeWindowInsets(statusBars si hay banner)) { NavHost } }`
+  para que las pantallas no dupliquen el padding de la status bar.
 - Manifest: `<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>`.
   `INTERNET` ya está.
 - `AcercaScreen` muestra `packageManager.versionName` en vez del literal "0.1.0".
