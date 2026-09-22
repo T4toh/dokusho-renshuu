@@ -55,6 +55,12 @@ class Instalador(private val context: Context) {
         return downloadManager.enqueue(request)
     }
 
+    /** Descarta una descarga en curso: sin esto, un Retry encolaría una segunda descarga
+     *  escribiendo el mismo `update.apk` que la anterior. Nunca lanza. */
+    fun cancelarDescarga(id: Long) {
+        runCatching { downloadManager.remove(id) }
+    }
+
     fun consultarDescarga(id: Long): Descarga =
         downloadManager.query(DownloadManager.Query().setFilterById(id)).use { cursor ->
             if (!cursor.moveToFirst()) {

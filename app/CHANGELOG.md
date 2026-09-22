@@ -6,6 +6,10 @@ Cambios notables de la app Dokusho Renshū, del más nuevo al más viejo. Format
 diccionario (`db-vN`) no van acá. Antes de la beta.5 las notas vivían solo en la release
 de GitHub.
 
+## [Sin publicar]
+
+- Acá van los cambios de la próxima versión (`release.sh` pide renombrar esta sección).
+
 ## [0.1.0-beta.5] - 2026-09-22
 
 ### Agregado

@@ -20,7 +20,7 @@ crea más viejo que la última release publicada:
       arriba de Biblioteca; el TopAppBar no tiene doble hueco de status bar.
 - [ ] `adb logcat -s Updater` no muestra warnings.
 - [ ] Rotar: el banner sigue.
-- [ ] ✕ → desaparece. Reabrir la app: no vuelve (gate 24 h). `pm clear` y seguir.
+- [ ] `Not now` → desaparece. Reabrir la app: no vuelve (gate 24 h). `pm clear` y seguir.
 - [ ] `Update` sin el permiso → "To update, allow "Install unknown apps" for Dokusho." ·
       `Open Settings` abre la pantalla de la app en Ajustes. Conceder y volver: la descarga
       arranca sola.

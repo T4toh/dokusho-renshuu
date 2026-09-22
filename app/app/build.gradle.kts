@@ -17,7 +17,7 @@ val firma = Properties().apply {
     if (propiedadesFirma.exists()) propiedadesFirma.inputStream().use { load(it) }
 }
 gradle.taskGraph.whenReady {
-    if (!propiedadesFirma.exists() && allTasks.any { it.name == "packageRelease" || it.name == "assembleRelease" }) {
+    if (!propiedadesFirma.exists() && allTasks.any { it.name == "packageRelease" || it.name == "assembleRelease" || it.name == "bundleRelease" }) {
         throw GradleException(
             "Falta app/key.properties (storeFile, storePassword, keyAlias, keyPassword). " +
                 "Sin eso el APK release saldría con otra firma y las betas instaladas lo rechazarían."

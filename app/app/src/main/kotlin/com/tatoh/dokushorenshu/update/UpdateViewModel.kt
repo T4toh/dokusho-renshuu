@@ -53,6 +53,7 @@ class UpdateViewModel(
                 fase = Fase.SIN_PERMISO
                 return
             }
+            downloadId?.let { instalador.cancelarDescarga(it) }
             seguimiento?.cancel()
             progreso = null
             val id = instalador.encolarDescarga(url)
@@ -79,6 +80,7 @@ class UpdateViewModel(
     fun instalar() {
         val id = downloadId ?: return
         if (fase == Fase.VERIFICANDO) return // doble tap: una sola verificación a la vez
+        fase = Fase.VERIFICANDO // sincrónico: que el guard de arriba corte el segundo tap
         viewModelScope.launch { verificarEInstalar(id) }
     }
 

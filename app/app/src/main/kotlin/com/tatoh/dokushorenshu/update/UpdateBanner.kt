@@ -40,7 +40,7 @@ fun UpdateBanner(vm: UpdateViewModel) {
         ) {
             when (vm.fase) {
                 Fase.AVISO -> Fila("New version available: ${info.version}", "Update", vm::actualizar, vm::cerrar)
-                Fase.SIN_PERMISO -> Fila("To update, allow \"Install unknown apps\" for Dokusho.", "Open Settings", vm::abrirAjustes, null)
+                Fase.SIN_PERMISO -> Fila("To update, allow \"Install unknown apps\" for Dokusho.", "Open Settings", vm::abrirAjustes, vm::cerrar)
                 Fase.DESCARGANDO, Fase.VERIFICANDO -> {
                     Text(
                         if (vm.fase == Fase.DESCARGANDO) "Downloading ${info.version}…" else "Verifying the download…",
@@ -52,6 +52,11 @@ fun UpdateBanner(vm: UpdateViewModel) {
                         LinearProgressIndicator(progress = { progreso }, modifier = modifier)
                     } else {
                         LinearProgressIndicator(modifier = modifier)
+                    }
+                    // Solo en DESCARGANDO: VERIFICANDO dura segundos y cancelar a mitad
+                    // podría dejar la fase inconsistente.
+                    if (vm.fase == Fase.DESCARGANDO) {
+                        TextButton(onClick = vm::cerrar, modifier = Modifier.align(Alignment.End)) { Text("Not now") }
                     }
                 }
                 Fase.LISTO -> Fila("Update ready to install.", "Install", vm::instalar, vm::cerrar)

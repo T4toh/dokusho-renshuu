@@ -24,13 +24,15 @@ class UpdateChecker(
             Log.w(TAG, "versionName \"$versionInstalada\" no parsea")
             return null
         }
-        val t = ahora()
-        val ultimo = prefs.ultimoChequeoUpdate()
-        if (ultimo != null && t - ultimo < INTERVALO_MS) return null
-        // Se graba ANTES del resultado: una falla también cuenta como intento y se
-        // reintenta al día siguiente. Evita martillar la API sin red.
-        prefs.setUltimoChequeoUpdate(t)
+        // El try arranca acá: si Room tira (prefs.ultimoChequeoUpdate/setUltimoChequeoUpdate),
+        // también tiene que devolver null y no matar la app al abrir (init de UpdateViewModel).
         return try {
+            val t = ahora()
+            val ultimo = prefs.ultimoChequeoUpdate()
+            if (ultimo != null && t - ultimo < INTERVALO_MS) return null
+            // Se graba ANTES del resultado: una falla también cuenta como intento y se
+            // reintenta al día siguiente. Evita martillar la API sin red.
+            prefs.setUltimoChequeoUpdate(t)
             val info = ReleaseInfo.desdeReleases(fetch(URL))
             when {
                 info == null -> { Log.w(TAG, "ninguna release con .apk y digest"); null }
