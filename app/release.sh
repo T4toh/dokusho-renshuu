@@ -14,8 +14,8 @@ if ! gh auth status >/dev/null 2>&1; then
     exit 1
 fi
 
-VERSION=$(grep -E '^\s*versionName = "' "$GRADLE" | sed -E 's/.*"([^"]+)".*/\1/')
-BUILD=$(grep -E '^\s*versionCode = ' "$GRADLE" | sed -E 's/[^0-9]*([0-9]+).*/\1/')
+VERSION=$(grep -E '^\s*versionName = "' "$GRADLE" | sed -E 's/.*"([^"]+)".*/\1/' || true)
+BUILD=$(grep -E '^\s*versionCode = ' "$GRADLE" | sed -E 's/[^0-9]*([0-9]+).*/\1/' || true)
 TAG="v$VERSION"
 
 if [ -z "$VERSION" ] || ! [[ "$BUILD" =~ ^[0-9]+$ ]]; then
