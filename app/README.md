@@ -11,6 +11,19 @@ Lector de japonés: historias de `catalogo/` con furigana, diccionario offline
 ./gradlew installDebug      # instalar en dispositivo
 ```
 
+### Release
+
+```bash
+./release.sh    # valida versionName/versionCode/CHANGELOG/key.properties/tag, buildea, imprime el gh release create
+```
+
+Necesita `app/key.properties` (gitignored) apuntando a `~/dokusho-release.jks`: copia del
+`debug.keystore` que firmó las betas 1-4 (alias `androiddebugkey`, pass `android`). Sin
+él, `assembleRelease` falla a propósito. Cada release sube `versionCode` y `versionName`
+juntos en `app/build.gradle.kts`; el tag es `v$versionName` y la release lleva
+`--prerelease` mientras sea beta. El updater in-app (`update/`) lista `/releases` (no
+`/latest`, que devuelve `db-v2`) y elige la mayor versión con `.apk` + `digest`.
+
 Requiere JDK 17+ (probado con JDK 21) y Android SDK 36. Los assets NO se commitean:
 `descargarDiccionario` baja `diccionario-v2.db` del release `db-v2` (una vez);
 `copiarHistorias` copia `../catalogo/` en cada build.
@@ -34,6 +47,9 @@ Requiere JDK 17+ (probado con JDK 21) y Android SDK 36. Los assets NO se commite
   la pestaña "Notes"; `ui/recortes/RecorteScreen.kt` reusa el renderizado de
   oraciones y la selección de texto que salieron de `ui/lector/` hacia `ui/comun/`
   para no duplicarlos.
+- `update/` — updater in-app: `Version` (semver con prerelease), `ReleaseInfo` (parser de
+  `/releases`), `UpdateChecker` (gate 24 h en `prefs`), `Instalador` (DownloadManager +
+  sha256 + intent del instalador, port de Pulpero) y `UpdateViewModel`/`UpdateBanner`.
 
 ## Actualizar datos
 
