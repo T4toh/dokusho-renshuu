@@ -308,6 +308,12 @@ class CapturaService : Service() {
      *  captura fallaría con el aviso de siempre. */
     private fun despertarEspejo() {
         val reader = imageReader ?: return
+        // El espejo se duerme con frames todavía en la cola del reader (los que llegaron
+        // después del acquire de la captura anterior). Si el productor no compone uno
+        // nuevo antes del acquire, acquireLatestImage() devolvía ESE frame viejo y se
+        // procesaba otra vez la imagen de la captura anterior. Con el productor todavía
+        // desenganchado, vaciar la cola garantiza que lo que se lea sea de esta captura.
+        reader.acquireLatestImage()?.close()
         virtualDisplay?.setSurface(reader.surface)
         android.util.Log.d("ScreenCapture", "Espejo despierto")
     }
