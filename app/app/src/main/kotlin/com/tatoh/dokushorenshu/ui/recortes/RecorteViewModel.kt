@@ -265,6 +265,18 @@ class RecorteViewModel(
         }
     }
 
+    /** Persiste la edición en curso, si la hay, sin tocar el estado. La llama MainActivity
+     *  cuando llega una captura nueva con este recorte abierto, justo antes de taparlo con
+     *  el nuevo: el borrador (tipeado o re-escaneado) no puede perderse en silencio.
+     *  Lanza si guardar() falla; el que llama decide no cerrar la pantalla. */
+    suspend fun guardarPendiente() {
+        val estado = _estado.value
+        val recorte = estado.recorte ?: return
+        val texto = estado.textoEditado
+        if (!estado.editando || texto.isBlank() || texto == recorte.texto) return
+        withContext(ioDispatcher) { creadorRecortes.editar(recorte, texto) }
+    }
+
     /** La Screen avisa que ya mostró el Toast: sin esto el mensaje se repetiría en cada
      *  recomposición con key nueva (rotar, por ejemplo). */
     fun errorMostrado() {

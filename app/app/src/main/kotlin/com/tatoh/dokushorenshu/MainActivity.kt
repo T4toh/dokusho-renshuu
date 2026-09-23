@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -89,8 +90,8 @@ class MainActivity : ComponentActivity() {
                     initializer { UpdateViewModel(contenedor.updateChecker, contenedor.instalador) }
                 })
                 val pedirPermiso by pedirPermisoPendiente
-                // Llegó una captura: se vuelve recorte y se abre. singleTop para no apilar
-                // pantallas si llegan varias capturas.
+                // Llegó una captura: se vuelve recorte y se abre. Si ya había un recorte
+                // abierto se lo reemplaza, para no apilar pantallas si llegan varias capturas.
                 //
                 // La key es Unit y NO `capturaPendiente`: keyeado en el valor, el propio
                 // `= null` de abajo cambia la key y LaunchedEffect cancela su job mientras
@@ -109,7 +110,27 @@ class MainActivity : ComponentActivity() {
                         val recorte = withContext(Dispatchers.IO) {
                             runCatching { contenedor.creadorRecortes.crear(texto, ruta?.let(::File)) }
                         }
-                        recorte.onSuccess { nav.navigate("recorte/${it.id}") { launchSingleTop = true } }
+                        recorte.onSuccess { nuevo ->
+                            // Con un recorte abierto NO sirve launchSingleTop: la ruta es la
+                            // misma, así que reusaba la entrada de arriba con su ViewModel y su
+                            // id viejo, y la pantalla seguía mostrando la captura anterior.
+                            // Se guarda el borrador del que está abierto y se lo reemplaza.
+                            val arriba = nav.currentBackStackEntry
+                            if (arriba?.destination?.route == "recorte/{id}") {
+                                val guardado = runCatching {
+                                    ViewModelProvider(arriba)[RecorteViewModel::class.java].guardarPendiente()
+                                }
+                                // Si no se pudo guardar, el viejo queda abajo con su borrador
+                                // intacto (Back vuelve a él) en vez de cerrarse y perderlo.
+                                if (guardado.isSuccess) {
+                                    nav.popBackStack()
+                                } else {
+                                    android.util.Log.e("MainActivity", "no se pudo guardar el recorte abierto", guardado.exceptionOrNull())
+                                    Toast.makeText(this@MainActivity, "Could not save the note", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            nav.navigate("recorte/${nuevo.id}")
+                        }
                         recorte.onFailure {
                             // Sin aviso el usuario se queda mirando la biblioteca sin saber que
                             // su captura se perdió: el texto original ya no existe en ningún lado.
