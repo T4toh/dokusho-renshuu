@@ -35,8 +35,8 @@ android {
         targetSdk = 36
         // Los dos suben juntos en cada release; el tag es "v$versionName". El updater
         // compara versionName (semver con prerelease) y Android compara versionCode.
-        versionCode = 6
-        versionName = "0.1.0-beta.6"
+        versionCode = 7
+        versionName = "0.1.0-beta.7"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

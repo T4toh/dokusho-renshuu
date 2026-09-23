@@ -10,6 +10,12 @@ de GitHub.
 
 - Acá van los cambios de la próxima versión (`release.sh` pide renombrar esta sección).
 
+## [0.1.0-beta.7] - 2026-09-23
+
+### Arreglado
+- Escanear con un recorte abierto ya no deja la captura anterior en pantalla: se guarda lo que
+  estabas editando y se abre el recorte nuevo.
+
 ## [0.1.0-beta.6] - 2026-09-23
 
 ### Arreglado
