@@ -10,6 +10,11 @@ de GitHub.
 
 - Acá van los cambios de la próxima versión (`release.sh` pide renombrar esta sección).
 
+## [0.1.0-beta.6] - 2026-09-23
+
+### Arreglado
+- El escaneo con la burbuja flotante ya no devuelve a veces la imagen del escaneo anterior.
+
 ## [0.1.0-beta.5] - 2026-09-22
 
 ### Agregado
