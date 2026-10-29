@@ -10,6 +10,8 @@ de GitHub.
 
 - Acá van los cambios de la próxima versión (`release.sh` pide renombrar esta sección).
 
+## [0.1.0-beta.8] - 2026-10-29
+
 ### Agregado
 - Escanear desde una foto: `Take a photo` en la pantalla Scan abre la cámara, reconoce la
   foto entera y crea una nota con la imagen. Para quedarte con una parte, `Rescan area` en
