@@ -2,4 +2,6 @@
 <paths>
     <!-- coincide con Contenedor.dirExportMazos = File(app.cacheDir, "export") -->
     <cache-path name="export" path="export/" />
+    <!-- foto de la cámara (ui/captura/CapturaScreen): el FileProvider se la da a la app de cámara para que escriba ahí -->
+    <cache-path name="foto" path="foto/" />
 </paths>

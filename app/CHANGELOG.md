@@ -10,6 +10,11 @@ de GitHub.
 
 - Acá van los cambios de la próxima versión (`release.sh` pide renombrar esta sección).
 
+### Agregado
+- Escanear desde una foto: `Take a photo` en la pantalla Scan abre la cámara, reconoce la
+  foto entera y crea una nota con la imagen. Para quedarte con una parte, `Rescan area` en
+  la nota. Anda también en Android 8 y 9.
+
 ## [0.1.0-beta.7] - 2026-09-23
 
 ### Arreglado

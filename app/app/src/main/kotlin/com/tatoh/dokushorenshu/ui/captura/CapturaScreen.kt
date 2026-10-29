@@ -1,6 +1,7 @@
 package com.tatoh.dokushorenshu.ui.captura
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,6 +9,7 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -30,12 +33,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import com.tatoh.dokushorenshu.App
 import com.tatoh.dokushorenshu.captura.CapturaService
+import com.tatoh.dokushorenshu.dominio.ocr.reconocerFoto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 /** MediaProjection con recorte por overlay necesita Android 10+. minSdk sigue en
  *  26 porque el lector anda perfecto sin esto: la feature se deshabilita, no se
@@ -72,7 +83,7 @@ private fun leerPermisos(context: Context) = EstadoPermisos(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CapturaScreen(onCerrar: () -> Unit) {
+fun CapturaScreen(onCerrar: () -> Unit, onFoto: (texto: String, imagen: File?) -> Unit) {
     val context = LocalContext.current
     var permisos by remember { mutableStateOf(leerPermisos(context)) }
     val bubbleActivo by CapturaService.corriendo.collectAsState()
@@ -97,6 +108,38 @@ fun CapturaScreen(onCerrar: () -> Unit) {
         }
     }
 
+    // Foto con la app de cámara del sistema (TakePicture): no pide el permiso CAMERA
+    // porque la app no lo declara, y anda en cualquier Android, no sólo en 10+.
+    // ponytail: el OCR corre en el scope de la pantalla; rotar mientras reconoce
+    // (~1 s) pierde el resultado y hay que sacar la foto de nuevo.
+    val scope = rememberCoroutineScope()
+    var reconociendo by remember { mutableStateOf(false) }
+    val archivoFoto = remember { File(context.cacheDir, "foto/foto.jpg") }
+    val lanzadorCamara = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { sacada ->
+        if (!sacada) return@rememberLauncherForActivityResult
+        reconociendo = true
+        scope.launch {
+            val resultado = withContext(Dispatchers.IO) {
+                runCatching {
+                    val ocr = (context.applicationContext as App).contenedor.ocr
+                    reconocerFoto(ocr, archivoFoto, File(context.filesDir, "foto-pendiente.jpg"))
+                }.also { archivoFoto.delete() }
+            }
+            reconociendo = false
+            resultado.onSuccess { (texto, imagen) ->
+                // crear() rechaza el texto en blanco: se avisa acá, como el bubble.
+                if (texto.isBlank()) Toast.makeText(context, "No text found in the photo", Toast.LENGTH_LONG).show()
+                else onFoto(texto, imagen)
+            }
+            resultado.onFailure {
+                android.util.Log.e("CapturaScreen", "no se pudo reconocer la foto", it)
+                Toast.makeText(context, "Could not read the photo", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     Scaffold(topBar = {
         TopAppBar(
             title = { Text("Scan") },
@@ -107,6 +150,26 @@ fun CapturaScreen(onCerrar: () -> Unit) {
             Modifier.fillMaxSize().padding(relleno).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Text(
+                "Take a photo of a page and turn it into a note. To read only part of it, use Rescan area on the note.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Button(
+                onClick = {
+                    archivoFoto.parentFile?.mkdirs()
+                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", archivoFoto)
+                    try {
+                        lanzadorCamara.launch(uri)
+                    } catch (e: ActivityNotFoundException) {
+                        Toast.makeText(context, "No camera app found", Toast.LENGTH_LONG).show()
+                    }
+                },
+                enabled = !reconociendo,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (reconociendo) "Recognizing text..." else "Take a photo") }
+
+            HorizontalDivider()
+
             if (!SOPORTADO) {
                 Text("Screen capture needs Android 10 or newer.", style = MaterialTheme.typography.bodyLarge)
                 return@Column

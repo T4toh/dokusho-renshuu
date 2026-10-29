@@ -80,3 +80,14 @@ class UnirBloquesTest {
         assertEquals("", unirBloques(emptyList()))
     }
 }
+
+class MuestreoTest {
+    @Test
+    fun `foto que ya entra no se achica`() = assertEquals(1, muestreo(1080, 2400, 3000))
+
+    @Test
+    fun `foto de 12 MP baja a la mitad`() = assertEquals(2, muestreo(4032, 3024, 3000))
+
+    @Test
+    fun `foto de 50 MP baja a un cuarto`() = assertEquals(4, muestreo(8160, 6120, 3000))
+}
