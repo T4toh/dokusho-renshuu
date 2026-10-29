@@ -50,3 +50,11 @@ fun unirBloques(bloques: List<BloqueOcr>): String =
         .map { bloque -> bloque.lineas.joinToString("").trim() }
         .filter { it.isNotEmpty() }
         .joinToString("\n")
+
+/** El `inSampleSize` para que el lado más largo de una foto quede en [ladoMax] o menos.
+ *  Potencia de 2 porque BitmapFactory redondea hacia abajo a una de todas formas. */
+fun muestreo(ancho: Int, alto: Int, ladoMax: Int): Int {
+    var m = 1
+    while (maxOf(ancho, alto) / m > ladoMax) m *= 2
+    return m
+}

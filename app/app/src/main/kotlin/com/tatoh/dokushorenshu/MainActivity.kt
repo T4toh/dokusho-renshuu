@@ -262,7 +262,15 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable("captura") {
-                                CapturaScreen(onCerrar = { nav.popBackStack() })
+                                CapturaScreen(
+                                    onCerrar = { nav.popBackStack() },
+                                    // Mismo camino que una captura del bubble: se cierra Scan
+                                    // para que Back desde la nota vuelva a donde se estaba.
+                                    onFoto = { texto, imagen ->
+                                        nav.popBackStack()
+                                        capturaPendiente.value = texto to imagen?.absolutePath
+                                    },
+                                )
                             }
                             composable("acerca") { AcercaScreen() }
                         }
